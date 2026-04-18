@@ -51,6 +51,8 @@ public class LobbyService
         return g;
     }
 
+    public void StoreGame(string id, GameState game) => _games[id] = game;
+
     public void RemoveGame(string id) => _games.TryRemove(id, out _);
 
     // --- Yahtzee Rooms ---
@@ -74,6 +76,8 @@ public class LobbyService
         _yahtzeeRooms.TryGetValue(id, out var r);
         return r;
     }
+
+    public void StoreRoom(string id, YahtzeeRoom room) => _yahtzeeRooms[id] = room;
 
     public IEnumerable<YahtzeeRoom> GetPublicRooms() =>
         _yahtzeeRooms.Values.Where(r => !r.Settings.IsPrivate && !r.Started && !r.IsOver);
@@ -108,4 +112,6 @@ public class GameState
     public string CurrentTurn { get; set; } = "X";
     public bool IsOver { get; set; }
     public string? Winner { get; set; }
+    public bool IsSinglePlayer { get; set; }
+    public string AiDifficulty { get; set; } = "regular";
 }

@@ -1,95 +1,46 @@
-# TacTacToe Hub 🎮
+﻿# TacTacToe
 
-A real-time multiplayer game hub built with **ASP.NET Core** and **SignalR**. Challenge friends to **Tic Tac Toe** or host a multi-player **Yahtzee** room — all from your browser, no plugins required.
+A real-time multiplayer Tic Tac Toe game with Google login, lobby system, and live gameplay via SignalR.
 
----
+## Setup
 
-## Features
+### 1. Google OAuth Credentials
 
-- 🔐 **Cookie-based authentication** — pick a username and jump straight in
-- 🏠 **Live lobby** — see who's online and send game challenges in real time
-- ✕○ **Tic Tac Toe** — classic 1v1, challenge any player in the lobby
-- 🎲 **Yahtzee** — host or join rooms with 2–20 players, full scorecard, turn timer, and 3D dice rolling
-- ⚡ **SignalR** for instant, low-latency updates across all clients
-- 🐳 **Docker** support — single-command deployment
+1. Go to [Google Cloud Console](https://console.cloud.google.com/apis/credentials)
+2. Create an OAuth 2.0 Client ID (Web application)
+3. Add authorized redirect URI: `http://localhost:8080/signin-google` (or your domain)
+4. Note the **Client ID** and **Client Secret**
 
----
+### 2. Run with Docker
 
-## Tech Stack
+Create a `.env` file:
 
-| Layer | Technology |
-|---|---|
-| Backend | ASP.NET Core (.NET 10), C# |
-| Real-time | ASP.NET Core SignalR |
-| Frontend | Vanilla HTML / CSS / JavaScript |
-| 3D Dice | dice-box (WebGL) |
-| Auth | ASP.NET Core Cookie Authentication |
-| Container | Docker / Docker Compose |
+```
+GOOGLE_CLIENT_ID=your-client-id-here
+GOOGLE_CLIENT_SECRET=your-client-secret-here
+```
 
----
+Then:
 
-## Getting Started
+```bash
+docker compose up --build
+```
 
-### Prerequisites
+Open http://localhost:8080
 
-- [.NET 10 SDK](https://dotnet.microsoft.com/download)
-- _or_ [Docker](https://www.docker.com/get-started)
+### 3. Run Locally
 
-### Run locally
+Update `appsettings.json` with your Google credentials, then:
 
 ```bash
 cd TacTacToe
 dotnet run
 ```
 
-Then open [http://localhost:5000](http://localhost:5000) in your browser.
+## How It Works
 
-### Run with Docker
-
-```bash
-docker compose up --build
-```
-
-The app will be available at [http://localhost:8080](http://localhost:8080).
-
----
-
-## Project Structure
-
-```
-TacTacToeHub/
-├── TacTacToe/
-│   ├── Hubs/
-│   │   └── GameHub.cs          # SignalR hub — lobby, challenges, game events
-│   ├── Services/
-│   │   ├── LobbyService.cs     # In-memory player/game/room state
-│   │   └── YahtzeeState.cs     # Yahtzee room, player, scoring models
-│   ├── wwwroot/
-│   │   ├── login.html
-│   │   ├── lobby.html
-│   │   ├── game.html           # Tic Tac Toe
-│   │   ├── yahtzee.html        # Yahtzee game board
-│   │   ├── yahtzee-room.html   # Yahtzee room lobby
-│   │   ├── css/style.css
-│   │   └── js/                 # Client-side game logic
-│   └── Program.cs              # Minimal API + middleware setup
-├── Dockerfile
-├── docker-compose.yml
-└── README.md
-```
-
----
-
-## How to Play
-
-1. **Login** — enter a display name (max 20 characters)
-2. **Lobby** — choose a game type from the top picker
-3. **Tic Tac Toe** — click a player's name to challenge them; accept or decline incoming challenges
-4. **Yahtzee** — create a room, share the room with friends, and the host starts the game when everyone is ready
-
----
-
-## License
-
-This project is open source. Feel free to fork and build on it.
-
+1. Sign in with Google
+2. See online players in the lobby
+3. Click a player to challenge them
+4. They accept/decline the challenge
+5. Play Tic Tac Toe in real-time!

@@ -8,6 +8,7 @@
     --bg-subtle:   #0b0b18;
     --surface:     rgba(255, 255, 255, 0.04);
     --surface-hover: rgba(255, 255, 255, 0.07);
+    --accent-hard: #ff5c8a;
     --surface-solid: #111122;
     --glass:       rgba(255, 255, 255, 0.05);
     --glass-border: rgba(255, 255, 255, 0.08);
@@ -375,6 +376,65 @@ body {
     border-top-color: var(--accent);
     border-radius: 50%;
     animation: spin 1s linear infinite;
+}
+
+/* ============================================================
+   SINGLE PLAYER SECTION
+   ============================================================ */
+.sp-section {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 14px 20px;
+    background: var(--glass);
+    border: 1.5px solid var(--glass-border);
+    border-radius: var(--radius-sm);
+    margin-bottom: 1.25rem;
+    flex-wrap: wrap;
+}
+.sp-label {
+    font-weight: 700;
+    font-size: 0.9rem;
+    color: var(--text-mid);
+    margin-right: auto;
+    white-space: nowrap;
+}
+.sp-btns {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+.btn-sp {
+    padding: 9px 22px;
+    border-radius: 50px;
+    border: 1.5px solid var(--accent);
+    background: rgba(124, 106, 255, 0.12);
+    color: var(--accent);
+    font-family: var(--font);
+    font-weight: 700;
+    font-size: 0.85rem;
+    cursor: pointer;
+    letter-spacing: 0.03em;
+    transition: all var(--transition);
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+    user-select: none;
+}
+.btn-sp:hover {
+    background: var(--accent);
+    color: #fff;
+    box-shadow: 0 4px 18px var(--accent-glow);
+    transform: translateY(-1px);
+}
+.btn-sp-hard {
+    border-color: var(--accent-hard);
+    background: rgba(255, 92, 138, 0.1);
+    color: var(--accent-hard);
+}
+.btn-sp-hard:hover {
+    background: var(--accent-hard);
+    color: #fff;
+    box-shadow: 0 4px 18px var(--accent2-glow);
 }
 
 /* ============================================================

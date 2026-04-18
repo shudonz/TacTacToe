@@ -11,6 +11,7 @@ public class YahtzeeRoom
     public string HostName { get; set; } = "";
     public List<YahtzeePlayer> Players { get; set; } = [];
     public bool Started { get; set; }
+    public bool IsSinglePlayer { get; set; }
     public YahtzeeSettings Settings { get; set; } = new();
 
     // --- Live game state (populated once Started == true) ---
@@ -36,6 +37,8 @@ public class YahtzeePlayer
     public string Name { get; set; } = "";
     public Dictionary<string, int?> Scores { get; set; } = InitScorecard();
     public bool Connected { get; set; } = true;
+    public bool IsBot { get; set; }
+    public string AiDifficulty { get; set; } = "regular";
 
     public static Dictionary<string, int?> InitScorecard()
     {

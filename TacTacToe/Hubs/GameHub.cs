@@ -10,9 +10,14 @@ namespace TacTacToe.Hubs;
 public class GameHub : Hub
 {
     private readonly LobbyService _lobby;
+    private readonly IHubContext<GameHub> _hubContext;
     private static readonly ConcurrentDictionary<string, (string target, string gameType)> PendingChallenges = new();
 
-    public GameHub(LobbyService lobby) => _lobby = lobby;
+    public GameHub(LobbyService lobby, IHubContext<GameHub> hubContext)
+    {
+        _lobby = lobby;
+        _hubContext = hubContext;
+    }
 
     public override async Task OnConnectedAsync()
     {
@@ -65,6 +70,30 @@ public class GameHub : Hub
         await Clients.Client(challengerConnectionId).SendAsync("ChallengeDeclined", decliner?.Name ?? "Someone");
     }
 
+    public async Task StartSinglePlayerTTT(string difficulty)
+    {
+        var name = Context.User?.FindFirst(ClaimTypes.Name)?.Value ?? "Unknown";
+        var gameId = Guid.NewGuid().ToString("N");
+        var aiName = difficulty == "hard" ? "🤖 Computer (Hard)" : "🤖 Computer";
+
+        var game = new GameState
+        {
+            Id = gameId,
+            XConnectionId = Context.ConnectionId,
+            OConnectionId = "BOT_" + gameId,
+            XName = name,
+            OName = aiName,
+            Board = new string[9],
+            CurrentTurn = "X",
+            IsSinglePlayer = true,
+            AiDifficulty = difficulty
+        };
+        _lobby.StoreGame(gameId, game);
+
+        await Groups.AddToGroupAsync(Context.ConnectionId, gameId);
+        await Clients.Caller.SendAsync("GameStarted", gameId, "X", name, aiName);
+    }
+
     public async Task JoinGame(string gameId, string mark)
     {
         var game = _lobby.GetGame(gameId);
@@ -113,6 +142,10 @@ public class GameHub : Hub
         }
 
         await Clients.Group(gameId).SendAsync("GameUpdated", game);
+
+        // Trigger AI move for single-player games
+        if (!game.IsOver && game.IsSinglePlayer && game.CurrentTurn == "O")
+            _ = TakeTttAiMoveAsync(gameId);
     }
 
     public async Task LeaveGame(string gameId)
@@ -304,34 +337,74 @@ public class GameHub : Hub
         var player = room.Players[room.CurrentPlayerIndex];
         if (!player.Scores.ContainsKey(category) || player.Scores[category] != null) return;
 
+        await AdvanceYahtzeeScore(gameId, room, category);
+    }
+
+    // Shared scoring logic used by both the hub method and the AI bot
+    private async Task AdvanceYahtzeeScore(string gameId, YahtzeeRoom room, string category)
+    {
+        var player = room.Players[room.CurrentPlayerIndex];
         player.Scores[category] = YahtzeeScoring.CalculateScore(category, room.Dice, room.Settings);
 
-        // Check if all players filled all 13
         bool allDone = room.Players.All(p => p.Scores.Values.All(v => v != null));
-
         if (allDone)
         {
             room.IsOver = true;
-            var best = room.Players
+            room.WinnerName = room.Players
                 .OrderByDescending(p => YahtzeeScoring.TotalScore(p.Scores, room.Settings))
-                .First();
-            room.WinnerName = best.Name;
+                .First().Name;
+            await _hubContext.Clients.Group(gameId).SendAsync("YahtzeeUpdated", room);
         }
         else
         {
-            // Advance to next player
             do
             {
                 room.CurrentPlayerIndex = (room.CurrentPlayerIndex + 1) % room.Players.Count;
             }
-            while (!room.Players[room.CurrentPlayerIndex].Connected && !allDone);
+            while (!room.Players[room.CurrentPlayerIndex].Connected);
 
             room.RollsLeft = room.Settings.RollsPerTurn;
             room.Held = new bool[room.Settings.NumberOfDice];
             room.Dice = new int[room.Settings.NumberOfDice];
-        }
 
-        await Clients.Group(gameId).SendAsync("YahtzeeUpdated", room);
+            await _hubContext.Clients.Group(gameId).SendAsync("YahtzeeUpdated", room);
+
+            // If the next player is an AI bot, trigger its turn
+            var next = room.Players[room.CurrentPlayerIndex];
+            if (next.IsBot && !room.IsOver)
+                _ = TakeYahtzeeAiBotTurnAsync(gameId, next.AiDifficulty);
+        }
+    }
+
+    public async Task StartYahtzeeSinglePlayer(string difficulty)
+    {
+        var name = Context.User?.FindFirst(ClaimTypes.Name)?.Value ?? "Unknown";
+        var roomId = Guid.NewGuid().ToString("N");
+        var aiName = difficulty == "hard" ? "🤖 Computer (Hard)" : "🤖 Computer";
+
+        var room = new YahtzeeRoom
+        {
+            Id = roomId,
+            HostConnectionId = Context.ConnectionId,
+            HostName = name,
+            IsSinglePlayer = true,
+            Players =
+            [
+                new YahtzeePlayer { ConnectionId = Context.ConnectionId, Name = name, Connected = true },
+                new YahtzeePlayer { ConnectionId = "BOT_" + roomId, Name = aiName, IsBot = true, AiDifficulty = difficulty, Connected = true }
+            ]
+        };
+        room.Settings.MaxPlayers = 2;
+        room.Settings.RoomName = "vs Computer";
+        room.Started = true;
+        room.CurrentPlayerIndex = 0;
+        room.RollsLeft = room.Settings.RollsPerTurn;
+        room.Dice = new int[room.Settings.NumberOfDice];
+        room.Held = new bool[room.Settings.NumberOfDice];
+
+        _lobby.StoreRoom(roomId, room);
+        await Groups.AddToGroupAsync(Context.ConnectionId, roomId);
+        await Clients.Caller.SendAsync("YahtzeeSinglePlayerStarted", roomId);
     }
 
     public async Task LeaveYahtzee(string roomId)
@@ -417,8 +490,274 @@ public class GameHub : Hub
             PlayerCount = r.Players.Count,
             r.Settings.MaxPlayers,
             r.Settings.RoomName,
-            r.Started
+            r.Started,
+            IsFull = r.Players.Count >= r.Settings.MaxPlayers
         });
         await Clients.All.SendAsync("YahtzeeRoomList", rooms);
+    }
+
+    /* ================================================================
+       Tic-Tac-Toe AI
+       ================================================================ */
+
+    private async Task TakeTttAiMoveAsync(string gameId)
+    {
+        try
+        {
+            await Task.Delay(520);
+            var game = _lobby.GetGame(gameId);
+            if (game == null || game.IsOver || game.CurrentTurn != "O") return;
+
+            int cell = game.AiDifficulty == "hard"
+                ? TttMinimaxBestMove(game.Board)
+                : TttRandomMove(game.Board);
+            if (cell < 0 || game.Board[cell] != null) return;
+
+            game.Board[cell] = "O";
+            if (CheckWin(game.Board, "O"))        { game.IsOver = true; game.Winner = "O"; }
+            else if (game.Board.All(c => c != null)) { game.IsOver = true; game.Winner = null; }
+            else                                    game.CurrentTurn = "X";
+
+            await _hubContext.Clients.Group(gameId).SendAsync("GameUpdated", game);
+        }
+        catch { }
+    }
+
+    private static int TttRandomMove(string[] board)
+    {
+        var empty = board.Select((v, i) => (v, i)).Where(x => x.v == null).Select(x => x.i).ToList();
+        return empty.Count > 0 ? empty[Random.Shared.Next(empty.Count)] : -1;
+    }
+
+    private static int TttMinimaxBestMove(string[] board)
+    {
+        int bestScore = int.MinValue, bestMove = -1;
+        for (int i = 0; i < 9; i++)
+        {
+            if (board[i] != null) continue;
+            board[i] = "O";
+            int score = TttMinimax(board, false, 0);
+            board[i] = null;
+            if (score > bestScore) { bestScore = score; bestMove = i; }
+        }
+        return bestMove;
+    }
+
+    private static int TttMinimax(string[] board, bool maximising, int depth)
+    {
+        if (CheckWin(board, "O")) return 10 - depth;
+        if (CheckWin(board, "X")) return depth - 10;
+        if (board.All(c => c != null)) return 0;
+
+        if (maximising)
+        {
+            int best = int.MinValue;
+            for (int i = 0; i < 9; i++)
+            {
+                if (board[i] != null) continue;
+                board[i] = "O";
+                best = Math.Max(best, TttMinimax(board, false, depth + 1));
+                board[i] = null;
+            }
+            return best;
+        }
+        else
+        {
+            int best = int.MaxValue;
+            for (int i = 0; i < 9; i++)
+            {
+                if (board[i] != null) continue;
+                board[i] = "X";
+                best = Math.Min(best, TttMinimax(board, true, depth + 1));
+                board[i] = null;
+            }
+            return best;
+        }
+    }
+
+    /* ================================================================
+       Yahtzee AI
+       ================================================================ */
+
+    private async Task TakeYahtzeeAiBotTurnAsync(string gameId, string difficulty)
+    {
+        try
+        {
+            var room = _lobby.GetRoom(gameId);
+            if (room == null || room.IsOver) return;
+
+            // Perform all rolls with think-pauses between them
+            while (room.RollsLeft > 0 && !room.IsOver)
+            {
+                await Task.Delay(900);
+                YahtzeeScoring.RollDice(room);
+                await _hubContext.Clients.Group(gameId).SendAsync("YahtzeeUpdated", room);
+
+                if (room.RollsLeft > 0)
+                {
+                    await Task.Delay(750);
+                    room.Held = difficulty == "hard"
+                        ? YahtzeeHardHold(room)
+                        : YahtzeeEasyHold(room);
+                    await _hubContext.Clients.Group(gameId).SendAsync("YahtzeeUpdated", room);
+                }
+            }
+
+            await Task.Delay(750);
+
+            // Choose and apply a scoring category
+            string category = difficulty == "hard"
+                ? YahtzeeHardScore(room)
+                : YahtzeeEasyScore(room);
+
+            await AdvanceYahtzeeScore(gameId, room, category);
+        }
+        catch { }
+    }
+
+    // Easy: hold the most-frequent face; fall back to highest single die
+    private static bool[] YahtzeeEasyHold(YahtzeeRoom room)
+    {
+        var dice = room.Dice;
+        var held = new bool[dice.Length];
+        var counts = new int[7];
+        foreach (var d in dice) counts[d]++;
+
+        int maxCount = counts.Skip(1).Max();
+        if (maxCount <= 1)
+        {
+            int maxVal = dice.Max();
+            for (int i = 0; i < dice.Length; i++)
+                if (dice[i] == maxVal) { held[i] = true; break; }
+        }
+        else
+        {
+            int face = Array.IndexOf(counts, maxCount, 1);
+            for (int i = 0; i < dice.Length; i++)
+                if (dice[i] == face) held[i] = true;
+        }
+        return held;
+    }
+
+    // Hard: strategic hold — chase Yahtzee > full house > straight > pairs
+    private static bool[] YahtzeeHardHold(YahtzeeRoom room)
+    {
+        var dice = room.Dice;
+        var held = new bool[dice.Length];
+        var counts = new int[7];
+        foreach (var d in dice) counts[d]++;
+        var scores = room.Players[room.CurrentPlayerIndex].Scores;
+
+        int maxCount = counts.Skip(1).Max();
+        int maxFace = Array.IndexOf(counts, maxCount, 1);
+
+        // 1 – Chase Yahtzee (4+ of a kind)
+        if (maxCount >= 4 && scores.GetValueOrDefault("yahtzee") == null)
+        {
+            for (int i = 0; i < dice.Length; i++)
+                if (dice[i] == maxFace) held[i] = true;
+            return held;
+        }
+
+        // 2 – Full house (3-of + 2-of)
+        if (maxCount >= 3 && scores.GetValueOrDefault("fullHouse") == null)
+        {
+            for (int i = 0; i < dice.Length; i++)
+                if (dice[i] == maxFace) held[i] = true;
+            if (maxCount == 3)
+            {
+                int pairFace = counts.Select((c, idx) => (c, idx)).Skip(1)
+                                     .FirstOrDefault(x => x.c == 2).idx;
+                if (pairFace > 0)
+                    for (int i = 0; i < dice.Length; i++)
+                        if (dice[i] == pairFace) held[i] = true;
+            }
+            return held;
+        }
+
+        // 3 – Chase 3/4 of a kind or Yahtzee
+        if (maxCount >= 3)
+        {
+            for (int i = 0; i < dice.Length; i++)
+                if (dice[i] == maxFace) held[i] = true;
+            return held;
+        }
+
+        // 4 – Straight potential
+        var unique = dice.Distinct().OrderBy(d => d).ToList();
+        int run = LongestRun(unique);
+        if (run >= 3 && (scores.GetValueOrDefault("largeStraight") == null || scores.GetValueOrDefault("smallStraight") == null))
+        {
+            var keep = BestStraightVals(unique);
+            bool[] usedVal = new bool[7];
+            for (int i = 0; i < dice.Length; i++)
+            {
+                if (keep.Contains(dice[i]) && !usedVal[dice[i]])
+                { held[i] = true; usedVal[dice[i]] = true; }
+            }
+            return held;
+        }
+
+        // 5 – Keep any pair
+        if (maxCount >= 2)
+        {
+            for (int i = 0; i < dice.Length; i++)
+                if (dice[i] == maxFace) held[i] = true;
+            return held;
+        }
+
+        // Default: keep highest die
+        int hi = dice.Max();
+        for (int i = 0; i < dice.Length; i++) if (dice[i] == hi) { held[i] = true; break; }
+        return held;
+    }
+
+    private static int LongestRun(List<int> sorted)
+    {
+        if (sorted.Count == 0) return 0;
+        int run = 1, max = 1;
+        for (int i = 1; i < sorted.Count; i++)
+        {
+            if (sorted[i] == sorted[i - 1] + 1) { run++; max = Math.Max(max, run); }
+            else run = 1;
+        }
+        return max;
+    }
+
+    private static HashSet<int> BestStraightVals(List<int> sorted)
+    {
+        // Test each 4-window and 5-window, pick the one with most matches
+        int[][] windows = [[1,2,3,4],[2,3,4,5],[3,4,5,6],[1,2,3,4,5],[2,3,4,5,6]];
+        var set = new HashSet<int>(sorted);
+        HashSet<int>? best = null;
+        int bestMatch = 0;
+        foreach (var w in windows)
+        {
+            int match = w.Count(v => set.Contains(v));
+            if (match > bestMatch) { bestMatch = match; best = new HashSet<int>(w.Where(v => set.Contains(v))); }
+        }
+        return best ?? [];
+    }
+
+    // Easy score: random pick from categories that score > 0; else random available
+    private static string YahtzeeEasyScore(YahtzeeRoom room)
+    {
+        var player = room.Players[room.CurrentPlayerIndex];
+        var available = YahtzeeScoring.Categories
+            .Where(c => player.Scores.GetValueOrDefault(c) == null).ToList();
+        var nonZero = available
+            .Where(c => YahtzeeScoring.CalculateScore(c, room.Dice, room.Settings) > 0).ToList();
+        var pool = nonZero.Count > 0 ? nonZero : available;
+        return pool[Random.Shared.Next(pool.Count)];
+    }
+
+    // Hard score: always pick the category that maximises current score
+    private static string YahtzeeHardScore(YahtzeeRoom room)
+    {
+        var player = room.Players[room.CurrentPlayerIndex];
+        return YahtzeeScoring.Categories
+            .Where(c => player.Scores.GetValueOrDefault(c) == null)
+            .OrderByDescending(c => YahtzeeScoring.CalculateScore(c, room.Dice, room.Settings))
+            .First();
     }
 }

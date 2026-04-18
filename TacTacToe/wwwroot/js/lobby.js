@@ -22,6 +22,7 @@ async function init() {
         const ttt = selectedGame === "tictactoe";
         document.getElementById("tttSection").style.display = ttt ? "" : "none";
         document.getElementById("tttHint").style.display = ttt ? "" : "none";
+        document.getElementById("tttSinglePlayer").style.display = ttt ? "" : "none";
         document.getElementById("playerList").style.display = ttt ? "" : "none";
         document.getElementById("waitingMsg").style.display = ttt ? "" : "none";
         document.getElementById("yahtzeeSection").style.display = ttt ? "none" : "";
@@ -120,9 +121,23 @@ async function init() {
         window.location.href = "/game";
     });
 
+    connection.on("YahtzeeSinglePlayerStarted", roomId => {
+        sessionStorage.setItem("gameId", roomId);
+        sessionStorage.setItem("myName", me.name);
+        window.location.href = "/yahtzee";
+    });
+
     await connection.start();
     myConnectionId = connection.connectionId;
     updateSections();
+
+    // Single player — Tic Tac Toe
+    document.getElementById("tttRegularBtn").addEventListener("click", () => spInvoke("StartSinglePlayerTTT", "regular"));
+    document.getElementById("tttHardBtn").addEventListener("click",    () => spInvoke("StartSinglePlayerTTT", "hard"));
+
+    // Single player — Yahtzee
+    document.getElementById("yahtzeeRegularBtn").addEventListener("click", () => spInvoke("StartYahtzeeSinglePlayer", "regular"));
+    document.getElementById("yahtzeeHardBtn").addEventListener("click",    () => spInvoke("StartYahtzeeSinglePlayer", "hard"));
 
     // Auto-join if an invite link was used (?join=roomId)
     const joinParam = new URLSearchParams(window.location.search).get("join");
@@ -168,6 +183,31 @@ function challengePlayer(connId) {
     connection.invoke("Challenge", connId, "tictactoe");
     document.getElementById("pendingModal").style.display = "flex";
     setTimeout(() => { document.getElementById("pendingModal").style.display = "none"; }, 15000);
+}
+
+// Ensures the connection is live before invoking a hub method — handles
+// the mobile case where the browser may have suspended the WebSocket.
+function spInvoke(method, difficulty) {
+    const btn = document.getElementById(
+        method === "StartSinglePlayerTTT"
+            ? (difficulty === "hard" ? "tttHardBtn" : "tttRegularBtn")
+            : (difficulty === "hard" ? "yahtzeeHardBtn" : "yahtzeeRegularBtn")
+    );
+    if (btn) { btn.disabled = true; btn.textContent = "Starting…"; }
+
+    const doInvoke = () => connection.invoke(method, difficulty).catch(err => {
+        console.error("spInvoke failed:", err);
+        if (btn) { btn.disabled = false; btn.textContent = difficulty === "hard" ? "💀 Hard" : "Regular"; }
+    });
+
+    if (connection.state === signalR.HubConnectionState.Connected) {
+        doInvoke();
+    } else {
+        connection.start().then(doInvoke).catch(err => {
+            console.error("Reconnect failed:", err);
+            if (btn) { btn.disabled = false; btn.textContent = difficulty === "hard" ? "💀 Hard" : "Regular"; }
+        });
+    }
 }
 
 function escapeHtml(s) {
