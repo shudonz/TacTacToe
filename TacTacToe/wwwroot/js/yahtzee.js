@@ -50,6 +50,98 @@ function launchConfetti() {
 }
 
 /* ============================================================
+   Sound Engine (Web Audio API — no external files required)
+   ============================================================ */
+const _ac = new (window.AudioContext || window.webkitAudioContext)();
+function _resumeAudio() { if (_ac.state === 'suspended') _ac.resume(); }
+
+function _tone(freq, type, start, dur, vol) {
+    const osc = _ac.createOscillator();
+    const gain = _ac.createGain();
+    osc.connect(gain); gain.connect(_ac.destination);
+    osc.type = type; osc.frequency.setValueAtTime(freq, start);
+    gain.gain.setValueAtTime(vol, start);
+    gain.gain.exponentialRampToValueAtTime(0.001, start + dur);
+    osc.start(start); osc.stop(start + dur + 0.05);
+}
+function _noise(start, dur, vol) {
+    const buf = _ac.createBuffer(1, Math.ceil(_ac.sampleRate * dur), _ac.sampleRate);
+    const data = buf.getChannelData(0);
+    for (let j = 0; j < data.length; j++) data[j] = (Math.random() * 2 - 1);
+    const src = _ac.createBufferSource();
+    const gain = _ac.createGain();
+    const filter = _ac.createBiquadFilter();
+    filter.type = 'bandpass'; filter.frequency.value = 1200; filter.Q.value = 0.8;
+    src.buffer = buf; src.connect(filter); filter.connect(gain); gain.connect(_ac.destination);
+    gain.gain.setValueAtTime(vol, start);
+    gain.gain.exponentialRampToValueAtTime(0.001, start + dur);
+    src.start(start); src.stop(start + dur + 0.05);
+}
+
+function playDiceRollSound() {
+    _resumeAudio();
+    const t = _ac.currentTime;
+    for (let i = 0; i < 7; i++) _noise(t + i * 0.06, 0.07, 0.18 + Math.random() * 0.12);
+}
+function playHoldSound() {
+    _resumeAudio();
+    _tone(660, 'square', _ac.currentTime, 0.07, 0.18);
+    _tone(880, 'square', _ac.currentTime + 0.05, 0.06, 0.12);
+}
+function playUnholdSound() {
+    _resumeAudio();
+    _tone(440, 'square', _ac.currentTime, 0.07, 0.15);
+}
+function playScoreSound(points, isYahtzee) {
+    _resumeAudio();
+    const t = _ac.currentTime;
+    if (isYahtzee) {
+        // Special multi-burst fanfare for Yahtzee!
+        [523, 659, 784, 1047, 1319].forEach((f, i) => _tone(f, 'sine', t + i * 0.09, 0.35, 0.38));
+        setTimeout(() => {
+            _resumeAudio();
+            const t2 = _ac.currentTime;
+            [784, 1047, 1319, 1568].forEach((f, i) => _tone(f, 'triangle', t2 + i * 0.08, 0.3, 0.3));
+        }, 600);
+    } else if (points >= 40) {
+        [523, 659, 784, 1047].forEach((f, i) => _tone(f, 'sine', t + i * 0.1, 0.28, 0.32));
+    } else if (points >= 20) {
+        [440, 554, 659].forEach((f, i) => _tone(f, 'sine', t + i * 0.1, 0.22, 0.28));
+    } else if (points > 0) {
+        [440, 550].forEach((f, i) => _tone(f, 'sine', t + i * 0.1, 0.18, 0.25));
+    } else {
+        _tone(240, 'sine', t, 0.32, 0.2);
+        _tone(200, 'sine', t + 0.18, 0.28, 0.15);
+    }
+}
+function playTurnSound() {
+    _resumeAudio();
+    _tone(660, 'sine', _ac.currentTime, 0.12, 0.2);
+    _tone(880, 'sine', _ac.currentTime + 0.1, 0.12, 0.2);
+}
+function playWinSound() {
+    _resumeAudio();
+    const t = _ac.currentTime;
+    [523, 659, 784, 1047].forEach((f, i) => _tone(f, 'sine', t + i * 0.13, 0.32, 0.35));
+}
+function playLoseSound() {
+    _resumeAudio();
+    const t = _ac.currentTime;
+    [400, 320, 260].forEach((f, i) => _tone(f, 'sine', t + i * 0.16, 0.38, 0.28));
+}
+function playChatSendSound() {
+    _resumeAudio();
+    _tone(880, 'sine', _ac.currentTime, 0.08, 0.14);
+    _tone(1100, 'sine', _ac.currentTime + 0.06, 0.07, 0.1);
+}
+function playChatReceiveSound() {
+    _resumeAudio();
+    const t = _ac.currentTime;
+    _tone(740, 'sine', t, 0.1, 0.18);
+    _tone(988, 'sine', t + 0.09, 0.1, 0.18);
+}
+
+/* ============================================================
    Dice face unicode
    ============================================================ */
 const dieFaces = ['', '⚀', '⚁', '⚂', '⚃', '⚄', '⚅'];
@@ -137,7 +229,11 @@ function buildDice(numDice) {
         d.className = "die";
         d.dataset.i = i;
         d.innerHTML = '<span class="die-face">?</span>';
-        d.addEventListener("click", () => connection.invoke("YahtzeeToggleHold", gameId, i));
+        d.addEventListener("click", () => {
+            if (currentRoom && currentRoom.held && currentRoom.held[i]) playUnholdSound();
+            else playHoldSound();
+            connection.invoke("YahtzeeToggleHold", gameId, i);
+        });
         row.appendChild(d);
     }
 }
@@ -196,6 +292,9 @@ function buildScorecard(players, settings) {
             const scores = currentRoom.players[myIdx].scores;
             if (scores[cat] !== null && scores[cat] !== undefined) return;
 
+            const preview = calcScore(cat, currentRoom.dice, currentRoom.settings);
+            const isYahtzee = cat === 'yahtzee' && preview === (currentRoom.settings?.yahtzeeScore ?? 50);
+            playScoreSound(preview, isYahtzee);
             connection.invoke("YahtzeeScore", gameId, cat);
         });
     });
@@ -216,6 +315,8 @@ function renderPlayerBar(room) {
 }
 
 let scorecardBuilt = false;
+let _prevTurnIdx = -1;
+let _gameOverSoundPlayed = false;
 
 connection.on("YahtzeeUpdated", room => {
     currentRoom = room;
@@ -231,6 +332,12 @@ connection.on("YahtzeeUpdated", room => {
     }
 
     renderPlayerBar(room);
+
+    // Play your-turn ping when the turn switches to you
+    if (!room.isOver && isMyTurn && room.currentPlayerIndex !== _prevTurnIdx && _prevTurnIdx !== -1) {
+        playTurnSound();
+    }
+    _prevTurnIdx = room.currentPlayerIndex;
 
     // Dice
     const diceEls = document.querySelectorAll(".die");
@@ -296,8 +403,8 @@ connection.on("YahtzeeUpdated", room => {
     if (room.isOver) {
         document.getElementById("turnIndicator").textContent = "";
         let msg;
-        if (room.winnerName === myName) { msg = "You win! 🎉"; launchConfetti(); }
-        else msg = (room.winnerName || "Nobody") + " wins!";
+        if (room.winnerName === myName) { msg = "You win! 🎉"; launchConfetti(); if (!_gameOverSoundPlayed) { playWinSound(); _gameOverSoundPlayed = true; } }
+        else { msg = (room.winnerName || "Nobody") + " wins!"; if (!_gameOverSoundPlayed) { playLoseSound(); _gameOverSoundPlayed = true; } }
         document.getElementById("resultText").textContent = msg;
         // Final scoreboard
         const fs = document.getElementById("finalScores");
@@ -312,6 +419,7 @@ connection.on("YahtzeeUpdated", room => {
 
 // Roll button
 document.getElementById("rollBtn").addEventListener("click", () => {
+    playDiceRollSound();
     connection.invoke("YahtzeeRoll", gameId);
 });
 
@@ -348,6 +456,7 @@ function initChat(conn, groupId, isLobby) {
         if (!msg) return;
         conn.invoke('SendChat', groupId, msg);
         input.value = '';
+        playChatSendSound();
     }
     send.onclick = doSend;
     input.addEventListener('keydown', e => { if (e.key === 'Enter') doSend(); });
@@ -358,6 +467,6 @@ function initChat(conn, groupId, isLobby) {
         el.innerHTML = '<span class="chat-name">' + escapeHtml(name) + '</span> <span class="chat-text">' + escapeHtml(message) + '</span>';
         msgs.appendChild(el);
         msgs.scrollTop = msgs.scrollHeight;
-        if (!chatOpen) { unread++; badge.textContent = unread; badge.style.display = 'inline-flex'; }
+        if (!chatOpen) { unread++; badge.textContent = unread; badge.style.display = 'inline-flex'; playChatReceiveSound(); }
     });
 }

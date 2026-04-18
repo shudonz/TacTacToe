@@ -121,6 +121,54 @@ function launchConfetti() {
 }
 
 /* ============================================================
+   Sound Engine (Web Audio API — no external files required)
+   ============================================================ */
+const _ac = new (window.AudioContext || window.webkitAudioContext)();
+function _resumeAudio() { if (_ac.state === 'suspended') _ac.resume(); }
+
+function _tone(freq, type, start, dur, vol) {
+    const osc = _ac.createOscillator();
+    const gain = _ac.createGain();
+    osc.connect(gain); gain.connect(_ac.destination);
+    osc.type = type; osc.frequency.setValueAtTime(freq, start);
+    gain.gain.setValueAtTime(vol, start);
+    gain.gain.exponentialRampToValueAtTime(0.001, start + dur);
+    osc.start(start); osc.stop(start + dur + 0.05);
+}
+
+function playPlaceSound() {
+    _resumeAudio();
+    _tone(520, 'sine', _ac.currentTime, 0.09, 0.28);
+    _tone(780, 'sine', _ac.currentTime + 0.04, 0.07, 0.15);
+}
+function playWinSound() {
+    _resumeAudio();
+    const t = _ac.currentTime;
+    [523, 659, 784, 1047].forEach((f, i) => _tone(f, 'sine', t + i * 0.13, 0.32, 0.35));
+}
+function playLoseSound() {
+    _resumeAudio();
+    const t = _ac.currentTime;
+    [400, 320, 260].forEach((f, i) => _tone(f, 'sine', t + i * 0.16, 0.38, 0.28));
+}
+function playDrawSound() {
+    _resumeAudio();
+    _tone(330, 'triangle', _ac.currentTime, 0.45, 0.22);
+    _tone(330, 'triangle', _ac.currentTime + 0.5, 0.35, 0.12);
+}
+function playChatSendSound() {
+    _resumeAudio();
+    _tone(880, 'sine', _ac.currentTime, 0.08, 0.14);
+    _tone(1100, 'sine', _ac.currentTime + 0.06, 0.07, 0.1);
+}
+function playChatReceiveSound() {
+    _resumeAudio();
+    const t = _ac.currentTime;
+    _tone(740, 'sine', t, 0.1, 0.18);
+    _tone(988, 'sine', t + 0.09, 0.1, 0.18);
+}
+
+/* ============================================================
    Game Logic
    ============================================================ */
 const connection = new signalR.HubConnectionBuilder().withUrl("/gamehub").withAutomaticReconnect().build();
@@ -132,11 +180,19 @@ document.getElementById("oName").textContent = sessionStorage.getItem("oName");
 
 const cells = document.querySelectorAll(".cell");
 
+let _prevBoard = Array(9).fill(null);
+let _gameOver = false;
+
 connection.on("GameUpdated", game => {
+    // Detect newly placed piece → play place sound
+    let newPiecePlaced = false;
     game.board.forEach((val, i) => {
+        if (val && !_prevBoard[i]) newPiecePlaced = true;
         cells[i].textContent = val || "";
         cells[i].className = "cell" + (val ? " taken " + val.toLowerCase() : "");
     });
+    _prevBoard = [...game.board];
+    if (newPiecePlaced && !game.isOver) playPlaceSound();
 
     document.getElementById("playerX").classList.toggle("active", game.currentTurn === "X" && !game.isOver);
     document.getElementById("playerO").classList.toggle("active", game.currentTurn === "O" && !game.isOver);
@@ -145,13 +201,16 @@ connection.on("GameUpdated", game => {
         const isMyTurn = game.currentTurn === myMark;
         document.getElementById("turnIndicator").textContent = isMyTurn ? "Your turn!" : "Opponent's turn...";
     } else {
-        document.getElementById("turnIndicator").textContent = "";
-        let msg;
-        if (!game.winner) msg = "It's a draw!";
-        else if (game.winner === myMark) { msg = "You win! 🎉"; launchConfetti(); }
-        else msg = "You lose 😢";
-        document.getElementById("resultText").textContent = msg;
-        document.getElementById("resultOverlay").style.display = "flex";
+        if (!_gameOver) {
+            _gameOver = true;
+            document.getElementById("turnIndicator").textContent = "";
+            let msg;
+            if (!game.winner) { msg = "It's a draw!"; playDrawSound(); }
+            else if (game.winner === myMark) { msg = "You win! 🎉"; launchConfetti(); playWinSound(); }
+            else { msg = "You lose 😢"; playLoseSound(); }
+            document.getElementById("resultText").textContent = msg;
+            document.getElementById("resultOverlay").style.display = "flex";
+        }
     }
 });
 
@@ -199,6 +258,7 @@ function initChat(conn, groupId) {
         if (!msg) return;
         conn.invoke('SendChat', groupId, msg);
         input.value = '';
+        playChatSendSound();
     }
     send.onclick = doSend;
     input.addEventListener('keydown', e => { if (e.key === 'Enter') doSend(); });
@@ -209,6 +269,6 @@ function initChat(conn, groupId) {
         el.innerHTML = '<span class="chat-name">' + escChat(name) + '</span> <span class="chat-text">' + escChat(message) + '</span>';
         msgs.appendChild(el);
         msgs.scrollTop = msgs.scrollHeight;
-        if (!chatOpen) { unread++; badge.textContent = unread; badge.style.display = 'inline-flex'; }
+        if (!chatOpen) { unread++; badge.textContent = unread; badge.style.display = 'inline-flex'; playChatReceiveSound(); }
     });
 }
