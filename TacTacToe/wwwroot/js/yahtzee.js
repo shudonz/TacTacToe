@@ -323,11 +323,10 @@ document.getElementById("backBtn").onclick = goBack;
 document.getElementById("backToLobby").onclick = goBack;
 
 // Connect
+document.getElementById("turnIndicator").textContent = "Loading game...";
 connection.start().then(() => {
-    return connection.invoke("RejoinYahtzeeRoom", gameId);
-}).then(() => {
-    document.getElementById("turnIndicator").textContent = "Loading game...";
     initChat(connection, gameId, false);
+    return connection.invoke("RejoinYahtzeeRoom", gameId);
 });
 
 function initChat(conn, groupId, isLobby) {

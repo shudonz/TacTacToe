@@ -39,12 +39,24 @@
             <!-- Yahtzee Room Section -->
             <div id="yahtzeeSection" style="display:none;">
                 <h2 class="lobby-title" style="margin-top:2rem;">Yahtzee Rooms</h2>
+                <p class="lobby-hint">Join an open room or create your own and invite friends.</p>
                 <button id="createRoomBtn" class="btn btn-accept" style="margin-bottom:1rem;">+ Create Room</button>
                 <div id="roomList" class="player-list"></div>
-                <p id="noRooms" class="lobby-hint" style="display:none;">No rooms available. Create one!</p>
+                <p id="noRooms" class="lobby-hint" style="display:none;">No open rooms right now. Create one!</p>
             </div>
         </main>
 
+        <div id="createRoomModal" class="modal" style="display:none">
+            <div class="modal-content">
+                <h3>🎲 Create Yahtzee Room</h3>
+                <p>Give your room a name so friends can find it.</p>
+                <input id="newRoomName" class="guest-input" type="text" placeholder="e.g. Friday Night Dice" maxlength="30" style="margin-top:1.25rem;width:100%;">
+                <div class="modal-actions">
+                    <button id="createRoomConfirmBtn" class="btn btn-accept">Create Room</button>
+                    <button id="createRoomCancelBtn" class="btn btn-decline">Cancel</button>
+                </div>
+            </div>
+        </div>
         <div id="challengeModal" class="modal" style="display:none">
             <div class="modal-content">
                 <h3 id="challengeText"></h3>

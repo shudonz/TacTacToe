@@ -17,7 +17,14 @@
         </nav>
         <main class="room-container">
             <h2 class="lobby-title" id="roomTitle">Yahtzee Room</h2>
-            <p class="lobby-hint" id="roomCode"></p>
+            <div class="room-invite-bar glass-card">
+                <div class="room-invite-code">
+                    <span class="room-invite-label">Room Code</span>
+                    <span class="room-code-value" id="roomCode"></span>
+                </div>
+                <button id="copyCodeBtn" class="btn-copy" title="Copy room code">&#128203; Copy Code</button>
+                <button id="copyLinkBtn" class="btn-copy btn-copy-link" title="Copy invite link">&#128279; Copy Invite Link</button>
+            </div>
 
             <!-- Player list -->
             <div class="room-section glass-card">
@@ -28,20 +35,23 @@
             <!-- Settings (host only) -->
             <div id="settingsPanel" class="room-section glass-card" style="display:none">
                 <h3 class="room-section-title">Game Settings <span class="room-host-badge">HOST</span></h3>
-                <div class="settings-grid">
+                <div class="settings-grid settings-basic">
                     <label>Room Name<input type="text" id="sRoomName" class="setting-input" maxlength="30" value="Yahtzee Room"></label>
                     <label>Max Players (2-20)<input type="number" id="sMaxPlayers" class="setting-input" min="2" max="20" value="4"></label>
+                    <label>Turn Time Limit (0=off)<input type="number" id="sTurnTime" class="setting-input" min="0" max="300" value="0"></label>
+                    <label class="setting-check"><input type="checkbox" id="sPrivate"> Private Room</label>
+                </div>
+                <button class="btn-advanced-toggle" id="advancedToggle">&#9881; Advanced Settings <span id="advancedArrow">&#9660;</span></button>
+                <div class="settings-grid settings-advanced" id="advancedSettings" style="display:none;margin-top:12px;">
                     <label>Rolls Per Turn (1-5)<input type="number" id="sRollsPerTurn" class="setting-input" min="1" max="5" value="3"></label>
                     <label>Number of Dice (3-8)<input type="number" id="sNumDice" class="setting-input" min="3" max="8" value="5"></label>
                     <label>Upper Bonus Threshold<input type="number" id="sUpperThreshold" class="setting-input" min="0" max="999" value="63"></label>
                     <label>Upper Bonus Points<input type="number" id="sUpperBonus" class="setting-input" min="0" max="100" value="35"></label>
-                    <label>Turn Time Limit (0=off)<input type="number" id="sTurnTime" class="setting-input" min="0" max="300" value="0"></label>
                     <label>Full House Score<input type="number" id="sFullHouse" class="setting-input" min="0" max="100" value="25"></label>
                     <label>Sm Straight Score<input type="number" id="sSmStraight" class="setting-input" min="0" max="100" value="30"></label>
                     <label>Lg Straight Score<input type="number" id="sLgStraight" class="setting-input" min="0" max="100" value="40"></label>
                     <label>Yahtzee Score<input type="number" id="sYahtzee" class="setting-input" min="0" max="100" value="50"></label>
                     <label class="setting-check"><input type="checkbox" id="sForce"> Force Best Category</label>
-                    <label class="setting-check"><input type="checkbox" id="sPrivate"> Private Room</label>
                 </div>
                 <button id="saveSettingsBtn" class="btn btn-accept" style="margin-top:1rem;">Save Settings</button>
             </div>
@@ -54,8 +64,8 @@
 
             <!-- Start / Wait -->
             <div class="room-actions">
-                <button id="startBtn" class="btn btn-accept" style="display:none;">Start Game</button>
-                <p id="waitMsg" class="lobby-hint">Waiting for host to start…</p>
+                <button id="startBtn" class="btn btn-accept" style="display:none;">&#9654; Start Game</button>
+                <p id="waitMsg" class="wait-for-host" style="display:none;">&#9203; Waiting for <strong id="hostNameWait">the host</strong> to start the game&hellip;</p>
             </div>
         </main>
 

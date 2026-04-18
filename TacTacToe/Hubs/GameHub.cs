@@ -158,10 +158,12 @@ public class GameHub : Hub
        Yahtzee Room Methods
        ================================================================ */
 
-    public async Task CreateYahtzeeRoom()
+    public async Task CreateYahtzeeRoom(string? roomName = null)
     {
         var roomId = Guid.NewGuid().ToString("N");
         var room = _lobby.CreateRoom(roomId, Context.ConnectionId);
+        if (!string.IsNullOrWhiteSpace(roomName))
+            room.Settings.RoomName = roomName.Trim()[..Math.Min(roomName.Trim().Length, 30)];
         await Groups.AddToGroupAsync(Context.ConnectionId, roomId);
         await Clients.Caller.SendAsync("YahtzeeRoomCreated", roomId);
         await BroadcastYahtzeeRooms();
@@ -176,7 +178,8 @@ public class GameHub : Hub
             PlayerCount = r.Players.Count,
             r.Settings.MaxPlayers,
             r.Settings.RoomName,
-            r.Started
+            r.Started,
+            IsFull = r.Players.Count >= r.Settings.MaxPlayers
         });
         await Clients.Caller.SendAsync("YahtzeeRoomList", rooms);
     }
@@ -207,7 +210,10 @@ public class GameHub : Hub
         player.Connected = true;
         if (room.HostName == name) room.HostConnectionId = Context.ConnectionId;
         await Groups.AddToGroupAsync(Context.ConnectionId, roomId);
-        await Clients.Group(roomId).SendAsync("YahtzeeRoomUpdated", room);
+        if (room.Started)
+            await Clients.Caller.SendAsync("YahtzeeUpdated", room);
+        else
+            await Clients.Group(roomId).SendAsync("YahtzeeRoomUpdated", room);
     }
 
     public async Task UpdateYahtzeeSettings(string roomId, YahtzeeSettings settings)

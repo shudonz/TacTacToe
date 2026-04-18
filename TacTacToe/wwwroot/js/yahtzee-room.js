@@ -10,7 +10,29 @@ async function init() {
     const me = await res.json();
     myName = me.name;
 
-    document.getElementById("roomCode").textContent = "Room ID: " + roomId;
+    // Room code display
+    const shortCode = roomId.slice(0, 8).toUpperCase();
+    document.getElementById("roomCode").textContent = shortCode;
+
+    // Copy code button
+    document.getElementById("copyCodeBtn").addEventListener("click", () => {
+        navigator.clipboard.writeText(shortCode).then(() => showCopyToast("Room code copied!"));
+    });
+
+    // Copy invite link button
+    document.getElementById("copyLinkBtn").addEventListener("click", () => {
+        const link = window.location.origin + "/lobby?join=" + roomId;
+        navigator.clipboard.writeText(link).then(() => showCopyToast("Invite link copied!"));
+    });
+
+    // Advanced settings toggle
+    document.getElementById("advancedToggle").addEventListener("click", () => {
+        const panel = document.getElementById("advancedSettings");
+        const arrow = document.getElementById("advancedArrow");
+        const open = panel.style.display === "none";
+        panel.style.display = open ? "grid" : "none";
+        arrow.innerHTML = open ? "&#9650;" : "&#9660;";
+    });
 
     connection.on("YahtzeeRoomUpdated", room => renderRoom(room));
 
@@ -89,6 +111,7 @@ function renderRoom(room) {
             settingLine("Force Best", s.forceScoreBestCategory ? "Yes" : "No") + '</div>';
         document.getElementById("startBtn").style.display = "none";
         document.getElementById("waitMsg").style.display = "block";
+        document.getElementById("hostNameWait").textContent = room.hostName;
     }
 }
 
@@ -118,6 +141,20 @@ document.getElementById("saveSettingsBtn").addEventListener("click", () => {
 document.getElementById("startBtn").addEventListener("click", () => {
     connection.invoke("StartYahtzeeGame", roomId);
 });
+
+function showCopyToast(msg) {
+    let toast = document.getElementById("copyToast");
+    if (!toast) {
+        toast = document.createElement("div");
+        toast.id = "copyToast";
+        toast.className = "copy-toast";
+        document.body.appendChild(toast);
+    }
+    toast.textContent = msg;
+    toast.classList.add("copy-toast-show");
+    clearTimeout(toast._t);
+    toast._t = setTimeout(() => toast.classList.remove("copy-toast-show"), 2500);
+}
 
 function kickPlayer(name) {
     connection.invoke("KickPlayer", roomId, name);

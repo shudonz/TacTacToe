@@ -1181,7 +1181,197 @@ body {
     scrollbar-width: thin;
     scrollbar-color: var(--accent) transparent;
 }
-.chat-msg {
+
+/* ============================================================
+   YAHTZEE ROOM — INVITE BAR
+   ============================================================ */
+.room-invite-bar {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 14px 20px;
+    margin-bottom: 1.5rem;
+    flex-wrap: wrap;
+}
+.room-invite-code {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    flex: 1;
+    min-width: 120px;
+}
+.room-invite-label {
+    font-size: 0.65rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: var(--text-dim);
+}
+.room-code-value {
+    font-size: 1.3rem;
+    font-weight: 900;
+    letter-spacing: 0.18em;
+    color: var(--accent);
+    font-family: monospace;
+    text-shadow: 0 0 16px var(--accent-glow);
+}
+.btn-copy {
+    padding: 9px 18px;
+    border-radius: 50px;
+    border: 1.5px solid var(--glass-border);
+    background: rgba(255, 255, 255, 0.05);
+    color: var(--text-mid);
+    font-family: var(--font);
+    font-size: 0.82rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all var(--transition);
+    white-space: nowrap;
+}
+.btn-copy:hover {
+    border-color: rgba(124, 106, 255, 0.4);
+    color: var(--text);
+    background: rgba(124, 106, 255, 0.08);
+}
+.btn-copy-link {
+    border-color: rgba(54, 214, 195, 0.3);
+    color: var(--accent3);
+}
+.btn-copy-link:hover {
+    border-color: rgba(54, 214, 195, 0.6);
+    background: rgba(54, 214, 195, 0.08);
+    color: var(--accent3);
+}
+
+/* ============================================================
+   COPY TOAST NOTIFICATION
+   ============================================================ */
+.copy-toast {
+    position: fixed;
+    bottom: 100px;
+    left: 50%;
+    transform: translateX(-50%) translateY(12px);
+    background: var(--surface-solid);
+    border: 1px solid var(--glass-border);
+    color: var(--text);
+    padding: 10px 22px;
+    border-radius: 50px;
+    font-size: 0.88rem;
+    font-weight: 600;
+    z-index: 300;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.25s ease, transform 0.25s ease;
+    box-shadow: 0 4px 24px rgba(0,0,0,0.4);
+}
+.copy-toast.copy-toast-show {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+}
+
+/* ============================================================
+   ADVANCED SETTINGS TOGGLE
+   ============================================================ */
+.btn-advanced-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 1rem;
+    background: none;
+    border: 1.5px solid var(--glass-border);
+    color: var(--text-dim);
+    font-family: var(--font);
+    font-size: 0.82rem;
+    font-weight: 600;
+    padding: 8px 18px;
+    border-radius: 50px;
+    cursor: pointer;
+    transition: all var(--transition);
+}
+.btn-advanced-toggle:hover {
+    color: var(--text);
+    border-color: rgba(124, 106, 255, 0.35);
+    background: rgba(124, 106, 255, 0.06);
+}
+
+/* ============================================================
+   WAIT FOR HOST MESSAGE
+   ============================================================ */
+.wait-for-host {
+    color: var(--text-dim);
+    font-size: 0.95rem;
+    text-align: center;
+    padding: 1rem;
+    border: 1px dashed var(--glass-border);
+    border-radius: var(--radius-sm);
+    background: rgba(255, 255, 255, 0.02);
+}
+.wait-for-host strong {
+    color: var(--accent);
+}
+
+/* ============================================================
+   ROOM LIST CARDS (lobby)
+   ============================================================ */
+.room-list-card {
+    cursor: pointer;
+    gap: 14px;
+}
+.room-list-card.room-full {
+    opacity: 0.4;
+    cursor: not-allowed;
+    pointer-events: none;
+}
+.room-card-info {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    flex: 1;
+    min-width: 0;
+}
+.room-card-host {
+    font-size: 0.75rem;
+    color: var(--text-dim);
+    font-weight: 500;
+}
+.room-card-right {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-shrink: 0;
+}
+.room-player-count-badge {
+    font-size: 0.78rem;
+    font-weight: 700;
+    color: var(--text-mid);
+    background: rgba(255,255,255,0.06);
+    padding: 4px 10px;
+    border-radius: 50px;
+    white-space: nowrap;
+}
+.room-badge {
+    font-size: 0.65rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    padding: 3px 10px;
+    border-radius: 50px;
+    white-space: nowrap;
+}
+.room-badge-open {
+    background: rgba(54, 214, 195, 0.12);
+    color: var(--accent3);
+    border: 1px solid rgba(54, 214, 195, 0.3);
+}
+.room-badge-full {
+    background: rgba(255, 92, 138, 0.1);
+    color: var(--accent2);
+    border: 1px solid rgba(255, 92, 138, 0.25);
+}
+.room-join-btn {
+    padding: 8px 16px !important;
+    font-size: 0.82rem !important;
+}
     font-size: 0.85rem;
     line-height: 1.4;
     word-break: break-word;

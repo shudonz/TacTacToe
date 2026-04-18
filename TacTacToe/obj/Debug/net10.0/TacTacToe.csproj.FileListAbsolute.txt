@@ -18,15 +18,9 @@ C:\Users\shudo\source\repos\TacTacToeHub\TacTacToe\obj\Debug\net10.0\rjimswa.dsw
 C:\Users\shudo\source\repos\TacTacToeHub\TacTacToe\obj\Debug\net10.0\rjsmrazor.dswa.cache.json
 C:\Users\shudo\source\repos\TacTacToeHub\TacTacToe\obj\Debug\net10.0\rjsmcshtml.dswa.cache.json
 C:\Users\shudo\source\repos\TacTacToeHub\TacTacToe\obj\Debug\net10.0\scopedcss\bundle\TacTacToe.styles.css
-C:\Users\shudo\source\repos\TacTacToeHub\TacTacToe\obj\Debug\net10.0\compressed\f01oeadw3p-{0}-4qk2u75eyp-4qk2u75eyp.gz
 C:\Users\shudo\source\repos\TacTacToeHub\TacTacToe\obj\Debug\net10.0\compressed\enp9bfa4rt-{0}-ppyitk8gwp-ppyitk8gwp.gz
 C:\Users\shudo\source\repos\TacTacToeHub\TacTacToe\obj\Debug\net10.0\compressed\a9lzdwl1yw-{0}-0a7wkxn47z-0a7wkxn47z.gz
-C:\Users\shudo\source\repos\TacTacToeHub\TacTacToe\obj\Debug\net10.0\compressed\onzo3w80jg-{0}-xjjc5eqq4x-xjjc5eqq4x.gz
-C:\Users\shudo\source\repos\TacTacToeHub\TacTacToe\obj\Debug\net10.0\compressed\hfr9589j4y-{0}-qizg3zy5a7-qizg3zy5a7.gz
-C:\Users\shudo\source\repos\TacTacToeHub\TacTacToe\obj\Debug\net10.0\compressed\7w17tvoa08-{0}-ooa4epjq8o-ooa4epjq8o.gz
-C:\Users\shudo\source\repos\TacTacToeHub\TacTacToe\obj\Debug\net10.0\compressed\qe3aml4flq-{0}-1ub2rnezoi-1ub2rnezoi.gz
 C:\Users\shudo\source\repos\TacTacToeHub\TacTacToe\obj\Debug\net10.0\compressed\f6cenngend-{0}-jm8qvrdh3t-jm8qvrdh3t.gz
-C:\Users\shudo\source\repos\TacTacToeHub\TacTacToe\obj\Debug\net10.0\compressed\mb8iuczeyu-{0}-lgdehybib9-lgdehybib9.gz
 C:\Users\shudo\source\repos\TacTacToeHub\TacTacToe\obj\Debug\net10.0\compressed\a1nslrv1cn-{0}-u3fpqmo7te-u3fpqmo7te.gz
 C:\Users\shudo\source\repos\TacTacToeHub\TacTacToe\obj\Debug\net10.0\staticwebassets.build.json
 C:\Users\shudo\source\repos\TacTacToeHub\TacTacToe\obj\Debug\net10.0\staticwebassets.build.json.cache
@@ -39,3 +33,9 @@ C:\Users\shudo\source\repos\TacTacToeHub\TacTacToe\obj\Debug\net10.0\refint\TacT
 C:\Users\shudo\source\repos\TacTacToeHub\TacTacToe\obj\Debug\net10.0\TacTacToe.pdb
 C:\Users\shudo\source\repos\TacTacToeHub\TacTacToe\obj\Debug\net10.0\TacTacToe.genruntimeconfig.cache
 C:\Users\shudo\source\repos\TacTacToeHub\TacTacToe\obj\Debug\net10.0\ref\TacTacToe.dll
+C:\Users\shudo\source\repos\TacTacToeHub\TacTacToe\obj\Debug\net10.0\compressed\f01oeadw3p-{0}-1jh4yl7111-1jh4yl7111.gz
+C:\Users\shudo\source\repos\TacTacToeHub\TacTacToe\obj\Debug\net10.0\compressed\onzo3w80jg-{0}-yv5ky2c47a-yv5ky2c47a.gz
+C:\Users\shudo\source\repos\TacTacToeHub\TacTacToe\obj\Debug\net10.0\compressed\hfr9589j4y-{0}-13tqpdbfn5-13tqpdbfn5.gz
+C:\Users\shudo\source\repos\TacTacToeHub\TacTacToe\obj\Debug\net10.0\compressed\qe3aml4flq-{0}-1nsebp9kh4-1nsebp9kh4.gz
+C:\Users\shudo\source\repos\TacTacToeHub\TacTacToe\obj\Debug\net10.0\compressed\mb8iuczeyu-{0}-ur3575xnok-ur3575xnok.gz
+C:\Users\shudo\source\repos\TacTacToeHub\TacTacToe\obj\Debug\net10.0\compressed\7w17tvoa08-{0}-03lfxlp9gq-03lfxlp9gq.gz

@@ -54,18 +54,36 @@ async function init() {
         const list = document.getElementById("roomList");
         const noRooms = document.getElementById("noRooms");
         list.innerHTML = "";
-        if (rooms.length === 0) {
+        const openRooms = rooms.filter(r => !r.started);
+        if (openRooms.length === 0) {
             noRooms.style.display = "block";
         } else {
             noRooms.style.display = "none";
-            rooms.forEach(r => {
+            openRooms.forEach(r => {
+                const isFull = r.isFull;
                 const card = document.createElement("div");
-                card.className = "player-card";
-                card.innerHTML = '<span class="game-option-icon" style="font-size:1.4rem;">🎲</span>'
+                card.className = "player-card room-list-card" + (isFull ? " room-full" : "");
+                const badges = isFull
+                    ? '<span class="room-badge room-badge-full">Full</span>'
+                    : '<span class="room-badge room-badge-open">Open</span>';
+                card.innerHTML =
+                    '<span class="game-option-icon" style="font-size:1.4rem;">&#127922;</span>'
+                    + '<div class="room-card-info">'
                     + '<span class="name">' + escapeHtml(r.roomName) + '</span>'
-                    + '<span class="you-tag">' + r.playerCount + '/' + r.maxPlayers + '</span>'
-                    + '<span style="color:var(--text-dim);font-size:0.8rem;">Host: ' + escapeHtml(r.hostName) + '</span>';
-                card.onclick = () => joinRoom(r.id);
+                    + '<span class="room-card-host">Hosted by ' + escapeHtml(r.hostName) + '</span>'
+                    + '</div>'
+                    + '<div class="room-card-right">'
+                    + '<span class="room-player-count-badge">' + r.playerCount + '/' + r.maxPlayers + '</span>'
+                    + badges
+                    + (!isFull ? '<button class="btn btn-accept room-join-btn">Join &rarr;</button>' : '')
+                    + '</div>';
+                if (!isFull) {
+                    card.querySelector(".room-join-btn").addEventListener("click", e => {
+                        e.stopPropagation();
+                        joinRoom(r.id);
+                    });
+                    card.onclick = () => joinRoom(r.id);
+                }
                 list.appendChild(card);
             });
         }
@@ -106,9 +124,33 @@ async function init() {
     myConnectionId = connection.connectionId;
     updateSections();
 
-    // Create room button
+    // Auto-join if an invite link was used (?join=roomId)
+    const joinParam = new URLSearchParams(window.location.search).get("join");
+    if (joinParam) {
+        window.history.replaceState({}, "", "/lobby");
+        joinRoom(joinParam);
+    }
+
+    // Create room button — open modal
     document.getElementById("createRoomBtn").addEventListener("click", () => {
-        connection.invoke("CreateYahtzeeRoom");
+        document.getElementById("newRoomName").value = "";
+        document.getElementById("createRoomModal").style.display = "flex";
+        setTimeout(() => document.getElementById("newRoomName").focus(), 50);
+    });
+
+    document.getElementById("createRoomCancelBtn").addEventListener("click", () => {
+        document.getElementById("createRoomModal").style.display = "none";
+    });
+
+    document.getElementById("createRoomConfirmBtn").addEventListener("click", () => {
+        const name = document.getElementById("newRoomName").value.trim() || "Yahtzee Room";
+        document.getElementById("createRoomModal").style.display = "none";
+        connection.invoke("CreateYahtzeeRoom", name);
+    });
+
+    document.getElementById("newRoomName").addEventListener("keydown", e => {
+        if (e.key === "Enter") document.getElementById("createRoomConfirmBtn").click();
+        if (e.key === "Escape") document.getElementById("createRoomCancelBtn").click();
     });
 
     // Chat
