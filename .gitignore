@@ -1,5 +1,59 @@
-﻿################################################################################
-# This .gitignore file was automatically created by Microsoft(R) Visual Studio.
-################################################################################
+﻿## Visual Studio / VS Code
+.vs/
+.vscode/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
 
-/.vs/TacTacToeHub.slnx/FileContentIndex
+## Build output
+[Bb]in/
+[Oo]bj/
+out/
+build/
+dist/
+
+## .NET / MSBuild
+*.binlog
+*.cache
+project.lock.json
+project.fragment.lock.json
+artifacts/
+
+## NuGet
+*.nupkg
+*.snupkg
+.nuget/
+packages/
+!**/[Pp]ackages/build/
+
+## Publish output
+**/publish/
+**/PublishProfiles/
+
+## Test results
+TestResults/
+coverage/
+*.trx
+*.coveragexml
+
+## Node.js / npm
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+## OS artifacts
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+.DS_Store
+
+## Docker
+docker-compose.override.yml
+
+## Secrets / environment
+*.env
+appsettings.Local.json
+appsettings.Development.json.local
+secrets.json
