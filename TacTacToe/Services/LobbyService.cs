@@ -8,6 +8,7 @@ public class LobbyService
     private readonly ConcurrentDictionary<string, GameState> _games = new();
     private readonly ConcurrentDictionary<string, YahtzeeRoom> _yahtzeeRooms = new();
     private readonly ConcurrentDictionary<string, TttRoom> _tttRooms = new();
+    private readonly ConcurrentDictionary<string, SlotsRoom> _slotsRooms = new();
 
     public bool AddPlayer(string connectionId, string name, string email, string picture)
     {
@@ -133,6 +134,37 @@ public class LobbyService
             r.Players.Any(p => p.ConnectionId == connectionId));
 
     public void RemoveRoom(string id) => _yahtzeeRooms.TryRemove(id, out _);
+
+    // --- Slots Rooms ---
+
+    public SlotsRoom CreateSlotsRoom(string id, string hostConnectionId)
+    {
+        var host = _players.GetValueOrDefault(hostConnectionId);
+        var room = new SlotsRoom
+        {
+            Id = id,
+            HostConnectionId = hostConnectionId,
+            HostName = host?.Name ?? "Host",
+            Players = [new SlotsPlayer { ConnectionId = hostConnectionId, Name = host?.Name ?? "Host", Connected = true }]
+        };
+        _slotsRooms[id] = room;
+        return room;
+    }
+
+    public SlotsRoom? GetSlotsRoom(string id) { _slotsRooms.TryGetValue(id, out var r); return r; }
+    public void StoreSlotsRoom(string id, SlotsRoom room) => _slotsRooms[id] = room;
+
+    public IEnumerable<SlotsRoom> GetOpenSlotsRooms() =>
+        _slotsRooms.Values.Where(r => !r.Started && !r.IsOver);
+
+    public IEnumerable<SlotsRoom> GetSlotsRoomsForConnection(string connectionId) =>
+        _slotsRooms.Values.Where(r => !r.Started && r.Players.Any(p => p.ConnectionId == connectionId));
+
+    public IEnumerable<SlotsRoom> GetActiveSlotsRoomsForConnection(string connectionId) =>
+        _slotsRooms.Values.Where(r => r.Started && !r.IsOver &&
+            r.Players.Any(p => p.ConnectionId == connectionId && !p.IsBot));
+
+    public void RemoveSlotsRoom(string id) => _slotsRooms.TryRemove(id, out _);
 }
 
 public class LobbyPlayer

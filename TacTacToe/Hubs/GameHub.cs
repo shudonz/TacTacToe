@@ -32,6 +32,65 @@ public class GameHub : Hub
         var name = Context.User?.FindFirst(ClaimTypes.Name)?.Value ?? "Unknown";
         var disconnectedConnectionId = Context.ConnectionId;
 
+        // Defer Slots waiting-room cleanup (same navigation grace period as TTT/Yahtzee)
+        var slotsWaitSnapshot = _lobby.GetSlotsRoomsForConnection(disconnectedConnectionId).ToList();
+        if (slotsWaitSnapshot.Count > 0)
+        {
+            _ = Task.Run(async () =>
+            {
+                await Task.Delay(TimeSpan.FromSeconds(8));
+                bool changed = false;
+                foreach (var snap in slotsWaitSnapshot)
+                {
+                    var room = _lobby.GetSlotsRoom(snap.Id);
+                    if (room == null || room.Started) continue;
+                    var player = room.Players.FirstOrDefault(p => p.Name == name);
+                    if (player == null || player.ConnectionId != disconnectedConnectionId) continue;
+                    room.Players.Remove(player);
+                    changed = true;
+                    if (room.Players.Count == 0 || room.HostName == name)
+                    { await _hubContext.Clients.Group(room.Id).SendAsync("SlotsRoomDissolved"); _lobby.RemoveSlotsRoom(room.Id); }
+                    else
+                    { await _hubContext.Clients.Group(room.Id).SendAsync("SlotsRoomUpdated", room); }
+                }
+                if (changed) await _hubContext.Clients.All.SendAsync("SlotsRoomList", SlotsRoomSummaries());
+            });
+        }
+
+        // Defer Slots active-game disconnect
+        var slotsGameSnapshot = _lobby.GetActiveSlotsRoomsForConnection(disconnectedConnectionId).ToList();
+        if (slotsGameSnapshot.Count > 0)
+        {
+            _ = Task.Run(async () =>
+            {
+                await Task.Delay(TimeSpan.FromSeconds(8));
+                foreach (var snap in slotsGameSnapshot)
+                {
+                    var room = _lobby.GetSlotsRoom(snap.Id);
+                    if (room == null || room.IsOver) continue;
+                    var player = room.Players.FirstOrDefault(p => p.Name == name && !p.IsBot);
+                    if (player == null || player.ConnectionId != disconnectedConnectionId) continue;
+                    player.Connected = false;
+                    await _hubContext.Clients.Group(room.Id).SendAsync("PlayerLeft", name);
+                    if (!player.HasSpun && room.Phase == SlotsPhase.Betting)
+                    {
+                        int bet = Math.Min(10, Math.Max(1, player.Balance));
+                        if (player.Balance > 0)
+                        {
+                            player.CurrentBet = bet;
+                            player.Reels = SlotsEngine.SpinReels();
+                            int payout = SlotsEngine.CalculatePayout(player.Reels, bet);
+                            player.Balance = player.Balance - bet + payout;
+                            player.LastWin = payout;
+                        }
+                        player.HasSpun = true;
+                        await _hubContext.Clients.Group(room.Id).SendAsync("SlotsUpdated", room);
+                        if (AllSlotsSpun(room)) _ = AdvanceSlotsRoundAsync(room.Id);
+                    }
+                }
+            });
+        }
+
         // Defer TTT room cleanup — the same grace period used for Yahtzee is needed here
         // because creating/joining a room causes a page navigation which disconnects the
         // lobby connection before RejoinTttRoom can update the player's ConnectionId.
@@ -292,6 +351,241 @@ public class GameHub : Hub
 
     private async Task BroadcastTttRooms() =>
         await Clients.All.SendAsync("TttRoomList", TttRoomSummaries());
+
+    /* ================================================================
+       Slots Room Methods
+       ================================================================ */
+
+    public async Task CreateSlotsRoom(string? roomName = null)
+    {
+        var roomId = Guid.NewGuid().ToString("N");
+        var room = _lobby.CreateSlotsRoom(roomId, Context.ConnectionId);
+        if (!string.IsNullOrWhiteSpace(roomName))
+            room.Settings.RoomName = roomName.Trim()[..Math.Min(roomName.Trim().Length, 30)];
+        await Groups.AddToGroupAsync(Context.ConnectionId, roomId);
+        await Clients.Caller.SendAsync("SlotsRoomCreated", roomId);
+        await BroadcastSlotsRooms();
+    }
+
+    public async Task GetSlotsRooms() =>
+        await Clients.Caller.SendAsync("SlotsRoomList", SlotsRoomSummaries());
+
+    public async Task JoinSlotsRoom(string roomId)
+    {
+        var room = _lobby.GetSlotsRoom(roomId);
+        if (room == null || room.Started || room.IsOver) return;
+        if (room.Players.Count >= room.Settings.MaxPlayers) return;
+        if (room.Players.Any(p => p.ConnectionId == Context.ConnectionId)) return;
+        var name = Context.User?.FindFirst(ClaimTypes.Name)?.Value ?? "Unknown";
+        room.Players.Add(new SlotsPlayer { ConnectionId = Context.ConnectionId, Name = name, Connected = true });
+        await Groups.AddToGroupAsync(Context.ConnectionId, roomId);
+        await Clients.Group(roomId).SendAsync("SlotsRoomUpdated", room);
+        await BroadcastSlotsRooms();
+    }
+
+    public async Task RejoinSlotsRoom(string roomId)
+    {
+        if (string.IsNullOrEmpty(roomId)) return;
+        var room = _lobby.GetSlotsRoom(roomId);
+        if (room == null) return;
+        var name = Context.User?.FindFirst(ClaimTypes.Name)?.Value ?? "Unknown";
+        var player = room.Players.FirstOrDefault(p => p.Name == name && !p.IsBot);
+        if (player == null) return;
+        player.ConnectionId = Context.ConnectionId;
+        player.Connected = true;
+        if (room.HostName == name) room.HostConnectionId = Context.ConnectionId;
+        await Groups.AddToGroupAsync(Context.ConnectionId, roomId);
+        if (room.Started)
+        {
+            _lobby.SetInGame(Context.ConnectionId, true);
+            await BroadcastLobby();
+            await Clients.Caller.SendAsync("SlotsUpdated", room);
+        }
+        else
+        {
+            await Clients.Group(roomId).SendAsync("SlotsRoomUpdated", room);
+        }
+    }
+
+    public async Task StartSlotsGame(string roomId)
+    {
+        var room = _lobby.GetSlotsRoom(roomId);
+        if (room == null || room.Started) return;
+        if (Context.ConnectionId != room.HostConnectionId) return;
+        if (room.Players.Count < 2) return;
+        room.Started = true;
+        foreach (var p in room.Players) p.Balance = room.Settings.StartingBalance;
+        await Clients.Group(roomId).SendAsync("SlotsGameStarted", room);
+        await BroadcastSlotsRooms();
+    }
+
+    public async Task LeaveSlotsRoom(string roomId)
+    {
+        var room = _lobby.GetSlotsRoom(roomId);
+        if (room == null) return;
+        var player = room.Players.FirstOrDefault(p => p.ConnectionId == Context.ConnectionId);
+        if (!room.Started)
+        {
+            await Groups.RemoveFromGroupAsync(Context.ConnectionId, roomId);
+            if (player != null) room.Players.Remove(player);
+            if (room.Players.Count == 0 || Context.ConnectionId == room.HostConnectionId)
+            { await Clients.Group(roomId).SendAsync("SlotsRoomDissolved"); _lobby.RemoveSlotsRoom(roomId); }
+            else
+            { await Clients.Group(roomId).SendAsync("SlotsRoomUpdated", room); }
+        }
+        else
+        {
+            if (player != null) player.Connected = false;
+            await Groups.RemoveFromGroupAsync(Context.ConnectionId, roomId);
+            await Clients.Group(roomId).SendAsync("PlayerLeft", player?.Name ?? "Someone");
+            if (room.Players.Where(p => !p.IsBot).All(p => !p.Connected))
+                _lobby.RemoveSlotsRoom(roomId);
+            else if (player != null && !player.HasSpun && room.Phase == SlotsPhase.Betting && player.Balance > 0)
+            {
+                player.CurrentBet = Math.Min(10, player.Balance);
+                player.Reels = SlotsEngine.SpinReels();
+                int payout = SlotsEngine.CalculatePayout(player.Reels, player.CurrentBet);
+                player.Balance = player.Balance - player.CurrentBet + payout;
+                player.LastWin = payout;
+                player.HasSpun = true;
+                await Clients.Group(roomId).SendAsync("SlotsUpdated", room);
+                if (AllSlotsSpun(room)) _ = AdvanceSlotsRoundAsync(roomId);
+            }
+        }
+        await BroadcastSlotsRooms();
+    }
+
+    public async Task KickSlotsPlayer(string roomId, string playerName)
+    {
+        var room = _lobby.GetSlotsRoom(roomId);
+        if (room == null) return;
+        if (Context.ConnectionId != room.HostConnectionId) return;
+        var player = room.Players.FirstOrDefault(p => p.Name == playerName && p.ConnectionId != room.HostConnectionId);
+        if (player == null) return;
+        await Clients.Client(player.ConnectionId).SendAsync("KickedFromRoom");
+        await Groups.RemoveFromGroupAsync(player.ConnectionId, roomId);
+        room.Players.Remove(player);
+        await Clients.Group(roomId).SendAsync("SlotsRoomUpdated", room);
+        await BroadcastSlotsRooms();
+    }
+
+    public async Task SpinSlots(string roomId, int bet)
+    {
+        var room = _lobby.GetSlotsRoom(roomId);
+        if (room == null || !room.Started || room.IsOver || room.Phase != SlotsPhase.Betting) return;
+        var player = room.Players.FirstOrDefault(p => p.ConnectionId == Context.ConnectionId && !p.IsBot);
+        if (player == null || player.HasSpun || player.Balance <= 0) return;
+        if (bet < 1 || bet > player.Balance) return;
+
+        player.CurrentBet = bet;
+        player.Reels = SlotsEngine.SpinReels();
+        int payout = SlotsEngine.CalculatePayout(player.Reels, bet);
+        player.Balance = player.Balance - bet + payout;
+        player.LastWin = payout;
+        player.HasSpun = true;
+
+        await Clients.Group(roomId).SendAsync("SlotsUpdated", room);
+        if (AllSlotsSpun(room)) _ = AdvanceSlotsRoundAsync(roomId);
+    }
+
+    public async Task StartSlotsSinglePlayer()
+    {
+        var name = Context.User?.FindFirst(ClaimTypes.Name)?.Value ?? "Unknown";
+        var roomId = Guid.NewGuid().ToString("N");
+        var room = new SlotsRoom
+        {
+            Id = roomId,
+            HostConnectionId = Context.ConnectionId,
+            HostName = name,
+            IsSinglePlayer = true,
+            Players =
+            [
+                new SlotsPlayer { ConnectionId = Context.ConnectionId, Name = name, Balance = 1000, Connected = true },
+                new SlotsPlayer { ConnectionId = "BOT_" + roomId, Name = "🎰 The Machine", Balance = 1000, IsBot = true, Connected = true }
+            ]
+        };
+        room.Settings.RoomName = "vs The Machine";
+        room.Settings.MaxPlayers = 2;
+        room.Started = true;
+        _lobby.StoreSlotsRoom(roomId, room);
+        await Groups.AddToGroupAsync(Context.ConnectionId, roomId);
+        await Clients.Caller.SendAsync("SlotsSinglePlayerStarted", roomId);
+        _ = TakeSlotsBotTurnAsync(roomId);
+    }
+
+    private static bool AllSlotsSpun(SlotsRoom room) =>
+        room.Players.All(p => p.HasSpun);
+
+    private async Task AdvanceSlotsRoundAsync(string roomId)
+    {
+        // Show results phase briefly
+        var r0 = _lobby.GetSlotsRoom(roomId);
+        if (r0 != null) { r0.Phase = SlotsPhase.Results; await _hubContext.Clients.Group(roomId).SendAsync("SlotsUpdated", r0); }
+
+        await Task.Delay(3500);
+
+        var room = _lobby.GetSlotsRoom(roomId);
+        if (room == null) return;
+
+        room.RoundsPlayed++;
+        bool allBust = room.Players.Where(p => !p.IsBot).All(p => p.Balance <= 0);
+        bool done = room.RoundsPlayed >= room.Settings.TotalRounds;
+
+        if (allBust || done)
+        {
+            room.IsOver = true;
+            room.WinnerName = room.Players.OrderByDescending(p => p.Balance).First().Name;
+            await _hubContext.Clients.Group(roomId).SendAsync("SlotsUpdated", room);
+            return;
+        }
+
+        // Reset for next round — bust players are auto-marked so they don't block
+        room.Phase = SlotsPhase.Betting;
+        foreach (var p in room.Players)
+        {
+            p.HasSpun = p.Balance <= 0;
+            if (!p.HasSpun) { p.Reels = [-1, -1, -1]; p.CurrentBet = 0; p.LastWin = 0; }
+        }
+
+        await _hubContext.Clients.Group(roomId).SendAsync("SlotsUpdated", room);
+
+        if (room.IsSinglePlayer) _ = TakeSlotsBotTurnAsync(roomId);
+    }
+
+    private async Task TakeSlotsBotTurnAsync(string roomId)
+    {
+        await Task.Delay(Random.Shared.Next(900, 2200));
+        var room = _lobby.GetSlotsRoom(roomId);
+        if (room == null || room.IsOver || room.Phase != SlotsPhase.Betting) return;
+        var bot = room.Players.FirstOrDefault(p => p.IsBot && !p.HasSpun && p.Balance > 0);
+        if (bot == null) return;
+
+        int[] amounts = new[] { 10, 25, 50, 100, 250 }.Where(a => a <= bot.Balance).ToArray();
+        int bet = amounts.Length > 0 ? amounts[Random.Shared.Next(amounts.Length)] : Math.Min(bot.Balance, 10);
+        bot.CurrentBet = bet;
+        bot.Reels = SlotsEngine.SpinReels();
+        int payout = SlotsEngine.CalculatePayout(bot.Reels, bet);
+        bot.Balance = bot.Balance - bet + payout;
+        bot.LastWin = payout;
+        bot.HasSpun = true;
+
+        await _hubContext.Clients.Group(roomId).SendAsync("SlotsUpdated", room);
+        if (AllSlotsSpun(room)) _ = AdvanceSlotsRoundAsync(roomId);
+    }
+
+    private IEnumerable<object> SlotsRoomSummaries() =>
+        _lobby.GetOpenSlotsRooms().Select(r => new
+        {
+            r.Id,
+            r.HostName,
+            RoomName = r.Settings.RoomName,
+            PlayerCount = r.Players.Count,
+            r.Settings.MaxPlayers,
+            IsFull = r.Players.Count >= r.Settings.MaxPlayers
+        });
+
+    private async Task BroadcastSlotsRooms() =>
+        await Clients.All.SendAsync("SlotsRoomList", SlotsRoomSummaries());
 
     public async Task ReplaySinglePlayerTTT(string gameId)
     {

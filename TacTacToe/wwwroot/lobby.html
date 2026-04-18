@@ -30,6 +30,10 @@
                     <span class="game-option-icon">🎲</span>
                     <span class="game-option-label">Yahtzee</span>
                 </button>
+                <button class="game-option" data-game="slots">
+                    <span class="game-option-icon">🎰</span>
+                    <span class="game-option-label">Slots</span>
+                </button>
             </div>
             <div id="tttSinglePlayer" class="sp-section" style="margin-top:2rem;">
                 <span class="sp-label">🤖 vs Computer</span>
@@ -45,6 +49,21 @@
                 <button id="createTttRoomBtn" class="btn btn-accept" style="margin-bottom:1rem;">+ Create Room</button>
                 <div id="tttRoomList" class="player-list"></div>
                 <p id="noTttRooms" class="lobby-hint" style="display:none;">No open rooms right now. Create one!</p>
+            </div>
+
+            <!-- Slots Section -->
+            <div id="slotsSection" style="display:none;">
+                <div class="sp-section" style="margin-top:2rem;">
+                    <span class="sp-label">🎰 vs The Machine</span>
+                    <div class="sp-btns">
+                        <button id="slotsSpBtn" class="btn btn-sp">Play Solo</button>
+                    </div>
+                </div>
+                <h2 class="lobby-title" style="margin-top:1.5rem;">Slots Rooms</h2>
+                <p class="lobby-hint">Create a room (up to 4 players) or join an open one.</p>
+                <button id="createSlotsRoomBtn" class="btn btn-accept" style="margin-bottom:1rem;">+ Create Room</button>
+                <div id="slotsRoomList" class="player-list"></div>
+                <p id="noSlotsRooms" class="lobby-hint" style="display:none;">No open rooms right now. Create one!</p>
             </div>
 
             <!-- Yahtzee Room Section -->
@@ -64,6 +83,17 @@
             </div>
         </main>
 
+        <div id="createSlotsRoomModal" class="modal" style="display:none">
+            <div class="modal-content">
+                <h3>🎰 Create Slots Room</h3>
+                <p>Give your room a name so friends can find it.</p>
+                <input id="newSlotsRoomName" class="guest-input" type="text" placeholder="e.g. Vegas Night" maxlength="30" style="margin-top:1.25rem;width:100%;">
+                <div class="modal-actions">
+                    <button id="createSlotsRoomConfirmBtn" class="btn btn-accept">Create Room</button>
+                    <button id="createSlotsRoomCancelBtn" class="btn btn-decline">Cancel</button>
+                </div>
+            </div>
+        </div>
         <div id="createTttRoomModal" class="modal" style="display:none">
             <div class="modal-content">
                 <h3>✕○ Create Tic Tac Toe Room</h3>

@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TacTacToe — Slots Room</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <link href="/css/style.css" rel="stylesheet">
+</head>
+<body>
+    <div class="ambient"></div>
+    <div class="noise"></div>
+    <div class="page-content">
+        <nav class="navbar">
+            <div class="logo-sm"><span class="logo-x">Tac</span><span class="logo-o">Tac</span><span class="logo-x">Toe</span></div>
+            <button id="backBtn" class="btn-logout">Back to Lobby</button>
+        </nav>
+        <main class="room-container">
+            <h2 class="lobby-title" id="roomTitle">Slots Room</h2>
+            <div class="room-invite-bar glass-card">
+                <div class="room-invite-code">
+                    <span class="room-invite-label">Room Code</span>
+                    <span class="room-code-value" id="roomCode"></span>
+                </div>
+                <button id="copyCodeBtn" class="btn-copy">&#128203; Copy Code</button>
+                <button id="copyLinkBtn" class="btn-copy btn-copy-link">&#128279; Copy Invite Link</button>
+            </div>
+
+            <div class="room-section glass-card">
+                <h3 class="room-section-title">Players <span id="playerCount" style="font-weight:500;color:var(--text-dim);">0/4</span></h3>
+                <p class="lobby-hint" style="margin-bottom:0.75rem;font-size:0.82rem;">Each player starts with <strong>$1,000</strong> — highest balance after <strong>10 rounds</strong> wins.</p>
+                <div id="roomPlayers" class="room-player-list"></div>
+            </div>
+
+            <div class="room-actions">
+                <button id="startBtn" class="btn btn-accept" style="display:none;">🎰 Start Game</button>
+                <p id="waitMsg" class="wait-for-host" style="display:none;">&#9203; Waiting for <strong id="hostNameWait">the host</strong> to start&hellip;</p>
+            </div>
+        </main>
+
+        <div id="chatWidget" class="chat-widget">
+            <button id="chatToggle" class="chat-toggle">💬 <span id="chatBadge" class="chat-badge" style="display:none">0</span></button>
+            <div id="chatPanel" class="chat-panel" style="display:none">
+                <div class="chat-header"><span>Room Chat</span><button id="chatClose" class="chat-close">✕</button></div>
+                <div id="chatMessages" class="chat-messages"></div>
+                <div class="chat-input-row"><input id="chatInput" class="chat-input" placeholder="Type a message…" maxlength="500"><button id="chatSend" class="chat-send">➤</button></div>
+            </div>
+        </div>
+    </div>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/8.0.0/signalr.min.js"></script>
+    <script src="/js/slots-room.js"></script>
+</body>
+</html>

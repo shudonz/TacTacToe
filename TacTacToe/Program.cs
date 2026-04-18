@@ -89,6 +89,20 @@ app.MapGet("/ttt-room", (HttpContext ctx) =>
     return Results.File("ttt-room.html", "text/html");
 });
 
+app.MapGet("/slots", (HttpContext ctx) =>
+{
+    if (ctx.User.Identity?.IsAuthenticated != true)
+        return Results.Redirect("/login");
+    return Results.File("slots.html", "text/html");
+});
+
+app.MapGet("/slots-room", (HttpContext ctx) =>
+{
+    if (ctx.User.Identity?.IsAuthenticated != true)
+        return Results.Redirect("/login");
+    return Results.File("slots-room.html", "text/html");
+});
+
 app.MapGet("/yahtzee", (HttpContext ctx) =>
 {
     if (ctx.User.Identity?.IsAuthenticated != true)

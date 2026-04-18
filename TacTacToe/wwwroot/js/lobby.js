@@ -19,10 +19,13 @@ async function init() {
 
     function updateSections() {
         const ttt = selectedGame === "tictactoe";
+        const slots = selectedGame === "slots";
         document.getElementById("tttSinglePlayer").style.display = ttt ? "" : "none";
         document.getElementById("tttRoomsSection").style.display = ttt ? "" : "none";
-        document.getElementById("yahtzeeSection").style.display = ttt ? "none" : "";
+        document.getElementById("yahtzeeSection").style.display = (!ttt && !slots) ? "" : "none";
+        document.getElementById("slotsSection").style.display = slots ? "" : "none";
         if (ttt) connection.invoke("GetTttRooms");
+        else if (slots) connection.invoke("GetSlotsRooms");
         else connection.invoke("GetYahtzeeRooms");
     }
 
@@ -70,6 +73,49 @@ async function init() {
         sessionStorage.setItem("tttRoomId", roomId);
         sessionStorage.setItem("isSinglePlayer", "0");
         window.location.href = "/ttt-room";
+    });
+
+    // Slots room list
+    connection.on("SlotsRoomList", rooms => {
+        const list = document.getElementById("slotsRoomList");
+        const noRooms = document.getElementById("noSlotsRooms");
+        list.innerHTML = "";
+        const open = rooms.filter(r => !r.started);
+        if (open.length === 0) {
+            noRooms.style.display = "block";
+        } else {
+            noRooms.style.display = "none";
+            open.forEach(r => {
+                const isFull = r.isFull;
+                const card = document.createElement("div");
+                card.className = "player-card room-list-card" + (isFull ? " room-full" : "");
+                const badge = isFull ? '<span class="room-badge room-badge-full">Full</span>' : '<span class="room-badge room-badge-open">Open</span>';
+                card.innerHTML =
+                    '<span class="game-option-icon" style="font-size:1.4rem;">🎰</span>'
+                    + '<div class="room-card-info"><span class="name">' + escapeHtml(r.roomName) + '</span>'
+                    + '<span class="room-card-host">Hosted by ' + escapeHtml(r.hostName) + '</span></div>'
+                    + '<div class="room-card-right"><span class="room-player-count-badge">' + r.playerCount + '/' + r.maxPlayers + '</span>'
+                    + badge + (!isFull ? '<button class="btn btn-accept room-join-btn">Join &rarr;</button>' : '') + '</div>';
+                if (!isFull) {
+                    card.querySelector(".room-join-btn").addEventListener("click", e => { e.stopPropagation(); joinSlotsRoom(r.id); });
+                    card.onclick = () => joinSlotsRoom(r.id);
+                }
+                list.appendChild(card);
+            });
+        }
+    });
+
+    connection.on("SlotsRoomCreated", roomId => {
+        sessionStorage.setItem("slotsRoomId", roomId);
+        sessionStorage.setItem("isSinglePlayer", "0");
+        window.location.href = "/slots-room";
+    });
+
+    connection.on("SlotsSinglePlayerStarted", roomId => {
+        sessionStorage.setItem("slotsRoomId", roomId);
+        sessionStorage.setItem("myName", me.name);
+        sessionStorage.setItem("isSinglePlayer", "1");
+        window.location.href = "/slots";
     });
 
     // Yahtzee room list
@@ -174,6 +220,31 @@ async function init() {
         if (e.key === "Escape") document.getElementById("createTttRoomCancelBtn").click();
     });
 
+    // Slots single player
+    document.getElementById("slotsSpBtn").addEventListener("click", () => {
+        sessionStorage.setItem("myName", me.name);
+        connection.invoke("StartSlotsSinglePlayer");
+    });
+
+    // Create Slots room
+    document.getElementById("createSlotsRoomBtn").addEventListener("click", () => {
+        document.getElementById("newSlotsRoomName").value = "";
+        document.getElementById("createSlotsRoomModal").style.display = "flex";
+        setTimeout(() => document.getElementById("newSlotsRoomName").focus(), 50);
+    });
+    document.getElementById("createSlotsRoomCancelBtn").addEventListener("click", () => {
+        document.getElementById("createSlotsRoomModal").style.display = "none";
+    });
+    document.getElementById("createSlotsRoomConfirmBtn").addEventListener("click", () => {
+        const name = document.getElementById("newSlotsRoomName").value.trim() || "Slots Room";
+        document.getElementById("createSlotsRoomModal").style.display = "none";
+        connection.invoke("CreateSlotsRoom", name);
+    });
+    document.getElementById("newSlotsRoomName").addEventListener("keydown", e => {
+        if (e.key === "Enter") document.getElementById("createSlotsRoomConfirmBtn").click();
+        if (e.key === "Escape") document.getElementById("createSlotsRoomCancelBtn").click();
+    });
+
     // Create Yahtzee room
     document.getElementById("createRoomBtn").addEventListener("click", () => {
         document.getElementById("newRoomName").value = "";
@@ -195,6 +266,14 @@ async function init() {
 
     // Chat
     initChat(connection, null, true);
+}
+
+function joinSlotsRoom(roomId) {
+    sessionStorage.setItem("isSinglePlayer", "0");
+    connection.invoke("JoinSlotsRoom", roomId).then(() => {
+        sessionStorage.setItem("slotsRoomId", roomId);
+        window.location.href = "/slots-room";
+    });
 }
 
 function joinTttRoom(roomId) {

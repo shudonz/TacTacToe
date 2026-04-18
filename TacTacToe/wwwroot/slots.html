@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TacTacToe — Slots</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <link href="/css/style.css" rel="stylesheet">
+</head>
+<body>
+    <div class="ambient"></div>
+    <div class="noise"></div>
+
+    <!-- Vegas light strip top -->
+    <div class="vegas-lights" id="vegasLights" aria-hidden="true"></div>
+
+    <div class="page-content">
+        <nav class="navbar">
+            <div class="logo-sm"><span class="logo-x">Tac</span><span class="logo-o">Tac</span><span class="logo-x">Toe</span></div>
+            <button id="backBtn" class="btn-logout">Back to Lobby</button>
+        </nav>
+        <main class="slots-main">
+
+            <!-- Round / status bar -->
+            <div class="slots-header glass-card">
+                <span id="roundLabel" class="slots-round-label">Round 1 / 10</span>
+                <span id="phaseLabel" class="slots-phase-label">Betting</span>
+            </div>
+
+            <!-- Leaderboard -->
+            <div id="leaderboard" class="slots-leaderboard glass-card"></div>
+
+            <!-- The Machine -->
+            <div class="slots-cabinet glass-card" id="slotsCabinet">
+                <!-- Cabinet top marquee -->
+                <div class="slots-marquee">
+                    <span class="slots-marquee-text">🎰&nbsp;&nbsp;LUCKY&nbsp;VEGAS&nbsp;SLOTS&nbsp;&nbsp;🎰&nbsp;&nbsp;LUCKY&nbsp;VEGAS&nbsp;SLOTS&nbsp;&nbsp;🎰&nbsp;&nbsp;LUCKY&nbsp;VEGAS&nbsp;SLOTS&nbsp;&nbsp;</span>
+                </div>
+
+                <!-- Payout table -->
+                <details class="slots-payouts">
+                    <summary>💰 Payout Table</summary>
+                    <div class="slots-payout-grid">
+                        <span>7️⃣7️⃣7️⃣</span><span class="slots-payout-val">× 100</span>
+                        <span>💎💎💎</span><span class="slots-payout-val">× 50</span>
+                        <span>⭐⭐⭐</span><span class="slots-payout-val">× 20</span>
+                        <span>🔔🔔🔔</span><span class="slots-payout-val">× 10</span>
+                        <span>🍇🍇🍇</span><span class="slots-payout-val">× 8</span>
+                        <span>🍊🍊🍊</span><span class="slots-payout-val">× 6</span>
+                        <span>🍋🍋🍋</span><span class="slots-payout-val">× 4</span>
+                        <span>🍒🍒🍒</span><span class="slots-payout-val">× 3</span>
+                        <span>🍒🍒 —</span><span class="slots-payout-val">× 2</span>
+                        <span>🍒 — —</span><span class="slots-payout-val">× 1</span>
+                    </div>
+                </details>
+
+                <!-- Reel window -->
+                <div class="slots-window">
+                    <div class="slots-reels" id="reels">
+                        <div class="slots-reel-col">
+                            <div class="slots-reel" id="r0">?</div>
+                        </div>
+                        <div class="slots-reel-sep">|</div>
+                        <div class="slots-reel-col">
+                            <div class="slots-reel" id="r1">?</div>
+                        </div>
+                        <div class="slots-reel-sep">|</div>
+                        <div class="slots-reel-col">
+                            <div class="slots-reel" id="r2">?</div>
+                        </div>
+                    </div>
+                    <!-- Win line overlay -->
+                    <div class="slots-winline" id="winLine"></div>
+                </div>
+
+                <!-- Win label -->
+                <div id="winLabel" class="slots-win-label"></div>
+
+                <!-- Bet controls -->
+                <div id="betArea" class="slots-bet-area">
+                    <div class="slots-balance-row">
+                        <span class="slots-balance-label">💵 Balance</span>
+                        <span class="slots-balance-value" id="myBalance">$1,000</span>
+                    </div>
+                    <div class="slots-bet-row">
+                        <button class="slots-bet-chip" data-amount="10">$10</button>
+                        <button class="slots-bet-chip" data-amount="25">$25</button>
+                        <button class="slots-bet-chip" data-amount="50">$50</button>
+                        <button class="slots-bet-chip" data-amount="100">$100</button>
+                        <button class="slots-bet-chip" data-amount="250">$250</button>
+                    </div>
+                    <div class="slots-spin-row">
+                        <span class="slots-current-bet">Bet: <strong id="betDisplay">$10</strong></span>
+                        <button id="spinBtn" class="btn slots-spin-btn">
+                            <span class="slots-spin-btn-inner">🎰 SPIN</span>
+                        </button>
+                    </div>
+                </div>
+                <div id="waitingMsg" class="slots-waiting" style="display:none;">⏳ Waiting for other players…</div>
+                <div id="bustMsg" class="slots-waiting" style="display:none;">💸 Out of chips! Watching the rest…</div>
+
+                <!-- Cabinet base decorations -->
+                <div class="slots-base-lights" aria-hidden="true">
+                    <span></span><span></span><span></span><span></span><span></span>
+                    <span></span><span></span><span></span><span></span><span></span>
+                </div>
+            </div>
+
+        </main>
+    </div>
+
+    <!-- Final overlay -->
+    <div id="resultOverlay" class="result-overlay" style="display:none">
+        <div class="result-card">
+            <h2 id="resultText"></h2>
+            <div id="finalScores" class="slots-final-scores"></div>
+            <button id="backToLobby" class="btn btn-outline" style="margin-top:1.5rem;">Back to Lobby</button>
+        </div>
+    </div>
+
+    <!-- Coin shower canvas (injected by JS) -->
+
+    <!-- Chat Widget -->
+    <div id="chatWidget" class="chat-widget">
+        <button id="chatToggle" class="chat-toggle">💬 <span id="chatBadge" class="chat-badge" style="display:none">0</span></button>
+        <div id="chatPanel" class="chat-panel" style="display:none">
+            <div class="chat-header"><span>Game Chat</span><button id="chatClose" class="chat-close">✕</button></div>
+            <div id="chatMessages" class="chat-messages"></div>
+            <div class="chat-input-row"><input id="chatInput" class="chat-input" placeholder="Type a message…" maxlength="500"><button id="chatSend" class="chat-send">➤</button></div>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/8.0.0/signalr.min.js"></script>
+    <script src="/js/slots.js"></script>
+</body>
+</html>
