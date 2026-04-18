@@ -519,6 +519,25 @@ body {
     box-shadow: 0 4px 20px var(--accent2-glow);
 }
 
+.btn-outline {
+    background: transparent;
+    border: 1.5px solid var(--glass-border);
+    color: var(--text-mid);
+}
+.btn-outline:hover {
+    border-color: rgba(255, 255, 255, 0.2);
+    color: var(--text);
+    background: rgba(255, 255, 255, 0.05);
+}
+
+.rematch-status {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--text-mid);
+    margin-bottom: 1rem;
+    min-height: 1.25em;
+}
+
 .spinner {
     margin: 1.5rem auto 0;
     width: 36px; height: 36px;

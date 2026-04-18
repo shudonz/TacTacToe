@@ -173,7 +173,7 @@ function playChatReceiveSound() {
    ============================================================ */
 const connection = new signalR.HubConnectionBuilder().withUrl("/gamehub").withAutomaticReconnect().build();
 const gameId = sessionStorage.getItem("gameId");
-const myMark = sessionStorage.getItem("myMark");
+let myMark = sessionStorage.getItem("myMark");
 const isSinglePlayer = sessionStorage.getItem("isSinglePlayer") === "1";
 
 document.getElementById("xName").textContent = sessionStorage.getItem("xName");
@@ -189,6 +189,14 @@ let _prevBoard = Array(9).fill(null);
 let _gameOver = false;
 
 connection.on("GameUpdated", game => {
+    // Server reset the game (SP replay) — dismiss the overlay before processing
+    if (_gameOver && !game.isOver) {
+        _gameOver = false;
+        document.getElementById("resultOverlay").style.display = "none";
+        document.getElementById("rematchArea").style.display = "none";
+        _prevBoard = Array(9).fill(null);
+    }
+
     // Detect newly placed piece → play place sound
     let newPiecePlaced = false;
     game.board.forEach((val, i) => {
@@ -215,6 +223,9 @@ connection.on("GameUpdated", game => {
             else { msg = "You lose 😢"; playLoseSound(); }
             document.getElementById("resultText").textContent = msg;
             document.getElementById("resultOverlay").style.display = "flex";
+            document.getElementById("rematchArea").style.display = "block";
+            document.getElementById("playAgainBtn").disabled = false;
+            document.getElementById("rematchStatus").textContent = "";
         }
     }
 });
@@ -226,6 +237,54 @@ cells.forEach(cell => {
             connection.invoke("MakeMove", gameId, i);
         }
     });
+});
+
+// Opponent clicked "Play Again" first — prompt this player
+connection.on("RematchRequested", requesterName => {
+    document.getElementById("rematchStatus").textContent = requesterName + " wants to play again!";
+});
+
+// Both clicked — reset the board in place (marks are swapped by the server)
+connection.on("RematchStarted", (newMark, newXName, newOName) => {
+    myMark = newMark;
+    document.getElementById("xName").textContent = newXName;
+    document.getElementById("oName").textContent = newOName;
+    document.getElementById("resultOverlay").style.display = "none";
+    document.getElementById("rematchArea").style.display = "none";
+    document.getElementById("rematchStatus").textContent = "";
+    document.getElementById("turnIndicator").textContent = myMark === "X" ? "Your turn!" : "Opponent's turn...";
+    document.getElementById("playerX").classList.toggle("active", true);
+    document.getElementById("playerO").classList.remove("active");
+    _gameOver = false;
+    _prevBoard = Array(9).fill(null);
+    cells.forEach(c => { c.textContent = ""; c.className = "cell"; });
+});
+
+// Opponent left — disable Play Again, show message
+connection.on("OpponentLeft", () => {
+    document.getElementById("rematchStatus").textContent = "Opponent left the game.";
+    const btn = document.getElementById("playAgainBtn");
+    if (btn) btn.style.display = "none";
+    // If mid-game, show the overlay so the player isn't just staring at a frozen board
+    if (!_gameOver) {
+        _gameOver = true;
+        document.getElementById("turnIndicator").textContent = "";
+        document.getElementById("resultText").textContent = "Opponent left.";
+        document.getElementById("resultOverlay").style.display = "flex";
+        document.getElementById("rematchArea").style.display = "block";
+        document.getElementById("playAgainBtn").style.display = "none";
+        playLoseSound();
+    }
+});
+
+document.getElementById("playAgainBtn").addEventListener("click", () => {
+    if (isSinglePlayer) {
+        connection.invoke("ReplaySinglePlayerTTT", gameId);
+    } else {
+        document.getElementById("playAgainBtn").disabled = true;
+        document.getElementById("rematchStatus").textContent = "Waiting for opponent…";
+        connection.invoke("RequestRematch", gameId);
+    }
 });
 
 function goBack() {

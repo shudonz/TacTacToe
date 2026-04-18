@@ -65,6 +65,10 @@ public class LobbyService
 
     public void RemoveGame(string id) => _games.TryRemove(id, out _);
 
+    public IEnumerable<GameState> GetGamesForConnection(string connectionId) =>
+        _games.Values.Where(g => !g.IsSinglePlayer &&
+            (g.XConnectionId == connectionId || g.OConnectionId == connectionId));
+
     // --- TTT Rooms ---
 
     public TttRoom CreateTttRoom(string id, string hostConnectionId)
@@ -161,6 +165,8 @@ public class GameState
     public string? Winner { get; set; }
     public bool IsSinglePlayer { get; set; }
     public string AiDifficulty { get; set; } = "regular";
+    public bool RematchRequestedByX { get; set; }
+    public bool RematchRequestedByO { get; set; }
 }
 
 public class TttRoom

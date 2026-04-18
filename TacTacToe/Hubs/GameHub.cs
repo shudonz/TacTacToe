@@ -67,6 +67,36 @@ public class GameHub : Hub
             });
         }
 
+        // Defer TTT game disconnect — grace period lets page-navigation reconnects through JoinGame
+        var gameSnapshot = _lobby.GetGamesForConnection(disconnectedConnectionId).ToList();
+        if (gameSnapshot.Count > 0)
+        {
+            _ = Task.Run(async () =>
+            {
+                await Task.Delay(TimeSpan.FromSeconds(8));
+                foreach (var snap in gameSnapshot)
+                {
+                    var game = _lobby.GetGame(snap.Id);
+                    if (game == null) continue;
+
+                    // If the player reconnected, JoinGame will have updated their ConnectionId
+                    bool stillX = game.XConnectionId == disconnectedConnectionId;
+                    bool stillO = game.OConnectionId == disconnectedConnectionId;
+                    if (!stillX && !stillO) continue;
+
+                    if (!game.IsOver)
+                    {
+                        game.IsOver = true;
+                        game.Winner = stillX ? "O" : "X";
+                        await _hubContext.Clients.Group(game.Id).SendAsync("GameUpdated", game);
+                    }
+
+                    await _hubContext.Clients.Group(game.Id).SendAsync("OpponentLeft");
+                    _lobby.RemoveGame(game.Id);
+                }
+            });
+        }
+
         // Defer Yahtzee mid-game disconnect handling to give page-navigations time to rejoin
         var roomsSnapshot = _lobby.GetActiveRoomsForConnection(disconnectedConnectionId).ToList();
         if (roomsSnapshot.Count > 0)
@@ -263,6 +293,20 @@ public class GameHub : Hub
     private async Task BroadcastTttRooms() =>
         await Clients.All.SendAsync("TttRoomList", TttRoomSummaries());
 
+    public async Task ReplaySinglePlayerTTT(string gameId)
+    {
+        var game = _lobby.GetGame(gameId);
+        if (game == null || !game.IsOver || !game.IsSinglePlayer) return;
+        if (Context.ConnectionId != game.XConnectionId) return;
+
+        game.Board = new string[9];
+        game.CurrentTurn = "X";
+        game.IsOver = false;
+        game.Winner = null;
+
+        await Clients.Group(gameId).SendAsync("GameUpdated", game);
+    }
+
     public async Task StartSinglePlayerTTT(string difficulty)
     {
         var name = Context.User?.FindFirst(ClaimTypes.Name)?.Value ?? "Unknown";
@@ -346,17 +390,54 @@ public class GameHub : Hub
     public async Task LeaveGame(string gameId)
     {
         var game = _lobby.GetGame(gameId);
-        if (game != null)
+        if (game == null) return;
+
+        if (!game.IsOver)
         {
-            if (!game.IsOver)
-            {
-                game.IsOver = true;
-                game.Winner = Context.ConnectionId == game.XConnectionId ? "O" : "X";
-                await Clients.Group(gameId).SendAsync("GameUpdated", game);
-            }
-            await Groups.RemoveFromGroupAsync(game.XConnectionId, gameId);
-            await Groups.RemoveFromGroupAsync(game.OConnectionId, gameId);
-            _lobby.RemoveGame(gameId);
+            game.IsOver = true;
+            game.Winner = Context.ConnectionId == game.XConnectionId ? "O" : "X";
+            await Clients.Group(gameId).SendAsync("GameUpdated", game);
+        }
+
+        // Notify any remaining player in the group before we remove the leaver
+        await Clients.OthersInGroup(gameId).SendAsync("OpponentLeft");
+        await Groups.RemoveFromGroupAsync(Context.ConnectionId, gameId);
+        _lobby.RemoveGame(gameId);
+    }
+
+    public async Task RequestRematch(string gameId)
+    {
+        var game = _lobby.GetGame(gameId);
+        if (game == null || !game.IsOver) return;
+
+        var isX = Context.ConnectionId == game.XConnectionId;
+        var isO = Context.ConnectionId == game.OConnectionId;
+        if (!isX && !isO) return;
+
+        if (isX) game.RematchRequestedByX = true;
+        else game.RematchRequestedByO = true;
+
+        if (game.RematchRequestedByX && game.RematchRequestedByO)
+        {
+            // Swap marks so each player gets the other side
+            (game.XConnectionId, game.OConnectionId) = (game.OConnectionId, game.XConnectionId);
+            (game.XName, game.OName) = (game.OName, game.XName);
+            game.Board = new string[9];
+            game.CurrentTurn = "X";
+            game.IsOver = false;
+            game.Winner = null;
+            game.RematchRequestedByX = false;
+            game.RematchRequestedByO = false;
+
+            await Clients.Client(game.XConnectionId).SendAsync("RematchStarted", "X", game.XName, game.OName);
+            await Clients.Client(game.OConnectionId).SendAsync("RematchStarted", "O", game.XName, game.OName);
+            await Clients.Group(gameId).SendAsync("GameUpdated", game);
+        }
+        else
+        {
+            // Tell the other player someone wants a rematch
+            var requesterName = isX ? game.XName : game.OName;
+            await Clients.OthersInGroup(gameId).SendAsync("RematchRequested", requesterName);
         }
     }
 
