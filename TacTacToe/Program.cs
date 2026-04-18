@@ -62,10 +62,15 @@ app.MapGet("/lobby", (HttpContext ctx) =>
     if (ctx.User.Identity?.IsAuthenticated != true)
     {
         var join = ctx.Request.Query["join"].ToString();
-        var returnUrl = string.IsNullOrEmpty(join)
-            ? "/lobby"
-            : $"/lobby?join={Uri.EscapeDataString(join)}";
-        return Results.Redirect($"/login?returnUrl={Uri.EscapeDataString(returnUrl)}");
+        var game = ctx.Request.Query["game"].ToString();
+        string lobbyUrl;
+        if (string.IsNullOrEmpty(join))
+            lobbyUrl = "/lobby";
+        else if (string.IsNullOrEmpty(game))
+            lobbyUrl = $"/lobby?join={Uri.EscapeDataString(join)}";
+        else
+            lobbyUrl = $"/lobby?join={Uri.EscapeDataString(join)}&game={Uri.EscapeDataString(game)}";
+        return Results.Redirect($"/login?returnUrl={Uri.EscapeDataString(lobbyUrl)}");
     }
     return Results.File("lobby.html", "text/html");
 });
@@ -75,6 +80,13 @@ app.MapGet("/game", (HttpContext ctx) =>
     if (ctx.User.Identity?.IsAuthenticated != true)
         return Results.Redirect("/login");
     return Results.File("game.html", "text/html");
+});
+
+app.MapGet("/ttt-room", (HttpContext ctx) =>
+{
+    if (ctx.User.Identity?.IsAuthenticated != true)
+        return Results.Redirect("/login");
+    return Results.File("ttt-room.html", "text/html");
 });
 
 app.MapGet("/yahtzee", (HttpContext ctx) =>

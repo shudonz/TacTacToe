@@ -1,5 +1,4 @@
-﻿using System.Collections.Concurrent;
-using System.Security.Claims;
+﻿using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.SignalR;
 using TacTacToe.Services;
@@ -11,7 +10,6 @@ public class GameHub : Hub
 {
     private readonly LobbyService _lobby;
     private readonly IHubContext<GameHub> _hubContext;
-    private static readonly ConcurrentDictionary<string, (string target, string gameType)> PendingChallenges = new();
 
     public GameHub(LobbyService lobby, IHubContext<GameHub> hubContext)
     {
@@ -34,8 +32,42 @@ public class GameHub : Hub
         var name = Context.User?.FindFirst(ClaimTypes.Name)?.Value ?? "Unknown";
         var disconnectedConnectionId = Context.ConnectionId;
 
-        // Snapshot rooms now, but defer the leave handling to give page-navigations
-        // time to call RejoinYahtzeeRoom on their new connection.
+        // Defer TTT room cleanup — the same grace period used for Yahtzee is needed here
+        // because creating/joining a room causes a page navigation which disconnects the
+        // lobby connection before RejoinTttRoom can update the player's ConnectionId.
+        var tttSnapshot = _lobby.GetTttRoomsForConnection(disconnectedConnectionId).ToList();
+        if (tttSnapshot.Count > 0)
+        {
+            _ = Task.Run(async () =>
+            {
+                await Task.Delay(TimeSpan.FromSeconds(8));
+                bool changed = false;
+                foreach (var snap in tttSnapshot)
+                {
+                    var room = _lobby.GetTttRoom(snap.Id);
+                    if (room == null || room.Started) continue;
+                    var player = room.Players.FirstOrDefault(p => p.Name == name);
+                    // If the player rejoined, RejoinTttRoom will have updated their ConnectionId
+                    if (player == null || player.ConnectionId != disconnectedConnectionId) continue;
+
+                    room.Players.Remove(player);
+                    changed = true;
+                    if (room.Players.Count == 0 || room.HostName == name)
+                    {
+                        await _hubContext.Clients.Group(room.Id).SendAsync("TttRoomDissolved");
+                        _lobby.RemoveTttRoom(room.Id);
+                    }
+                    else
+                    {
+                        await _hubContext.Clients.Group(room.Id).SendAsync("TttRoomUpdated", room);
+                    }
+                }
+                if (changed)
+                    await _hubContext.Clients.All.SendAsync("TttRoomList", TttRoomSummaries());
+            });
+        }
+
+        // Defer Yahtzee mid-game disconnect handling to give page-navigations time to rejoin
         var roomsSnapshot = _lobby.GetActiveRoomsForConnection(disconnectedConnectionId).ToList();
         if (roomsSnapshot.Count > 0)
         {
@@ -47,8 +79,6 @@ public class GameHub : Hub
                     var room = _lobby.GetRoom(snapshot.Id);
                     if (room == null || room.IsOver) continue;
                     var player = room.Players.FirstOrDefault(p => p.Name == name);
-                    // If the player rejoined, their ConnectionId will have been updated by
-                    // RejoinYahtzeeRoom — the old ID means they never came back.
                     if (player == null || player.ConnectionId != disconnectedConnectionId) continue;
                     await HandleYahtzeePlayerDisconnected(room, disconnectedConnectionId, name);
                 }
@@ -104,41 +134,134 @@ public class GameHub : Hub
         await BroadcastYahtzeeRooms();
     }
 
-    public async Task Challenge(string targetConnectionId, string gameType = "tictactoe")
+    /* ================================================================
+       TTT Room Methods
+       ================================================================ */
+
+    public async Task CreateTttRoom(string? roomName = null)
     {
-        if (gameType != "tictactoe") return; // Yahtzee uses room system now
-        if (targetConnectionId == Context.ConnectionId) return;
-        var challenger = _lobby.GetPlayer(Context.ConnectionId);
-        if (challenger == null) return;
-        var target = _lobby.GetPlayer(targetConnectionId);
-        if (target == null || target.InGame) return;
-
-        PendingChallenges[Context.ConnectionId] = (targetConnectionId, gameType);
-
-        await Clients.Client(targetConnectionId).SendAsync("ChallengeReceived",
-            Context.ConnectionId, challenger.Name, challenger.Picture, gameType);
+        var roomId = Guid.NewGuid().ToString("N");
+        var room = _lobby.CreateTttRoom(roomId, Context.ConnectionId);
+        if (!string.IsNullOrWhiteSpace(roomName))
+            room.RoomName = roomName.Trim()[..Math.Min(roomName.Trim().Length, 30)];
+        await Groups.AddToGroupAsync(Context.ConnectionId, roomId);
+        await Clients.Caller.SendAsync("TttRoomCreated", roomId);
+        await BroadcastTttRooms();
     }
 
-    public async Task AcceptChallenge(string challengerConnectionId)
+    public async Task GetTttRooms()
     {
-        if (!PendingChallenges.TryRemove(challengerConnectionId, out var pending)) return;
-        if (pending.target != Context.ConnectionId) return;
+        await Clients.Caller.SendAsync("TttRoomList", TttRoomSummaries());
+    }
 
+    public async Task JoinTttRoom(string roomId)
+    {
+        var room = _lobby.GetTttRoom(roomId);
+        if (room == null || room.Started || room.IsOver) return;
+        if (room.Players.Count >= 2) return;
+        if (room.Players.Any(p => p.ConnectionId == Context.ConnectionId)) return;
+
+        var name = Context.User?.FindFirst(ClaimTypes.Name)?.Value ?? "Unknown";
+        room.Players.Add(new TttPlayer { ConnectionId = Context.ConnectionId, Name = name });
+        await Groups.AddToGroupAsync(Context.ConnectionId, roomId);
+        await Clients.Group(roomId).SendAsync("TttRoomUpdated", room);
+        await BroadcastTttRooms();
+    }
+
+    public async Task RejoinTttRoom(string roomId)
+    {
+        if (string.IsNullOrEmpty(roomId)) return;
+        var room = _lobby.GetTttRoom(roomId);
+        if (room == null || room.Started) return;
+        var name = Context.User?.FindFirst(ClaimTypes.Name)?.Value ?? "Unknown";
+        var player = room.Players.FirstOrDefault(p => p.Name == name);
+        if (player == null) return;
+        player.ConnectionId = Context.ConnectionId;
+        if (room.HostName == name) room.HostConnectionId = Context.ConnectionId;
+        await Groups.AddToGroupAsync(Context.ConnectionId, roomId);
+        await Clients.Group(roomId).SendAsync("TttRoomUpdated", room);
+    }
+
+    public async Task StartTttGame(string roomId)
+    {
+        var room = _lobby.GetTttRoom(roomId);
+        if (room == null || room.Started) return;
+        if (Context.ConnectionId != room.HostConnectionId) return;
+        if (room.Players.Count < 2) return;
+
+        room.Started = true;
         var gameId = Guid.NewGuid().ToString("N");
+        var x = room.Players[0]; // host plays X
+        var o = room.Players[1];
 
-        var game = _lobby.CreateGame(gameId, challengerConnectionId, Context.ConnectionId);
-        await Groups.AddToGroupAsync(challengerConnectionId, gameId);
-        await Groups.AddToGroupAsync(Context.ConnectionId, gameId);
-        await Clients.Client(challengerConnectionId).SendAsync("GameStarted", gameId, "X", game.XName, game.OName);
-        await Clients.Client(Context.ConnectionId).SendAsync("GameStarted", gameId, "O", game.XName, game.OName);
+        var game = new GameState
+        {
+            Id = gameId,
+            XConnectionId = x.ConnectionId,
+            OConnectionId = o.ConnectionId,
+            XName = x.Name,
+            OName = o.Name,
+            Board = new string[9],
+            CurrentTurn = "X",
+            IsOver = false
+        };
+        _lobby.StoreGame(gameId, game);
+        await Groups.AddToGroupAsync(x.ConnectionId, gameId);
+        await Groups.AddToGroupAsync(o.ConnectionId, gameId);
+        await Clients.Client(x.ConnectionId).SendAsync("GameStarted", gameId, "X", x.Name, o.Name);
+        await Clients.Client(o.ConnectionId).SendAsync("GameStarted", gameId, "O", x.Name, o.Name);
+
+        _lobby.RemoveTttRoom(roomId);
+        await BroadcastTttRooms();
     }
 
-    public async Task DeclineChallenge(string challengerConnectionId)
+    public async Task LeaveTttRoom(string roomId)
     {
-        PendingChallenges.TryRemove(challengerConnectionId, out _);
-        var decliner = _lobby.GetPlayer(Context.ConnectionId);
-        await Clients.Client(challengerConnectionId).SendAsync("ChallengeDeclined", decliner?.Name ?? "Someone");
+        var room = _lobby.GetTttRoom(roomId);
+        if (room == null) return;
+
+        var player = room.Players.FirstOrDefault(p => p.ConnectionId == Context.ConnectionId);
+        await Groups.RemoveFromGroupAsync(Context.ConnectionId, roomId);
+        if (player != null) room.Players.Remove(player);
+
+        if (room.Players.Count == 0 || Context.ConnectionId == room.HostConnectionId)
+        {
+            await Clients.Group(roomId).SendAsync("TttRoomDissolved");
+            _lobby.RemoveTttRoom(roomId);
+        }
+        else
+        {
+            await Clients.Group(roomId).SendAsync("TttRoomUpdated", room);
+        }
+        await BroadcastTttRooms();
     }
+
+    public async Task KickTttPlayer(string roomId, string playerName)
+    {
+        var room = _lobby.GetTttRoom(roomId);
+        if (room == null) return;
+        if (Context.ConnectionId != room.HostConnectionId) return;
+        var player = room.Players.FirstOrDefault(p => p.Name == playerName && p.ConnectionId != room.HostConnectionId);
+        if (player == null) return;
+        await Clients.Client(player.ConnectionId).SendAsync("KickedFromRoom");
+        await Groups.RemoveFromGroupAsync(player.ConnectionId, roomId);
+        room.Players.Remove(player);
+        await Clients.Group(roomId).SendAsync("TttRoomUpdated", room);
+        await BroadcastTttRooms();
+    }
+
+    private IEnumerable<object> TttRoomSummaries() =>
+        _lobby.GetOpenTttRooms().Select(r => new
+        {
+            r.Id,
+            r.HostName,
+            r.RoomName,
+            PlayerCount = r.Players.Count,
+            IsFull = r.Players.Count >= 2
+        });
+
+    private async Task BroadcastTttRooms() =>
+        await Clients.All.SendAsync("TttRoomList", TttRoomSummaries());
 
     public async Task StartSinglePlayerTTT(string difficulty)
     {

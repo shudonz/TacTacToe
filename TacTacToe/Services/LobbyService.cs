@@ -7,6 +7,7 @@ public class LobbyService
     private readonly ConcurrentDictionary<string, LobbyPlayer> _players = new();
     private readonly ConcurrentDictionary<string, GameState> _games = new();
     private readonly ConcurrentDictionary<string, YahtzeeRoom> _yahtzeeRooms = new();
+    private readonly ConcurrentDictionary<string, TttRoom> _tttRooms = new();
 
     public bool AddPlayer(string connectionId, string name, string email, string picture)
     {
@@ -63,6 +64,38 @@ public class LobbyService
     public void StoreGame(string id, GameState game) => _games[id] = game;
 
     public void RemoveGame(string id) => _games.TryRemove(id, out _);
+
+    // --- TTT Rooms ---
+
+    public TttRoom CreateTttRoom(string id, string hostConnectionId)
+    {
+        var host = _players.GetValueOrDefault(hostConnectionId);
+        var room = new TttRoom
+        {
+            Id = id,
+            HostConnectionId = hostConnectionId,
+            HostName = host?.Name ?? "Host",
+            Players = [new TttPlayer { ConnectionId = hostConnectionId, Name = host?.Name ?? "Host" }]
+        };
+        _tttRooms[id] = room;
+        return room;
+    }
+
+    public TttRoom? GetTttRoom(string id)
+    {
+        _tttRooms.TryGetValue(id, out var r);
+        return r;
+    }
+
+    public void StoreTttRoom(string id, TttRoom room) => _tttRooms[id] = room;
+
+    public IEnumerable<TttRoom> GetOpenTttRooms() =>
+        _tttRooms.Values.Where(r => !r.Started && !r.IsOver);
+
+    public IEnumerable<TttRoom> GetTttRoomsForConnection(string connectionId) =>
+        _tttRooms.Values.Where(r => !r.Started && r.Players.Any(p => p.ConnectionId == connectionId));
+
+    public void RemoveTttRoom(string id) => _tttRooms.TryRemove(id, out _);
 
     // --- Yahtzee Rooms ---
 
@@ -128,4 +161,21 @@ public class GameState
     public string? Winner { get; set; }
     public bool IsSinglePlayer { get; set; }
     public string AiDifficulty { get; set; } = "regular";
+}
+
+public class TttRoom
+{
+    public string Id { get; set; } = "";
+    public string HostConnectionId { get; set; } = "";
+    public string HostName { get; set; } = "";
+    public string RoomName { get; set; } = "Tic Tac Toe";
+    public List<TttPlayer> Players { get; set; } = [];
+    public bool Started { get; set; }
+    public bool IsOver { get; set; }
+}
+
+public class TttPlayer
+{
+    public string ConnectionId { get; set; } = "";
+    public string Name { get; set; } = "";
 }

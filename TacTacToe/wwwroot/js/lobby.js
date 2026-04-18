@@ -1,5 +1,4 @@
 const connection = new signalR.HubConnectionBuilder().withUrl("/gamehub").withAutomaticReconnect().build();
-let myConnectionId = null;
 let selectedGame = "tictactoe";
 
 async function init() {
@@ -20,37 +19,60 @@ async function init() {
 
     function updateSections() {
         const ttt = selectedGame === "tictactoe";
-        document.getElementById("tttSection").style.display = ttt ? "" : "none";
-        document.getElementById("tttHint").style.display = ttt ? "" : "none";
         document.getElementById("tttSinglePlayer").style.display = ttt ? "" : "none";
-        document.getElementById("playerList").style.display = ttt ? "" : "none";
-        document.getElementById("waitingMsg").style.display = ttt ? "" : "none";
+        document.getElementById("tttRoomsSection").style.display = ttt ? "" : "none";
         document.getElementById("yahtzeeSection").style.display = ttt ? "none" : "";
-        if (!ttt) connection.invoke("GetYahtzeeRooms");
+        if (ttt) connection.invoke("GetTttRooms");
+        else connection.invoke("GetYahtzeeRooms");
     }
 
-    connection.on("LobbyUpdated", players => {
-        const list = document.getElementById("playerList");
-        const waiting = document.getElementById("waitingMsg");
+    // TTT room list
+    connection.on("TttRoomList", rooms => {
+        const list = document.getElementById("tttRoomList");
+        const noRooms = document.getElementById("noTttRooms");
         list.innerHTML = "";
-        const others = players.filter(p => p.connectionId !== myConnectionId);
-        if (others.length === 0) {
-            waiting.style.display = selectedGame === "tictactoe" ? "block" : "none";
+        const open = rooms.filter(r => !r.started);
+        if (open.length === 0) {
+            noRooms.style.display = "block";
         } else {
-            waiting.style.display = "none";
+            noRooms.style.display = "none";
+            open.forEach(r => {
+                const isFull = r.isFull;
+                const card = document.createElement("div");
+                card.className = "player-card room-list-card" + (isFull ? " room-full" : "");
+                const badge = isFull
+                    ? '<span class="room-badge room-badge-full">Full</span>'
+                    : '<span class="room-badge room-badge-open">Open</span>';
+                card.innerHTML =
+                    '<span class="game-option-icon" style="font-size:1.4rem;">✕○</span>'
+                    + '<div class="room-card-info">'
+                    + '<span class="name">' + escapeHtml(r.roomName) + '</span>'
+                    + '<span class="room-card-host">Hosted by ' + escapeHtml(r.hostName) + '</span>'
+                    + '</div>'
+                    + '<div class="room-card-right">'
+                    + '<span class="room-player-count-badge">' + r.playerCount + '/2</span>'
+                    + badge
+                    + (!isFull ? '<button class="btn btn-accept room-join-btn">Join &rarr;</button>' : '')
+                    + '</div>';
+                if (!isFull) {
+                    card.querySelector(".room-join-btn").addEventListener("click", e => {
+                        e.stopPropagation();
+                        joinTttRoom(r.id);
+                    });
+                    card.onclick = () => joinTttRoom(r.id);
+                }
+                list.appendChild(card);
+            });
         }
-        players.forEach(p => {
-            const isMe = p.connectionId === myConnectionId;
-            const card = document.createElement("div");
-            card.className = "player-card" + (isMe ? " is-me" : "");
-            card.innerHTML = '<img class="avatar" src="' + (p.picture || "https://ui-avatars.com/api/?name=" + encodeURIComponent(p.name) + "&background=6c63ff&color=fff") + '" alt="">'
-                + '<span class="name">' + escapeHtml(p.name) + '</span>'
-                + (isMe ? '<span class="you-tag">You</span>' : "");
-            if (!isMe) card.onclick = () => challengePlayer(p.connectionId);
-            list.appendChild(card);
-        });
     });
 
+    connection.on("TttRoomCreated", roomId => {
+        sessionStorage.setItem("tttRoomId", roomId);
+        sessionStorage.setItem("isSinglePlayer", "0");
+        window.location.href = "/ttt-room";
+    });
+
+    // Yahtzee room list
     connection.on("YahtzeeRoomList", rooms => {
         const list = document.getElementById("roomList");
         const noRooms = document.getElementById("noRooms");
@@ -81,9 +103,9 @@ async function init() {
                 if (!isFull) {
                     card.querySelector(".room-join-btn").addEventListener("click", e => {
                         e.stopPropagation();
-                        joinRoom(r.id);
+                        joinYahtzeeRoom(r.id);
                     });
-                    card.onclick = () => joinRoom(r.id);
+                    card.onclick = () => joinYahtzeeRoom(r.id);
                 }
                 list.appendChild(card);
             });
@@ -96,25 +118,14 @@ async function init() {
         window.location.href = "/yahtzee-room";
     });
 
-    connection.on("ChallengeReceived", (challengerId, name, picture, gameType) => {
-        document.getElementById("challengeText").textContent = name + " challenges you to Tic Tac Toe!";
-        document.getElementById("challengeModal").style.display = "flex";
-        document.getElementById("acceptBtn").onclick = () => {
-            sessionStorage.setItem("isSinglePlayer", "0");
-            connection.invoke("AcceptChallenge", challengerId);
-            document.getElementById("challengeModal").style.display = "none";
-        };
-        document.getElementById("declineBtn").onclick = () => {
-            connection.invoke("DeclineChallenge", challengerId);
-            document.getElementById("challengeModal").style.display = "none";
-        };
+    connection.on("YahtzeeSinglePlayerStarted", roomId => {
+        sessionStorage.setItem("gameId", roomId);
+        sessionStorage.setItem("myName", me.name);
+        sessionStorage.setItem("isSinglePlayer", "1");
+        window.location.href = "/yahtzee";
     });
 
-    connection.on("ChallengeDeclined", name => {
-        document.getElementById("pendingModal").style.display = "none";
-        alert(name + " declined your challenge.");
-    });
-
+    // TTT SP navigates through lobby GameStarted
     connection.on("GameStarted", (gameId, mark, xName, oName) => {
         sessionStorage.setItem("gameId", gameId);
         sessionStorage.setItem("myMark", mark);
@@ -123,15 +134,7 @@ async function init() {
         window.location.href = "/game";
     });
 
-    connection.on("YahtzeeSinglePlayerStarted", roomId => {
-        sessionStorage.setItem("gameId", roomId);
-        sessionStorage.setItem("myName", me.name);
-        sessionStorage.setItem("isSinglePlayer", "1");
-        window.location.href = "/yahtzee";
-    });
-
     await connection.start();
-    myConnectionId = connection.connectionId;
     updateSections();
 
     // Single player — Tic Tac Toe
@@ -142,30 +145,49 @@ async function init() {
     document.getElementById("yahtzeeRegularBtn").addEventListener("click", () => spInvoke("StartYahtzeeSinglePlayer", "regular"));
     document.getElementById("yahtzeeHardBtn").addEventListener("click",    () => spInvoke("StartYahtzeeSinglePlayer", "hard"));
 
-    // Auto-join if an invite link was used (?join=roomId)
-    const joinParam = new URLSearchParams(window.location.search).get("join");
+    // Auto-join via invite link (?join=roomId&game=ttt or ?join=roomId for Yahtzee)
+    const params = new URLSearchParams(window.location.search);
+    const joinParam = params.get("join");
+    const gameParam = params.get("game");
     if (joinParam) {
         window.history.replaceState({}, "", "/lobby");
-        joinRoom(joinParam);
+        if (gameParam === "ttt") joinTttRoom(joinParam);
+        else joinYahtzeeRoom(joinParam);
     }
 
-    // Create room button — open modal
+    // Create TTT room
+    document.getElementById("createTttRoomBtn").addEventListener("click", () => {
+        document.getElementById("newTttRoomName").value = "";
+        document.getElementById("createTttRoomModal").style.display = "flex";
+        setTimeout(() => document.getElementById("newTttRoomName").focus(), 50);
+    });
+    document.getElementById("createTttRoomCancelBtn").addEventListener("click", () => {
+        document.getElementById("createTttRoomModal").style.display = "none";
+    });
+    document.getElementById("createTttRoomConfirmBtn").addEventListener("click", () => {
+        const name = document.getElementById("newTttRoomName").value.trim() || "Tic Tac Toe";
+        document.getElementById("createTttRoomModal").style.display = "none";
+        connection.invoke("CreateTttRoom", name);
+    });
+    document.getElementById("newTttRoomName").addEventListener("keydown", e => {
+        if (e.key === "Enter") document.getElementById("createTttRoomConfirmBtn").click();
+        if (e.key === "Escape") document.getElementById("createTttRoomCancelBtn").click();
+    });
+
+    // Create Yahtzee room
     document.getElementById("createRoomBtn").addEventListener("click", () => {
         document.getElementById("newRoomName").value = "";
         document.getElementById("createRoomModal").style.display = "flex";
         setTimeout(() => document.getElementById("newRoomName").focus(), 50);
     });
-
     document.getElementById("createRoomCancelBtn").addEventListener("click", () => {
         document.getElementById("createRoomModal").style.display = "none";
     });
-
     document.getElementById("createRoomConfirmBtn").addEventListener("click", () => {
         const name = document.getElementById("newRoomName").value.trim() || "Yahtzee Room";
         document.getElementById("createRoomModal").style.display = "none";
         connection.invoke("CreateYahtzeeRoom", name);
     });
-
     document.getElementById("newRoomName").addEventListener("keydown", e => {
         if (e.key === "Enter") document.getElementById("createRoomConfirmBtn").click();
         if (e.key === "Escape") document.getElementById("createRoomCancelBtn").click();
@@ -175,7 +197,15 @@ async function init() {
     initChat(connection, null, true);
 }
 
-function joinRoom(roomId) {
+function joinTttRoom(roomId) {
+    sessionStorage.setItem("isSinglePlayer", "0");
+    connection.invoke("JoinTttRoom", roomId).then(() => {
+        sessionStorage.setItem("tttRoomId", roomId);
+        window.location.href = "/ttt-room";
+    });
+}
+
+function joinYahtzeeRoom(roomId) {
     sessionStorage.setItem("isSinglePlayer", "0");
     connection.invoke("JoinYahtzeeRoom", roomId).then(() => {
         sessionStorage.setItem("yahtzeeRoomId", roomId);
@@ -183,15 +213,7 @@ function joinRoom(roomId) {
     });
 }
 
-function challengePlayer(connId) {
-    sessionStorage.setItem("isSinglePlayer", "0");
-    connection.invoke("Challenge", connId, "tictactoe");
-    document.getElementById("pendingModal").style.display = "flex";
-    setTimeout(() => { document.getElementById("pendingModal").style.display = "none"; }, 15000);
-}
-
-// Ensures the connection is live before invoking a hub method — handles
-// the mobile case where the browser may have suspended the WebSocket.
+// Ensures the connection is live before invoking a hub method
 function spInvoke(method, difficulty) {
     const btn = document.getElementById(
         method === "StartSinglePlayerTTT"
