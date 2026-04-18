@@ -174,9 +174,14 @@ function playChatReceiveSound() {
 const connection = new signalR.HubConnectionBuilder().withUrl("/gamehub").withAutomaticReconnect().build();
 const gameId = sessionStorage.getItem("gameId");
 const myMark = sessionStorage.getItem("myMark");
+const isSinglePlayer = sessionStorage.getItem("isSinglePlayer") === "1";
 
 document.getElementById("xName").textContent = sessionStorage.getItem("xName");
-document.getElementById("oName").textContent = sessionStorage.getItem("oName");
+document.getElementById("oName").textContent = sessionStorage.getItem("oName") + (isSinglePlayer ? " 🤖" : "");
+
+if (isSinglePlayer) {
+    document.getElementById("chatWidget").style.display = "none";
+}
 
 const cells = document.querySelectorAll(".cell");
 
@@ -199,7 +204,7 @@ connection.on("GameUpdated", game => {
 
     if (!game.isOver) {
         const isMyTurn = game.currentTurn === myMark;
-        document.getElementById("turnIndicator").textContent = isMyTurn ? "Your turn!" : "Opponent's turn...";
+        document.getElementById("turnIndicator").textContent = isMyTurn ? "Your turn!" : (isSinglePlayer ? "Thinking..." : "Opponent's turn...");
     } else {
         if (!_gameOver) {
             _gameOver = true;
@@ -233,9 +238,9 @@ document.getElementById("backToLobby").onclick = goBack;
 connection.start().then(() => {
     return connection.invoke("JoinGame", gameId, myMark);
 }).then(() => {
-    document.getElementById("turnIndicator").textContent = myMark === "X" ? "Your turn!" : "Opponent's turn...";
+    document.getElementById("turnIndicator").textContent = myMark === "X" ? "Your turn!" : (isSinglePlayer ? "Thinking..." : "Opponent's turn...");
     document.getElementById("playerX").classList.toggle("active", true);
-    initChat(connection, gameId, false);
+    if (!isSinglePlayer) initChat(connection, gameId, false);
 });
 
 function initChat(conn, groupId) {

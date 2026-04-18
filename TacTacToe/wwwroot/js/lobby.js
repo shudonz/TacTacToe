@@ -91,6 +91,7 @@ async function init() {
     });
 
     connection.on("YahtzeeRoomCreated", roomId => {
+        sessionStorage.setItem("isSinglePlayer", "0");
         sessionStorage.setItem("yahtzeeRoomId", roomId);
         window.location.href = "/yahtzee-room";
     });
@@ -99,6 +100,7 @@ async function init() {
         document.getElementById("challengeText").textContent = name + " challenges you to Tic Tac Toe!";
         document.getElementById("challengeModal").style.display = "flex";
         document.getElementById("acceptBtn").onclick = () => {
+            sessionStorage.setItem("isSinglePlayer", "0");
             connection.invoke("AcceptChallenge", challengerId);
             document.getElementById("challengeModal").style.display = "none";
         };
@@ -124,6 +126,7 @@ async function init() {
     connection.on("YahtzeeSinglePlayerStarted", roomId => {
         sessionStorage.setItem("gameId", roomId);
         sessionStorage.setItem("myName", me.name);
+        sessionStorage.setItem("isSinglePlayer", "1");
         window.location.href = "/yahtzee";
     });
 
@@ -132,8 +135,8 @@ async function init() {
     updateSections();
 
     // Single player — Tic Tac Toe
-    document.getElementById("tttRegularBtn").addEventListener("click", () => spInvoke("StartSinglePlayerTTT", "regular"));
-    document.getElementById("tttHardBtn").addEventListener("click",    () => spInvoke("StartSinglePlayerTTT", "hard"));
+    document.getElementById("tttRegularBtn").addEventListener("click", () => { sessionStorage.setItem("isSinglePlayer", "1"); spInvoke("StartSinglePlayerTTT", "regular"); });
+    document.getElementById("tttHardBtn").addEventListener("click",    () => { sessionStorage.setItem("isSinglePlayer", "1"); spInvoke("StartSinglePlayerTTT", "hard"); });
 
     // Single player — Yahtzee
     document.getElementById("yahtzeeRegularBtn").addEventListener("click", () => spInvoke("StartYahtzeeSinglePlayer", "regular"));
@@ -173,6 +176,7 @@ async function init() {
 }
 
 function joinRoom(roomId) {
+    sessionStorage.setItem("isSinglePlayer", "0");
     connection.invoke("JoinYahtzeeRoom", roomId).then(() => {
         sessionStorage.setItem("yahtzeeRoomId", roomId);
         window.location.href = "/yahtzee-room";
@@ -180,6 +184,7 @@ function joinRoom(roomId) {
 }
 
 function challengePlayer(connId) {
+    sessionStorage.setItem("isSinglePlayer", "0");
     connection.invoke("Challenge", connId, "tictactoe");
     document.getElementById("pendingModal").style.display = "flex";
     setTimeout(() => { document.getElementById("pendingModal").style.display = "none"; }, 15000);

@@ -1120,6 +1120,21 @@ body {
     box-shadow: 0 0 16px var(--accent-glow);
 }
 .player-bar-item.is-me { border-style: dashed; }
+.player-bar-item.player-disconnected {
+    opacity: 0.4;
+    filter: grayscale(0.6);
+}
+.disconnected-tag {
+    font-size: 0.68rem;
+    font-weight: 700;
+    background: rgba(255, 92, 138, 0.18);
+    color: var(--accent2);
+    border: 1px solid rgba(255, 92, 138, 0.35);
+    border-radius: 4px;
+    padding: 1px 5px;
+    margin-left: 4px;
+    vertical-align: middle;
+}
 .player-bar-name {
     font-weight: 700;
     font-size: 0.78rem;
@@ -1482,4 +1497,32 @@ body {
     .chat-panel { width: calc(100vw - 32px); right: -8px; }
     .chat-widget { bottom: 16px; right: 16px; }
     .chat-toggle { width: 48px; height: 48px; font-size: 1.3rem; }
+}
+
+/* ============================================================
+   GAME TOAST NOTIFICATION
+   ============================================================ */
+.game-toast {
+    position: fixed;
+    bottom: 80px;
+    left: 50%;
+    transform: translateX(-50%) translateY(20px);
+    background: rgba(20, 18, 40, 0.96);
+    border: 1.5px solid rgba(255, 92, 138, 0.4);
+    color: var(--text);
+    font-family: var(--font);
+    font-size: 0.92rem;
+    font-weight: 600;
+    padding: 12px 24px;
+    border-radius: 50px;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+    z-index: 9998;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s ease, transform 0.3s ease;
+    white-space: nowrap;
+}
+.game-toast.game-toast-show {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
 }

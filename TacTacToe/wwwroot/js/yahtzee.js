@@ -202,6 +202,11 @@ const catDescs = {
 const connection = new signalR.HubConnectionBuilder().withUrl("/gamehub").withAutomaticReconnect().build();
 const gameId = sessionStorage.getItem("gameId");
 const myName = sessionStorage.getItem("myName");
+const isSinglePlayer = sessionStorage.getItem("isSinglePlayer") === "1";
+
+if (isSinglePlayer) {
+    document.getElementById("chatWidget").style.display = "none";
+}
 let currentRoom = null;
 
 const playerColors = [
@@ -305,10 +310,12 @@ function renderPlayerBar(room) {
     bar.innerHTML = "";
     room.players.forEach((p, i) => {
         const el = document.createElement("div");
-        el.className = "player-bar-item" + (i === room.currentPlayerIndex && !room.isOver ? " active" : "");
+        const disconnected = !p.connected;
+        el.className = "player-bar-item" + (i === room.currentPlayerIndex && !room.isOver ? " active" : "") + (disconnected ? " player-disconnected" : "");
         if (p.name === myName) el.classList.add("is-me");
         el.style.borderColor = playerColors[i];
-        el.innerHTML = '<span class="player-bar-name" style="color:' + playerColors[i] + '">' + escapeHtml(p.name) + '</span>' +
+        const displayName = (isSinglePlayer && p.name !== myName) ? p.name + " 🤖" : p.name;
+        el.innerHTML = '<span class="player-bar-name" style="color:' + playerColors[i] + '">' + escapeHtml(displayName) + (disconnected ? ' <span class="disconnected-tag">left</span>' : '') + '</span>' +
             '<span class="player-bar-score">' + totalScore(p.scores, room.settings) + '</span>';
         bar.appendChild(el);
     });
@@ -417,6 +424,10 @@ connection.on("YahtzeeUpdated", room => {
     }
 });
 
+connection.on("PlayerLeft", name => {
+    showToast("⚠️ " + escapeHtml(name) + " left the game");
+});
+
 // Roll button
 document.getElementById("rollBtn").addEventListener("click", () => {
     playDiceRollSound();
@@ -433,9 +444,21 @@ document.getElementById("backToLobby").onclick = goBack;
 // Connect
 document.getElementById("turnIndicator").textContent = "Loading game...";
 connection.start().then(() => {
-    initChat(connection, gameId, false);
+    if (!isSinglePlayer) initChat(connection, gameId, false);
     return connection.invoke("RejoinYahtzeeRoom", gameId);
 });
+
+function showToast(msg) {
+    const t = document.createElement("div");
+    t.className = "game-toast";
+    t.innerHTML = msg;
+    document.body.appendChild(t);
+    requestAnimationFrame(() => t.classList.add("game-toast-show"));
+    setTimeout(() => {
+        t.classList.remove("game-toast-show");
+        t.addEventListener("transitionend", () => t.remove(), { once: true });
+    }, 4000);
+}
 
 function initChat(conn, groupId, isLobby) {
     let chatOpen = false;

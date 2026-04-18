@@ -31,9 +31,77 @@ public class GameHub : Hub
 
     public override async Task OnDisconnectedAsync(Exception? exception)
     {
-        _lobby.RemovePlayer(Context.ConnectionId);
+        var name = Context.User?.FindFirst(ClaimTypes.Name)?.Value ?? "Unknown";
+        var disconnectedConnectionId = Context.ConnectionId;
+
+        // Snapshot rooms now, but defer the leave handling to give page-navigations
+        // time to call RejoinYahtzeeRoom on their new connection.
+        var roomsSnapshot = _lobby.GetActiveRoomsForConnection(disconnectedConnectionId).ToList();
+        if (roomsSnapshot.Count > 0)
+        {
+            _ = Task.Run(async () =>
+            {
+                await Task.Delay(TimeSpan.FromSeconds(10));
+                foreach (var snapshot in roomsSnapshot)
+                {
+                    var room = _lobby.GetRoom(snapshot.Id);
+                    if (room == null || room.IsOver) continue;
+                    var player = room.Players.FirstOrDefault(p => p.Name == name);
+                    // If the player rejoined, their ConnectionId will have been updated by
+                    // RejoinYahtzeeRoom — the old ID means they never came back.
+                    if (player == null || player.ConnectionId != disconnectedConnectionId) continue;
+                    await HandleYahtzeePlayerDisconnected(room, disconnectedConnectionId, name);
+                }
+            });
+        }
+
+        _lobby.RemovePlayer(disconnectedConnectionId);
         await BroadcastLobby();
         await base.OnDisconnectedAsync(exception);
+    }
+
+    private async Task HandleYahtzeePlayerDisconnected(YahtzeeRoom room, string connectionId, string playerName)
+    {
+        var player = room.Players.FirstOrDefault(p => p.ConnectionId == connectionId);
+        if (player == null) return;
+
+        player.Connected = false;
+
+        // Notify remaining players (connection is gone so use _hubContext, not Groups)
+        await _hubContext.Clients.Group(room.Id).SendAsync("PlayerLeft", playerName);
+
+        // If no human players remain, clean up silently
+        if (room.Players.Where(p => !p.IsBot).All(p => !p.Connected))
+        {
+            _lobby.RemoveRoom(room.Id);
+            return;
+        }
+
+        // If it was the leaving player's turn, advance to the next connected player
+        if (room.CurrentPlayerConnectionId == connectionId)
+        {
+            int next = room.CurrentPlayerIndex;
+            int tries = 0;
+            do
+            {
+                next = (next + 1) % room.Players.Count;
+                tries++;
+            }
+            while (!room.Players[next].Connected && tries < room.Players.Count);
+
+            room.CurrentPlayerIndex = next;
+            room.RollsLeft = room.Settings.RollsPerTurn;
+            room.Held = new bool[room.Settings.NumberOfDice];
+            room.Dice = new int[room.Settings.NumberOfDice];
+
+            // Trigger AI turn if the next player is a bot
+            var nextPlayer = room.Players[next];
+            if (nextPlayer.IsBot && !room.IsOver)
+                _ = TakeYahtzeeAiBotTurnAsync(room.Id, nextPlayer.AiDifficulty);
+        }
+
+        await _hubContext.Clients.Group(room.Id).SendAsync("YahtzeeUpdated", room);
+        await BroadcastYahtzeeRooms();
     }
 
     public async Task Challenge(string targetConnectionId, string gameType = "tictactoe")
@@ -42,6 +110,8 @@ public class GameHub : Hub
         if (targetConnectionId == Context.ConnectionId) return;
         var challenger = _lobby.GetPlayer(Context.ConnectionId);
         if (challenger == null) return;
+        var target = _lobby.GetPlayer(targetConnectionId);
+        if (target == null || target.InGame) return;
 
         PendingChallenges[Context.ConnectionId] = (targetConnectionId, gameType);
 
@@ -109,6 +179,8 @@ public class GameHub : Hub
             return;
 
         await Groups.AddToGroupAsync(Context.ConnectionId, gameId);
+        _lobby.SetInGame(Context.ConnectionId, true);
+        await BroadcastLobby();
         await Clients.Caller.SendAsync("GameUpdated", game);
     }
 
@@ -167,7 +239,7 @@ public class GameHub : Hub
 
     private async Task BroadcastLobby()
     {
-        var players = _lobby.GetPlayers().Select(p => new
+        var players = _lobby.GetLobbyPlayers().Select(p => new
         {
             p.ConnectionId,
             p.Name,
@@ -244,9 +316,15 @@ public class GameHub : Hub
         if (room.HostName == name) room.HostConnectionId = Context.ConnectionId;
         await Groups.AddToGroupAsync(Context.ConnectionId, roomId);
         if (room.Started)
+        {
+            _lobby.SetInGame(Context.ConnectionId, true);
+            await BroadcastLobby();
             await Clients.Caller.SendAsync("YahtzeeUpdated", room);
+        }
         else
+        {
             await Clients.Group(roomId).SendAsync("YahtzeeRoomUpdated", room);
+        }
     }
 
     public async Task UpdateYahtzeeSettings(string roomId, YahtzeeSettings settings)

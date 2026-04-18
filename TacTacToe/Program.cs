@@ -50,13 +50,23 @@ app.MapPost("/login", async (HttpContext ctx) =>
         CookieAuthenticationDefaults.AuthenticationScheme,
         new ClaimsPrincipal(identity),
         new AuthenticationProperties { IsPersistent = true });
-    return Results.Redirect("/lobby");
+
+    var returnUrl = form["returnUrl"].ToString();
+    if (string.IsNullOrEmpty(returnUrl) || !returnUrl.StartsWith("/"))
+        returnUrl = "/lobby";
+    return Results.Redirect(returnUrl);
 });
 
 app.MapGet("/lobby", (HttpContext ctx) =>
 {
     if (ctx.User.Identity?.IsAuthenticated != true)
-        return Results.Redirect("/login");
+    {
+        var join = ctx.Request.Query["join"].ToString();
+        var returnUrl = string.IsNullOrEmpty(join)
+            ? "/lobby"
+            : $"/lobby?join={Uri.EscapeDataString(join)}";
+        return Results.Redirect($"/login?returnUrl={Uri.EscapeDataString(returnUrl)}");
+    }
     return Results.File("lobby.html", "text/html");
 });
 

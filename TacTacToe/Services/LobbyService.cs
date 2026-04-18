@@ -26,6 +26,15 @@ public class LobbyService
         return p;
     }
 
+    public void SetInGame(string connectionId, bool inGame)
+    {
+        if (_players.TryGetValue(connectionId, out var p))
+            p.InGame = inGame;
+    }
+
+    public IEnumerable<LobbyPlayer> GetLobbyPlayers() =>
+        _players.Values.Where(p => !p.InGame);
+
     public GameState CreateGame(string id, string xConnectionId, string oConnectionId)
     {
         var x = _players.GetValueOrDefault(xConnectionId);
@@ -82,6 +91,10 @@ public class LobbyService
     public IEnumerable<YahtzeeRoom> GetPublicRooms() =>
         _yahtzeeRooms.Values.Where(r => !r.Settings.IsPrivate && !r.Started && !r.IsOver);
 
+    public IEnumerable<YahtzeeRoom> GetActiveRoomsForConnection(string connectionId) =>
+        _yahtzeeRooms.Values.Where(r => r.Started && !r.IsOver &&
+            r.Players.Any(p => p.ConnectionId == connectionId));
+
     public void RemoveRoom(string id) => _yahtzeeRooms.TryRemove(id, out _);
 }
 
@@ -91,6 +104,7 @@ public class LobbyPlayer
     public string Name { get; set; }
     public string Email { get; set; }
     public string Picture { get; set; }
+    public bool InGame { get; set; }
 
     public LobbyPlayer(string connectionId, string name, string email, string picture)
     {

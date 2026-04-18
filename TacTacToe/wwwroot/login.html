@@ -18,9 +18,14 @@
             <p class="login-subtitle">Enter your name to start playing</p>
             <form action="/login" method="post" class="guest-form">
                 <input type="text" name="name" placeholder="Your name" maxlength="20" required class="guest-input" autocomplete="off" />
+                <input type="hidden" name="returnUrl" id="returnUrl" value="/lobby" />
                 <button type="submit" class="guest-btn">Let's Play</button>
             </form>
         </div>
     </div>
+    <script>
+        const ret = new URLSearchParams(window.location.search).get("returnUrl");
+        if (ret && ret.startsWith("/")) document.getElementById("returnUrl").value = ret;
+    </script>
 </body>
 </html>
