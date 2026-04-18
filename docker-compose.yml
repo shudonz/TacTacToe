@@ -1,0 +1,9 @@
+﻿services:
+  tactactoe:
+    build: .
+    ports:
+      - "8080:8080"
+    environment:
+      - Authentication__Google__ClientId=${GOOGLE_CLIENT_ID}
+      - Authentication__Google__ClientSecret=${GOOGLE_CLIENT_SECRET}
+    restart: unless-stopped
