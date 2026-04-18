@@ -1,6 +1,19 @@
-﻿# TacTacToe
+﻿# TacTacToeHub
 
-A real-time multiplayer Tic Tac Toe game with Google login, lobby system, and live gameplay via SignalR.
+A real-time multiplayer game hub with Google login, a shared lobby, and live gameplay via SignalR. Currently features three games: **Tic Tac Toe**, **Yahtzee**, and **Slots**.
+
+## Games
+
+- **Tic Tac Toe** — Classic 1v1 board game. Challenge another online player and play in real-time.
+- **Yahtzee** — Multiplayer dice game. Roll and score across standard Yahtzee categories with other players in a shared room.
+- **Slots** — Spin the reels and try your luck in a shared slots room.
+
+## Tech Stack
+
+- **Backend:** ASP.NET Core (.NET 10), SignalR
+- **Frontend:** Vanilla HTML/CSS/JavaScript
+- **Auth:** Google OAuth 2.0
+- **Containerization:** Docker / Docker Compose
 
 ## Setup
 
@@ -41,6 +54,6 @@ dotnet run
 
 1. Sign in with Google
 2. See online players in the lobby
-3. Click a player to challenge them
-4. They accept/decline the challenge
-5. Play Tic Tac Toe in real-time!
+3. Choose a game to play
+4. **Tic Tac Toe:** Click a player to challenge them — they accept or decline, then play in real-time
+5. **Yahtzee / Slots:** Join a shared room and play together with other online players
