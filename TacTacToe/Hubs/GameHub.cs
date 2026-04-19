@@ -81,14 +81,18 @@ public class GameHub : Hub
                     await _hubContext.Clients.Group(room.Id).SendAsync("PlayerLeft", name);
                     if (!player.HasSpun && room.Phase == SlotsPhase.Betting)
                     {
-                        int bet = Math.Min(10, Math.Max(1, player.Balance));
                         if (player.Balance > 0)
                         {
-                            player.CurrentBet = bet;
+                            var (betPerLine, activePaylines) = ChooseAutoSlotsBet(player.Balance);
+                            player.BetPerLine = betPerLine;
+                            player.ActivePaylines = activePaylines;
+                            player.CurrentBet = betPerLine * activePaylines;
                             player.Reels = SlotsEngine.SpinReels();
-                            int payout = SlotsEngine.CalculatePayout(player.Reels, bet);
-                            player.Balance = player.Balance - bet + payout;
-                            player.LastWin = payout;
+                            var spin = SlotsEngine.EvaluateSpin(player.Reels, betPerLine, activePaylines);
+                            player.Balance = player.Balance - player.CurrentBet + spin.Payout;
+                            player.LastWin = spin.Payout;
+                            player.WinningPaylines = spin.WinningPaylines;
+                            player.TotalMultiplier = spin.TotalMultiplier;
                         }
                         player.HasSpun = true;
                         await _hubContext.Clients.Group(room.Id).SendAsync("SlotsUpdated", room);
@@ -511,11 +515,16 @@ public class GameHub : Hub
                 _lobby.RemoveSlotsRoom(roomId);
             else if (player != null && !player.HasSpun && room.Phase == SlotsPhase.Betting && player.Balance > 0)
             {
-                player.CurrentBet = Math.Min(10, player.Balance);
+                var (betPerLine, activePaylines) = ChooseAutoSlotsBet(player.Balance);
+                player.BetPerLine = betPerLine;
+                player.ActivePaylines = activePaylines;
+                player.CurrentBet = betPerLine * activePaylines;
                 player.Reels = SlotsEngine.SpinReels();
-                int payout = SlotsEngine.CalculatePayout(player.Reels, player.CurrentBet);
-                player.Balance = player.Balance - player.CurrentBet + payout;
-                player.LastWin = payout;
+                var spin = SlotsEngine.EvaluateSpin(player.Reels, betPerLine, activePaylines);
+                player.Balance = player.Balance - player.CurrentBet + spin.Payout;
+                player.LastWin = spin.Payout;
+                player.WinningPaylines = spin.WinningPaylines;
+                player.TotalMultiplier = spin.TotalMultiplier;
                 player.HasSpun = true;
                 await Clients.Group(roomId).SendAsync("SlotsUpdated", room);
                 if (AllSlotsSpun(room)) _ = AdvanceSlotsRoundAsync(roomId);
@@ -538,19 +547,26 @@ public class GameHub : Hub
         await BroadcastSlotsRooms();
     }
 
-    public async Task SpinSlots(string roomId, int bet)
+    public async Task SpinSlots(string roomId, int betPerLine, int activePaylines)
     {
         var room = _lobby.GetSlotsRoom(roomId);
         if (room == null || !room.Started || room.IsOver || room.Phase != SlotsPhase.Betting) return;
         var player = room.Players.FirstOrDefault(p => p.ConnectionId == Context.ConnectionId && !p.IsBot);
         if (player == null || player.HasSpun || player.Balance <= 0) return;
-        if (bet < 1 || bet > player.Balance) return;
+        activePaylines = Math.Clamp(activePaylines, 1, SlotsEngine.MaxPaylines);
+        if (betPerLine < 1) return;
+        int totalBet = betPerLine * activePaylines;
+        if (totalBet < 1 || totalBet > player.Balance) return;
 
-        player.CurrentBet = bet;
+        player.BetPerLine = betPerLine;
+        player.ActivePaylines = activePaylines;
+        player.CurrentBet = totalBet;
         player.Reels = SlotsEngine.SpinReels();
-        int payout = SlotsEngine.CalculatePayout(player.Reels, bet);
-        player.Balance = player.Balance - bet + payout;
-        player.LastWin = payout;
+        var spin = SlotsEngine.EvaluateSpin(player.Reels, betPerLine, activePaylines);
+        player.Balance = player.Balance - totalBet + spin.Payout;
+        player.LastWin = spin.Payout;
+        player.WinningPaylines = spin.WinningPaylines;
+        player.TotalMultiplier = spin.TotalMultiplier;
         player.HasSpun = true;
 
         await Clients.Group(roomId).SendAsync("SlotsUpdated", room);
@@ -613,7 +629,16 @@ public class GameHub : Hub
         foreach (var p in room.Players)
         {
             p.HasSpun = p.Balance <= 0;
-            if (!p.HasSpun) { p.Reels = [-1, -1, -1]; p.CurrentBet = 0; p.LastWin = 0; }
+            if (!p.HasSpun)
+            {
+                p.Reels = SlotsEngine.UnspunReels();
+                p.CurrentBet = 0;
+                p.BetPerLine = 0;
+                p.ActivePaylines = 0;
+                p.LastWin = 0;
+                p.WinningPaylines = [];
+                p.TotalMultiplier = 0;
+            }
         }
 
         await _hubContext.Clients.Group(roomId).SendAsync("SlotsUpdated", room);
@@ -629,13 +654,16 @@ public class GameHub : Hub
         var bot = room.Players.FirstOrDefault(p => p.IsBot && !p.HasSpun && p.Balance > 0);
         if (bot == null) return;
 
-        int[] amounts = new[] { 10, 25, 50, 100, 250 }.Where(a => a <= bot.Balance).ToArray();
-        int bet = amounts.Length > 0 ? amounts[Random.Shared.Next(amounts.Length)] : Math.Min(bot.Balance, 10);
-        bot.CurrentBet = bet;
+        var (betPerLine, activePaylines) = ChooseAutoSlotsBet(bot.Balance);
+        bot.BetPerLine = betPerLine;
+        bot.ActivePaylines = activePaylines;
+        bot.CurrentBet = betPerLine * activePaylines;
         bot.Reels = SlotsEngine.SpinReels();
-        int payout = SlotsEngine.CalculatePayout(bot.Reels, bet);
-        bot.Balance = bot.Balance - bet + payout;
-        bot.LastWin = payout;
+        var spin = SlotsEngine.EvaluateSpin(bot.Reels, betPerLine, activePaylines);
+        bot.Balance = bot.Balance - bot.CurrentBet + spin.Payout;
+        bot.LastWin = spin.Payout;
+        bot.WinningPaylines = spin.WinningPaylines;
+        bot.TotalMultiplier = spin.TotalMultiplier;
         bot.HasSpun = true;
 
         await _hubContext.Clients.Group(roomId).SendAsync("SlotsUpdated", room);
@@ -655,6 +683,25 @@ public class GameHub : Hub
 
     private async Task BroadcastSlotsRooms() =>
         await Clients.All.SendAsync("SlotsRoomList", SlotsRoomSummaries());
+
+    private static (int BetPerLine, int ActivePaylines) ChooseAutoSlotsBet(int balance)
+    {
+        if (balance <= 0) return (1, 1);
+
+        int[] paylineOptions = [5, 3, 1];
+        int[] betPerLineOptions = [50, 25, 10, 5, 2, 1];
+
+        foreach (var lines in paylineOptions)
+        {
+            if (lines > balance) continue;
+            foreach (var perLine in betPerLineOptions)
+            {
+                if (perLine * lines <= balance) return (perLine, lines);
+            }
+        }
+
+        return (1, 1);
+    }
 
     /* ================================================================
        Concentration Madness Methods
