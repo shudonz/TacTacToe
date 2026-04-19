@@ -41,37 +41,43 @@
                 <details class="slots-payouts">
                     <summary>&#128176; Payout Table</summary>
                     <div class="slots-payout-grid">
-                        <span>7&#xFE0F;&#x20E3;7&#xFE0F;&#x20E3;7&#xFE0F;&#x20E3;</span><span class="slots-payout-val">&times; 100</span>
-                        <span>&#128142;&#128142;&#128142;</span><span class="slots-payout-val">&times; 50</span>
-                        <span>⭐⭐⭐</span><span class="slots-payout-val">&times; 20</span>
-                        <span>&#128276;&#128276;&#128276;</span><span class="slots-payout-val">&times; 10</span>
-                        <span>&#127815;&#127815;&#127815;</span><span class="slots-payout-val">&times; 8</span>
-                        <span>&#127819;&#127819;&#127819;</span><span class="slots-payout-val">&times; 6</span>
-                        <span>&#127818;&#127818;&#127818;</span><span class="slots-payout-val">&times; 4</span>
-                        <span>&#127826;&#127826;&#127826;</span><span class="slots-payout-val">&times; 3</span>
-                        <span>&#127826;&#127826; &#x2605;</span><span class="slots-payout-val">&times; 2</span>
-                        <span>&#127826; &#x2605;&#x2605;</span><span class="slots-payout-val">&times; 1</span>
+                        <span>7&#xFE0F;&#x20E3;7&#xFE0F;&#x20E3;7&#xFE0F;&#x20E3;</span><span class="slots-payout-val">&times;100 / line</span>
+                        <span>&#128142;&#128142;&#128142;</span><span class="slots-payout-val">&times;50 / line</span>
+                        <span>⭐⭐⭐</span><span class="slots-payout-val">&times;20 / line</span>
+                        <span>&#128276;&#128276;&#128276;</span><span class="slots-payout-val">&times;10 / line</span>
+                        <span>&#127815;&#127815;&#127815;</span><span class="slots-payout-val">&times;8 / line</span>
+                        <span>&#127819;&#127819;&#127819;</span><span class="slots-payout-val">&times;6 / line</span>
+                        <span>&#127818;&#127818;&#127818;</span><span class="slots-payout-val">&times;4 / line</span>
+                        <span>&#127826;&#127826;&#127826;</span><span class="slots-payout-val">&times;3 / line</span>
+                        <span>1 cherry on a line</span><span class="slots-payout-val">&times;1 / line</span>
+                        <span>2 cherries on a line</span><span class="slots-payout-val">&times;2 / line</span>
+                    </div>
+                    <div class="slots-payline-help">
+                        Active lines: Top, Middle, Bottom, Diagonal ↘, Diagonal ↗
                     </div>
                 </details>
 
                 <!-- Reel window -->
                 <div class="slots-window">
                     <div class="slots-reels" id="reels">
-                        <div class="slots-reel-col">
-                            <div class="slots-reel" id="r0">?</div>
+                        <div class="slots-reel-row">
+                            <div class="slots-reel" id="r00">?</div>
+                            <div class="slots-reel" id="r01">?</div>
+                            <div class="slots-reel" id="r02">?</div>
                         </div>
-                        <div class="slots-reel-sep">|</div>
-                        <div class="slots-reel-col">
-                            <div class="slots-reel" id="r1">?</div>
+                        <div class="slots-reel-row">
+                            <div class="slots-reel" id="r10">?</div>
+                            <div class="slots-reel" id="r11">?</div>
+                            <div class="slots-reel" id="r12">?</div>
                         </div>
-                        <div class="slots-reel-sep">|</div>
-                        <div class="slots-reel-col">
-                            <div class="slots-reel" id="r2">?</div>
+                        <div class="slots-reel-row">
+                            <div class="slots-reel" id="r20">?</div>
+                            <div class="slots-reel" id="r21">?</div>
+                            <div class="slots-reel" id="r22">?</div>
                         </div>
                     </div>
-                    <!-- Win line overlay -->
-                    <div class="slots-winline" id="winLine"></div>
                 </div>
+                <div id="paylineLegend" class="slots-payline-legend"></div>
 
                 <!-- Win label -->
                 <div id="winLabel" class="slots-win-label"></div>
@@ -83,14 +89,21 @@
                         <span class="slots-balance-value" id="myBalance">$1,000</span>
                     </div>
                     <div class="slots-bet-row">
-                        <button class="slots-bet-chip" data-amount="10">$10</button>
-                        <button class="slots-bet-chip" data-amount="25">$25</button>
-                        <button class="slots-bet-chip" data-amount="50">$50</button>
-                        <button class="slots-bet-chip" data-amount="100">$100</button>
-                        <button class="slots-bet-chip" data-amount="250">$250</button>
+                        <span class="slots-control-label">Bet / line</span>
+                        <button class="slots-bet-chip" data-bet-per-line="2">$2</button>
+                        <button class="slots-bet-chip" data-bet-per-line="5">$5</button>
+                        <button class="slots-bet-chip" data-bet-per-line="10">$10</button>
+                        <button class="slots-bet-chip" data-bet-per-line="25">$25</button>
+                        <button class="slots-bet-chip" data-bet-per-line="50">$50</button>
+                    </div>
+                    <div class="slots-lines-row">
+                        <span class="slots-control-label">Paylines</span>
+                        <button class="slots-line-chip" data-lines="1">1</button>
+                        <button class="slots-line-chip" data-lines="3">3</button>
+                        <button class="slots-line-chip" data-lines="5">5</button>
                     </div>
                     <div class="slots-spin-row">
-                        <span class="slots-current-bet">Bet: <strong id="betDisplay">$10</strong></span>
+                        <span class="slots-current-bet">Total Bet: <strong id="betDisplay">$10</strong></span>
                         <button id="spinBtn" class="btn slots-spin-btn">
                             <span class="slots-spin-btn-inner">&#127920; SPIN</span>
                         </button>

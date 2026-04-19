@@ -1765,7 +1765,7 @@ body {
    SLOTS â€” LAYOUT
    ============================================================ */
 .slots-main {
-    max-width: 520px;
+    max-width: 760px;
     margin: 0 auto;
     display: flex;
     flex-direction: column;
@@ -1802,7 +1802,8 @@ body {
 .slots-lb-row.is-me { color: var(--accent); font-weight: 700; }
 .slots-lb-rank { width: 28px; text-align: center; flex-shrink: 0; }
 .slots-lb-name { flex: 1; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.slots-lb-reels { font-size: 1rem; flex-shrink: 0; }
+.slots-lb-lines { font-size: 0.72rem; color: var(--text-dim); flex-shrink: 0; }
+.slots-lb-reels { font-size: 0.92rem; flex-shrink: 0; letter-spacing: 0.04em; }
 .slots-lb-win { font-size: 0.78rem; font-weight: 800; color: #4ade80; flex-shrink: 0; }
 .slots-lb-bust { font-size: 0.7rem; font-weight: 800; color: #f87171; padding: 1px 6px; border: 1px solid rgba(248,113,113,0.3); border-radius: 4px; flex-shrink: 0; }
 .slots-lb-balance { font-weight: 800; font-size: 0.95rem; flex-shrink: 0; margin-left: auto; color: var(--text); }
@@ -1866,12 +1867,17 @@ body {
 }
 .slots-payout-grid {
     display: grid;
-    grid-template-columns: 1fr 1fr 1fr 1fr;
+    grid-template-columns: minmax(0, 1fr) auto;
     gap: 4px 12px;
     padding: 8px 18px 12px;
     font-size: 0.82rem;
 }
 .slots-payout-val { font-weight: 800; color: #4ade80; }
+.slots-payline-help {
+    padding: 0 18px 10px;
+    font-size: 0.75rem;
+    color: var(--text-dim);
+}
 
 /* Reel window */
 .slots-window {
@@ -1883,23 +1889,28 @@ body {
 }
 .slots-reels {
     display: flex;
-    align-items: center;
+    flex-direction: column;
+    gap: 10px;
     background: rgba(0,0,0,0.45);
     border: 2px solid rgba(255,255,255,0.08);
     border-radius: 16px;
     padding: 12px 16px;
     box-shadow: inset 0 4px 24px rgba(0,0,0,0.6);
 }
-.slots-reel-col { display: flex; align-items: center; justify-content: center; }
-.slots-reel-sep { color: rgba(255,255,255,0.15); font-size: 1.6rem; padding: 0 4px; }
+.slots-reel-row {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(64px, 1fr));
+    gap: 10px;
+}
 .slots-reel {
-    width: 78px; height: 88px;
+    width: 84px; height: 82px;
     background: linear-gradient(180deg, rgba(196,231,233,0.06) 0%, rgba(0,0,0,0.3) 100%);
     border: 1.5px solid rgba(255,255,255,0.1);
     border-radius: 12px;
     display: flex; align-items: center; justify-content: center;
     font-size: 2.5rem;
     box-shadow: inset 0 2px 10px rgba(0,0,0,0.5);
+    transition: box-shadow 0.2s ease, border-color 0.2s ease;
 }
 
 /* Reel animations */
@@ -1921,20 +1932,39 @@ body {
     100% { transform: scaleY(1)    scaleX(1); }
 }
 
-/* Win line */
-.slots-winline {
-    position: absolute; top: 50%; left: 5%; right: 5%;
-    height: 4px; border-radius: 2px;
-    background: transparent;
-    transform: translateY(-50%);
-    pointer-events: none;
-}
-.slots-winline-active {
-    background: linear-gradient(90deg, transparent, #fbbf24, #fbbf24, transparent);
-    box-shadow: 0 0 12px 3px rgba(251,191,36,0.7);
+.slots-reel.line-win {
+    border-color: #fbbf24;
+    box-shadow: inset 0 2px 10px rgba(0,0,0,0.45), 0 0 14px rgba(251,191,36,0.65);
     animation: winLinePulse 0.35s ease-in-out 4;
 }
-@keyframes winLinePulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+@keyframes winLinePulse { 0%,100%{opacity:1} 50%{opacity:0.55} }
+
+.slots-payline-legend {
+    width: 100%;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 8px;
+    padding: 0.25rem 1rem 0.8rem;
+}
+.slots-payline-badge {
+    font-size: 0.72rem;
+    font-weight: 700;
+    color: var(--text-dim);
+    border: 1px solid rgba(196,231,233,0.22);
+    border-radius: 999px;
+    padding: 4px 10px;
+    background: rgba(196,231,233,0.04);
+}
+.slots-payline-badge.active {
+    color: var(--text-mid);
+    border-color: rgba(18,145,158,0.35);
+}
+.slots-payline-badge.win {
+    color: #fbbf24;
+    border-color: rgba(251,191,36,0.55);
+    background: rgba(251,191,36,0.12);
+}
 
 /* Win label */
 .slots-win-label {
@@ -1964,6 +1994,16 @@ body {
 .slots-balance-label { font-size:0.82rem; font-weight:600; color:var(--text-dim); text-transform:uppercase; letter-spacing:0.06em; }
 .slots-balance-value { font-size:1.2rem; font-weight:900; color:#fbbf24; text-shadow:0 0 10px rgba(251,191,36,0.4); }
 .slots-bet-row { display:flex; gap:8px; flex-wrap:wrap; justify-content:center; }
+.slots-lines-row { display:flex; gap:8px; flex-wrap:wrap; justify-content:center; }
+.slots-control-label {
+    align-self: center;
+    font-size: 0.75rem;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    padding: 0 4px;
+}
 .slots-bet-chip {
     padding:7px 16px; border-radius:50px;
     border:1.5px solid var(--glass-border);
@@ -1976,6 +2016,20 @@ body {
 .slots-bet-chip.active {
     background:rgba(251,191,36,0.15); border-color:#fbbf24; color:#fbbf24;
     box-shadow:0 0 12px rgba(251,191,36,0.35);
+}
+.slots-line-chip {
+    padding:7px 14px; border-radius:50px;
+    border:1.5px solid var(--glass-border);
+    background:rgba(196,231,233,0.04);
+    color:var(--text-mid);
+    font-family:var(--font); font-size:0.82rem; font-weight:800;
+    cursor:pointer; transition:all var(--transition);
+    min-width: 46px;
+}
+.slots-line-chip:hover { border-color:var(--accent); color:var(--accent); background:rgba(124,106,255,0.08); }
+.slots-line-chip.active {
+    background:rgba(18,145,158,0.15); border-color:var(--accent); color:var(--accent);
+    box-shadow:0 0 10px rgba(18,145,158,0.28);
 }
 .slots-spin-row { display:flex; align-items:center; gap:16px; }
 .slots-current-bet { font-size:0.88rem; color:var(--text-dim); }
@@ -2019,8 +2073,13 @@ body {
 .slots-final-row.is-me { color:var(--accent); font-weight:800; }
 
 @media (max-width: 480px) {
-    .slots-reel { width:62px; height:72px; font-size:2rem; }
+    .slots-main { max-width: 100%; padding: 0 0.5rem 5.25rem; }
+    .slots-reel-row { grid-template-columns: repeat(3, minmax(56px, 1fr)); gap: 8px; }
+    .slots-reel { width:100%; height:70px; font-size:2rem; }
+    .slots-payline-badge { font-size: 0.66rem; padding: 3px 8px; }
+    .slots-lb-reels { display: none; }
     .slots-spin-btn { padding:12px 28px; font-size:0.95rem; }
+    .slots-spin-row { flex-direction: column; gap: 8px; }
 }
 
 
