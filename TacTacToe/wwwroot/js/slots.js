@@ -16,6 +16,8 @@ const PAYLINES = [
 ];
 const BET_PER_LINE_OPTIONS = [2, 5, 10, 25, 50];
 const PAYLINE_OPTIONS = [1, 3, 5];
+const BET_PER_LINE_OPTIONS_DESC = [...BET_PER_LINE_OPTIONS].sort((a, b) => b - a);
+const PAYLINE_OPTIONS_DESC = [...PAYLINE_OPTIONS].sort((a, b) => b - a);
 
 let myName = "";
 let selectedBetPerLine = 5;
@@ -257,6 +259,7 @@ function formatReelsInline(reels) {
 function getWinLabel(player) {
     const wins = Array.isArray(player.winningPaylines) ? player.winningPaylines : [];
     if (!wins.length) return "";
+    if (wins.length > 3) return `${wins.length} lines hit!`;
     const names = wins.map(i => LINE_NAMES[i] || `Line ${i + 1}`).join(", ");
     return `${wins.length} line${wins.length > 1 ? "s" : ""} hit: ${names}`;
 }
@@ -265,10 +268,10 @@ function syncBetDisplay() {
 }
 function applyAffordableSelection(balance) {
     if (balance <= 0) return;
-    const bestLineChoice = [...PAYLINE_OPTIONS].sort((a, b) => b - a).find(lines => selectedBetPerLine * lines <= balance);
+    const bestLineChoice = PAYLINE_OPTIONS_DESC.find(lines => selectedBetPerLine * lines <= balance);
     selectedPaylines = bestLineChoice || 1;
 
-    const bestBetPerLine = [...BET_PER_LINE_OPTIONS].sort((a, b) => b - a).find(bet => bet * selectedPaylines <= balance);
+    const bestBetPerLine = BET_PER_LINE_OPTIONS_DESC.find(bet => bet * selectedPaylines <= balance);
     selectedBetPerLine = bestBetPerLine || 1;
 
     document.querySelectorAll(".slots-line-chip").forEach(b => b.classList.toggle("active", Number(b.dataset.lines) === selectedPaylines));

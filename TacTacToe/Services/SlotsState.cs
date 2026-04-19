@@ -37,7 +37,7 @@ public class SlotsPlayer
     public int CurrentBet { get; set; }
     public int BetPerLine { get; set; }
     public int ActivePaylines { get; set; }
-    public int[][] Reels { get; set; } = SlotsEngine.UnspunReels(); // -1 = not yet spun this round
+    public int[][] Reels { get; set; } = SlotsEngine.UnspunReels(); // Each cell is -1 until spun this round
     public int LastWin { get; set; }
     public List<int> WinningPaylines { get; set; } = [];
     public int TotalMultiplier { get; set; }
@@ -136,7 +136,7 @@ public static class SlotsEngine
         if (a == b && b == c)
             return a switch { 7 => 100, 6 => 50, 5 => 20, 4 => 10, 3 => 8, 2 => 6, 1 => 4, 0 => 3, _ => 0 };
 
-        // Cherry fallback wins on a line (any position)
+        // Cherry wins: any cherries on a line count (position-independent)
         int cherries = line.Count(s => s == 0);
         return cherries switch
         {
