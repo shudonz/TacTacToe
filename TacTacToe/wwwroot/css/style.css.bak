@@ -1,141 +1,31 @@
 ﻿/* ============================================================
-   TacTacToe — "Abandoned Ship on the Beach" Design System
-   ============================================================
-   DESIGN SPEC v2 — Full Palette Mapping
-   ─────────────────────────────────────────────────────────────
+   TacTacToe — Premium 2026 Design System
+   ============================================================ */
 
-   PALETTE
-   ┌─────────────────┬──────────┬──────────────────────────────┐
-   │ Name            │ Hex      │ Role                         │
-   ├─────────────────┼──────────┼──────────────────────────────┤
-   │ Firefly         │ #112D38  │ App background (subtle)      │
-   │ Oceanic Teal    │ #165267  │ Surface solid / nav base     │
-   │ Aesthetic Teal  │ #12919E  │ PRIMARY accent — CTA, links, │
-   │                 │          │ active states, focus rings   │
-   │ Jagged Ice      │ #C4E7E9  │ SECONDARY accent — mid text, │
-   │                 │          │ glass tints, hover shimmer   │
-   │ Carrara White   │ #F2F4F1  │ Primary text                 │
-   │ Elephant        │ #94979A  │ Muted / dim text, neutral UI │
-   └─────────────────┴──────────┴──────────────────────────────┘
-   ⚠ ACCESSIBILITY EXCEPTION
-     --accent-hard #7A4048 (muted rust) — used ONLY for
-     destructive UI (Decline, Kick, Logout, error badges)
-     because no palette colour achieves WCAG AA contrast
-     against dark surfaces for a "warning/danger" signal.
-
-   ─────────────────────────────────────────────────────────────
-   BACKGROUND HIERARCHY
-     1. App BG          #0C2230   deepest layer behind everything
-     2. Subtle BG       #112D38   Firefly — page-level sections
-     3. Surface Solid   #0F2533   cards, modals, panels
-     4. Glass           rgba(18,145,158, 0.07) + blur — floating UI
-     5. Glass Border    rgba(196,231,233, 0.13) — subtle separation
-
-   TYPOGRAPHY RULES
-     Headers      → --text     (#F2F4F1 Carrara White)  wt 700–900
-     Body         → --text     (#F2F4F1)                wt 400–600
-     Mid/Label    → --text-mid (#C4E7E9 Jagged Ice)     wt 500–700
-     Muted/Hints  → --text-dim (#94979A Elephant)       wt 400
-     Disabled     → --text-dim  + opacity 0.4
-     Active Acc.  → --accent   (#12919E Teal)            wt 700–900
-
-   BUTTON STYLES
-     Primary      teal gradient (#12919E → #1AACBA), white text
-     Secondary    ghost border (glass-border), ice text
-     Destructive  rust tint bg + rust border, --accent-hard text  ⚠
-     Ghost        transparent, glass-border, elephant text → ice on hover
-
-   NAVIGATION
-     Navbar       --bg #0C2230 at 80% opacity + blur(20px)
-                  border-bottom: glass-border (ice 13%)
-     Active item  accent teal underline/indicator
-
-   FORM ELEMENTS
-     Input bg     rgba(196,231,233, 0.04)  border glass-border
-     Focus ring   border accent + box-shadow rgba(18,145,158, 0.12)
-     Checkbox     accent-color: --accent
-     Dropdown     same as input
-
-   SHADOWS & ELEVATION
-     Ambient glow  0 0 60px -12px rgba(18,145,158, 0.38)
-                   + 0 0 120px -40px rgba(196,231,233, 0.12)
-     Card hover    0 8px 32px rgba(0,0,0, 0.30) — neutral shadow
-     Active card   + 0 0 16px rgba(18,145,158, 0.25) teal halo
-
-   GRADIENTS (optional — use sparingly on hero/result elements)
-     Ocean Surge  linear-gradient(135deg, #12919E 0%, #1AACBA 100%)
-     Deep Dive    linear-gradient(180deg, #0C2230 0%, #112D38 100%)
-     Ice Wash     linear-gradient(135deg, #C4E7E9 0%, #F2F4F1 100%)
-     Coral Ruin   linear-gradient(135deg, #7A4048 0%, #94979A 100%)  ⚠
-
-   DARK MODE  (default — all tokens above)
-   LIGHT MODE  @media (prefers-color-scheme: light)  — see below.
-               Inverts depth: Carrara White surfaces, Firefly text.
-   ─────────────────────────────────────────────────────────────
-============================================================ */
-
-/* --- Custom Font --- */
-@font-face {
-    font-family: "Supply Center";
-    src: url("/css/supply-center.regular.ttf") format("truetype");
-    font-weight: normal;
-    font-style: normal;
-    font-display: swap;
-}
-
-/* --- Design Tokens
-   Palette:
-     Firefly       #112D38   deepest ocean floor / app bg
-     Oceanic Teal  #165267   ocean depth / surface solid
-     Aesthetic Teal #12919E  breaking wave / primary accent
-     Jagged Ice    #C4E7E9   seafoam highlight / secondary accent
-     Carrara White #F2F4F1   bleached driftwood / primary text
-     Elephant      #94979A   weathered hull / muted text
-   Accessibility exception:
-     --accent-hard #7A4048   muted rust — used ONLY for destructive
-                             actions (Decline / Kick / Logout) where
-                             pure-palette colours lack sufficient
-                             contrast against dark surfaces.
-*/
+/* --- Design Tokens --- */
 :root {
-    /* Raw palette references */
-    --firefly:     #112D38;
-    --oceanic:     #165267;
-    --teal:        #12919E;
-    --ice:         #C4E7E9;
-    --white:       #F2F4F1;
-    --elephant:    #94979A;
-
-    /* Backgrounds */
-    --bg:            #0C2230;                        /* deeper than Firefly */
-    --bg-subtle:     #112D38;                        /* Firefly */
-    --surface:       rgba(22, 82, 103, 0.32);        /* Oceanic Teal glass */
-    --surface-hover: rgba(22, 82, 103, 0.50);
-    --surface-solid: #0F2533;                        /* darkest surface */
-    --glass:         rgba(18, 145, 158, 0.07);       /* Teal-tinted glass */
-    --glass-border:  rgba(196, 231, 233, 0.13);      /* Ice-tinted border */
-
-    /* Accents */
-    --accent:        #12919E;                        /* Aesthetic Teal */
-    --accent-glow:   rgba(18, 145, 158, 0.38);
-    --accent2:       #C4E7E9;                        /* Jagged Ice */
-    --accent2-glow:  rgba(196, 231, 233, 0.22);
-    --accent3:       #94979A;                        /* Elephant — neutral */
-    --accent-hard:   #7A4048;                        /* ⚠ accessibility exception: muted rust */
-    --accent-hard-glow: rgba(122, 64, 72, 0.35);
-
-    /* Typography */
-    --text:          #F2F4F1;                        /* Carrara White */
-    --text-mid:      #C4E7E9;                        /* Jagged Ice */
-    --text-dim:      #94979A;                        /* Elephant */
-
-    /* Shape */
-    --radius:        20px;
-    --radius-sm:     12px;
-    --radius-xs:     8px;
-    --font:          "Supply Center", "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-    --transition:    0.25s cubic-bezier(0.22, 1, 0.36, 1);
-    --shadow-glow:   0 0 60px -12px var(--accent-glow), 0 0 120px -40px rgba(196, 231, 233, 0.12);
+    --bg:          #06060e;
+    --bg-subtle:   #0b0b18;
+    --surface:     rgba(255, 255, 255, 0.04);
+    --surface-hover: rgba(255, 255, 255, 0.07);
+    --accent-hard: #ff5c8a;
+    --surface-solid: #111122;
+    --glass:       rgba(255, 255, 255, 0.05);
+    --glass-border: rgba(255, 255, 255, 0.08);
+    --accent:      #7c6aff;
+    --accent-glow: rgba(124, 106, 255, 0.35);
+    --accent2:     #ff5c8a;
+    --accent2-glow: rgba(255, 92, 138, 0.35);
+    --accent3:     #36d6c3;
+    --text:        #f0eef8;
+    --text-mid:    #b0acc8;
+    --text-dim:    #6a6688;
+    --radius:      20px;
+    --radius-sm:   12px;
+    --radius-xs:   8px;
+    --font:        "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    --transition:  0.25s cubic-bezier(0.22, 1, 0.36, 1);
+    --shadow-glow: 0 0 60px -12px var(--accent-glow), 0 0 120px -40px var(--accent2-glow);
 }
 
 /* --- Reset & Base --- */
@@ -170,12 +60,12 @@ body {
 }
 .ambient::before {
     width: 600px; height: 600px;
-    background: radial-gradient(circle, #12919E 0%, transparent 70%);
+    background: radial-gradient(circle, var(--accent) 0%, transparent 70%);
     top: -15%; left: -10%;
 }
 .ambient::after {
     width: 500px; height: 500px;
-    background: radial-gradient(circle, #165267 0%, transparent 70%);
+    background: radial-gradient(circle, var(--accent2) 0%, transparent 70%);
     bottom: -15%; right: -10%;
     animation-delay: -9s;
     animation-direction: alternate-reverse;
@@ -262,7 +152,7 @@ body {
     padding: 14px 20px;
     border-radius: 50px;
     border: 1.5px solid var(--glass-border);
-    background: rgba(196, 231, 233, 0.04);
+    background: rgba(255, 255, 255, 0.04);
     color: var(--text);
     font-family: var(--font);
     font-size: 1rem;
@@ -273,14 +163,14 @@ body {
 .guest-input::placeholder { color: var(--text-dim); }
 .guest-input:focus {
     border-color: var(--accent);
-    box-shadow: 0 0 0 4px rgba(18, 145, 158, 0.12);
+    box-shadow: 0 0 0 4px rgba(124, 106, 255, 0.12);
 }
 
 .guest-btn {
     padding: 14px 32px;
     border-radius: 50px;
     border: none;
-    background: linear-gradient(135deg, var(--accent) 0%, #1AACBA 100%);
+    background: linear-gradient(135deg, var(--accent) 0%, #9b7aff 100%);
     color: #fff;
     font-family: var(--font);
     font-weight: 700;
@@ -323,7 +213,7 @@ body {
     justify-content: center;
     gap: 12px;
     width: 100%;
-    background: rgba(196, 231, 233, 0.06);
+    background: rgba(255, 255, 255, 0.06);
     border: 1.5px solid var(--glass-border);
     color: var(--text);
     font-family: var(--font);
@@ -335,8 +225,8 @@ body {
     transition: background var(--transition), border-color var(--transition), transform var(--transition);
 }
 .google-btn:hover {
-    background: rgba(196, 231, 233, 0.10);
-    border-color: rgba(196, 231, 233, 0.18);
+    background: rgba(255, 255, 255, 0.1);
+    border-color: rgba(255, 255, 255, 0.2);
     transform: translateY(-2px);
 }
 .google-btn:active { transform: translateY(0); }
@@ -349,7 +239,7 @@ body {
     align-items: center;
     justify-content: space-between;
     padding: 1rem 2rem;
-    background: rgba(12, 34, 48, 0.80);
+    background: rgba(6, 6, 14, 0.7);
     backdrop-filter: blur(20px) saturate(1.4);
     -webkit-backdrop-filter: blur(20px) saturate(1.4);
     border-bottom: 1px solid var(--glass-border);
@@ -373,9 +263,9 @@ body {
     object-fit: cover;
 }
 .btn-logout {
-    background: rgba(122, 64, 72, 0.08);
-    border: 1.5px solid rgba(122, 64, 72, 0.25);
-    color: var(--accent-hard);
+    background: rgba(255, 92, 138, 0.08);
+    border: 1.5px solid rgba(255, 92, 138, 0.25);
+    color: var(--accent2);
     font-family: var(--font);
     padding: 8px 20px;
     border-radius: 50px;
@@ -385,8 +275,8 @@ body {
     transition: background var(--transition), border-color var(--transition), transform var(--transition);
 }
 .btn-logout:hover {
-    background: rgba(122, 64, 72, 0.16);
-    border-color: rgba(122, 64, 72, 0.42);
+    background: rgba(255, 92, 138, 0.15);
+    border-color: rgba(255, 92, 138, 0.4);
     transform: translateY(-1px);
 }
 
@@ -446,7 +336,7 @@ body {
 }
 .player-card:hover::before { opacity: 1; }
 .player-card:hover {
-    border-color: rgba(18, 145, 158, 0.30);
+    border-color: rgba(124, 106, 255, 0.3);
     transform: translateY(-2px);
     box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
 }
@@ -462,7 +352,7 @@ body {
     font-size: 0.7rem;
     font-weight: 700;
     color: var(--text-dim);
-    background: rgba(196, 231, 233, 0.06);
+    background: rgba(255, 255, 255, 0.06);
     padding: 4px 12px;
     border-radius: 50px;
     text-transform: uppercase;
@@ -482,7 +372,7 @@ body {
     display: block;
     width: 40px; height: 40px;
     margin: 1.5rem auto 0;
-    border: 2.5px solid rgba(196, 231, 233, 0.06);
+    border: 2.5px solid rgba(255, 255, 255, 0.06);
     border-top-color: var(--accent);
     border-radius: 50%;
     animation: spin 1s linear infinite;
@@ -518,7 +408,7 @@ body {
     padding: 9px 22px;
     border-radius: 50px;
     border: 1.5px solid var(--accent);
-    background: rgba(18, 145, 158, 0.12);
+    background: rgba(124, 106, 255, 0.12);
     color: var(--accent);
     font-family: var(--font);
     font-weight: 700;
@@ -538,7 +428,7 @@ body {
 }
 .btn-sp-hard {
     border-color: var(--accent-hard);
-    background: rgba(122, 64, 72, 0.10);
+    background: rgba(255, 92, 138, 0.1);
     color: var(--accent-hard);
 }
 .btn-sp-hard:hover {
@@ -553,7 +443,7 @@ body {
 .modal {
     position: fixed;
     inset: 0;
-    background: rgba(12, 34, 48, 0.85);
+    background: rgba(6, 6, 14, 0.8);
     backdrop-filter: blur(8px);
     display: flex;
     align-items: center;
@@ -613,20 +503,20 @@ body {
 .btn:active { transform: translateY(0) scale(0.97); }
 
 .btn-accept {
-    background: linear-gradient(135deg, var(--accent) 0%, #1AACBA 100%);
+    background: linear-gradient(135deg, var(--accent) 0%, #9b7aff 100%);
     color: #fff;
     box-shadow: 0 4px 20px var(--accent-glow);
 }
 .btn-accept:hover { box-shadow: 0 8px 36px var(--accent-glow); }
 
 .btn-decline {
-    background: rgba(122, 64, 72, 0.12);
-    border: 1.5px solid rgba(122, 64, 72, 0.30);
-    color: var(--accent-hard);
+    background: rgba(255, 92, 138, 0.12);
+    border: 1.5px solid rgba(255, 92, 138, 0.3);
+    color: var(--accent2);
 }
 .btn-decline:hover {
-    background: rgba(122, 64, 72, 0.22);
-    box-shadow: 0 4px 20px var(--accent-hard-glow);
+    background: rgba(255, 92, 138, 0.2);
+    box-shadow: 0 4px 20px var(--accent2-glow);
 }
 
 .btn-outline {
@@ -635,9 +525,9 @@ body {
     color: var(--text-mid);
 }
 .btn-outline:hover {
-    border-color: rgba(196, 231, 233, 0.18);
+    border-color: rgba(255, 255, 255, 0.2);
     color: var(--text);
-    background: rgba(196, 231, 233, 0.05);
+    background: rgba(255, 255, 255, 0.05);
 }
 
 .rematch-status {
@@ -651,7 +541,7 @@ body {
 .spinner {
     margin: 1.5rem auto 0;
     width: 36px; height: 36px;
-    border: 3px solid rgba(196, 231, 233, 0.06);
+    border: 3px solid rgba(255, 255, 255, 0.06);
     border-top-color: var(--accent);
     border-radius: 50%;
     animation: spin 0.9s linear infinite;
@@ -713,8 +603,8 @@ body {
     background: linear-gradient(90deg, transparent, var(--accent2), transparent);
     box-shadow: 0 0 12px var(--accent2-glow);
 }
-#playerX.active { border-color: rgba(18, 145, 158, 0.30); }
-#playerO.active { border-color: rgba(122, 64, 72, 0.30); }
+#playerX.active { border-color: rgba(124, 106, 255, 0.3); }
+#playerO.active { border-color: rgba(255, 92, 138, 0.3); }
 
 .vs {
     font-weight: 900;
@@ -764,8 +654,8 @@ body {
 
 .cell {
     aspect-ratio: 1;
-    background: rgba(196, 231, 233, 0.03);
-    border: 1.5px solid rgba(196, 231, 233, 0.06);
+    background: rgba(255, 255, 255, 0.03);
+    border: 1.5px solid rgba(255, 255, 255, 0.06);
     border-radius: var(--radius-sm);
     display: flex;
     align-items: center;
@@ -788,10 +678,10 @@ body {
 }
 .cell:hover:not(.taken)::before {
     opacity: 1;
-    background: radial-gradient(circle at center, rgba(18, 145, 158, 0.08), transparent 70%);
+    background: radial-gradient(circle at center, rgba(124, 106, 255, 0.08), transparent 70%);
 }
 .cell:hover:not(.taken) {
-    border-color: rgba(18, 145, 158, 0.25);
+    border-color: rgba(124, 106, 255, 0.25);
     transform: scale(1.04);
 }
 .cell:active:not(.taken) { transform: scale(0.96); }
@@ -815,7 +705,7 @@ body {
 .result-overlay {
     position: fixed;
     inset: 0;
-    background: rgba(12, 34, 48, 0.88);
+    background: rgba(6, 6, 14, 0.85);
     backdrop-filter: blur(12px);
     display: flex;
     align-items: center;
@@ -869,12 +759,12 @@ body {
     transition: all var(--transition);
 }
 .game-option:hover {
-    border-color: rgba(18, 145, 158, 0.25);
+    border-color: rgba(124, 106, 255, 0.25);
     color: var(--text);
 }
 .game-option.active {
     border-color: var(--accent);
-    background: rgba(18, 145, 158, 0.08);
+    background: rgba(124, 106, 255, 0.08);
     color: var(--text);
     box-shadow: 0 0 24px var(--accent-glow);
 }
@@ -925,10 +815,10 @@ body {
     position: relative;
     user-select: none;
 }
-.die:hover { border-color: rgba(18, 145, 158, 0.30); transform: translateY(-2px); }
+.die:hover { border-color: rgba(124, 106, 255, 0.3); transform: translateY(-2px); }
 .die.held {
     border-color: var(--accent);
-    background: rgba(18, 145, 158, 0.12);
+    background: rgba(124, 106, 255, 0.12);
     box-shadow: 0 0 16px var(--accent-glow);
 }
 .die.held::after {
@@ -1009,12 +899,12 @@ body {
     grid-template-columns: 1fr 72px 72px;
     gap: 4px;
     padding: 6px 0;
-    border-bottom: 1px solid rgba(196, 231, 233, 0.03);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.03);
     cursor: pointer;
     transition: background var(--transition);
     border-radius: 4px;
 }
-.sc-row:hover { background: rgba(196, 231, 233, 0.03); }
+.sc-row:hover { background: rgba(255, 255, 255, 0.03); }
 .sc-cat {
     font-size: 0.85rem;
     font-weight: 600;
@@ -1040,12 +930,12 @@ body {
 }
 .sc-val.sc-scoreable {
     color: var(--accent);
-    background: rgba(18, 145, 158, 0.08);
-    border: 1px dashed rgba(18, 145, 158, 0.30);
+    background: rgba(124, 106, 255, 0.08);
+    border: 1px dashed rgba(124, 106, 255, 0.3);
     cursor: pointer;
 }
 .sc-val.sc-scoreable:hover {
-    background: rgba(18, 145, 158, 0.16);
+    background: rgba(124, 106, 255, 0.16);
 }
 .sc-val.sc-invalid {
     opacity: 0.25;
@@ -1060,7 +950,7 @@ body {
     color: var(--accent);
     opacity: 0.7;
 }
-.sc-bonus { background: rgba(18, 145, 158, 0.04); }
+.sc-bonus { background: rgba(124, 106, 255, 0.04); }
 .sc-total {
     border-top: 2px solid var(--glass-border);
     border-bottom: none;
@@ -1141,12 +1031,12 @@ body {
     align-items: center;
     gap: 10px;
     padding: 10px 16px;
-    background: rgba(196, 231, 233, 0.03);
+    background: rgba(255, 255, 255, 0.03);
     border: 1px solid var(--glass-border);
     border-radius: var(--radius-xs);
     transition: all var(--transition);
 }
-.room-player.is-me { border-color: rgba(18, 145, 158, 0.30); }
+.room-player.is-me { border-color: rgba(124, 106, 255, 0.3); }
 .room-player-name { font-weight: 700; font-size: 0.9rem; }
 .room-player-count {
     font-size: 0.8rem;
@@ -1158,9 +1048,9 @@ body {
 }
 .btn-kick {
     margin-left: auto;
-    background: rgba(122, 64, 72, 0.10);
-    border: 1px solid rgba(122, 64, 72, 0.30);
-    color: var(--accent-hard);
+    background: rgba(255, 92, 138, 0.1);
+    border: 1px solid rgba(255, 92, 138, 0.3);
+    color: var(--accent2);
     width: 28px; height: 28px;
     border-radius: 50%;
     cursor: pointer;
@@ -1170,7 +1060,7 @@ body {
     justify-content: center;
     transition: all var(--transition);
 }
-.btn-kick:hover { background: rgba(122, 64, 72, 0.25); }
+.btn-kick:hover { background: rgba(255, 92, 138, 0.25); }
 
 /* Settings grid */
 .settings-grid {
@@ -1190,7 +1080,7 @@ body {
     padding: 10px 14px;
     border-radius: var(--radius-xs);
     border: 1.5px solid var(--glass-border);
-    background: rgba(196, 231, 233, 0.04);
+    background: rgba(255, 255, 255, 0.04);
     color: var(--text);
     font-family: var(--font);
     font-size: 0.9rem;
@@ -1210,7 +1100,7 @@ body {
 
 /* Read-only settings */
 .settings-readonly { display: flex; flex-direction: column; gap: 6px; }
-.setting-ro { display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid rgba(196,231,233,0.03); }
+.setting-ro { display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid rgba(255,255,255,0.03); }
 .setting-ro-label { color: var(--text-dim); font-size: 0.85rem; }
 .setting-ro-val { font-weight: 700; font-size: 0.85rem; }
 
@@ -1245,7 +1135,7 @@ body {
     flex-shrink: 0;
 }
 .player-bar-item.active {
-    background: rgba(18, 145, 158, 0.08);
+    background: rgba(124, 106, 255, 0.08);
     box-shadow: 0 0 16px var(--accent-glow);
 }
 .player-bar-item.is-me { border-style: dashed; }
@@ -1256,9 +1146,9 @@ body {
 .disconnected-tag {
     font-size: 0.68rem;
     font-weight: 700;
-    background: rgba(122, 64, 72, 0.18);
-    color: var(--accent-hard);
-    border: 1px solid rgba(122, 64, 72, 0.35);
+    background: rgba(255, 92, 138, 0.18);
+    color: var(--accent2);
+    border: 1px solid rgba(255, 92, 138, 0.35);
     border-radius: 4px;
     padding: 1px 5px;
     margin-left: 4px;
@@ -1292,7 +1182,7 @@ body {
 .final-score-row {
     padding: 6px 0;
     font-size: 0.95rem;
-    border-bottom: 1px solid rgba(196, 231, 233, 0.05);
+    border-bottom: 1px solid rgba(255,255,255,0.05);
 }
 .final-score-row strong { color: var(--accent); }
 
@@ -1423,7 +1313,7 @@ body {
     padding: 9px 18px;
     border-radius: 50px;
     border: 1.5px solid var(--glass-border);
-    background: rgba(196, 231, 233, 0.05);
+    background: rgba(255, 255, 255, 0.05);
     color: var(--text-mid);
     font-family: var(--font);
     font-size: 0.82rem;
@@ -1435,15 +1325,15 @@ body {
 .btn-copy:hover {
     border-color: rgba(124, 106, 255, 0.4);
     color: var(--text);
-    background: rgba(18, 145, 158, 0.08);
+    background: rgba(124, 106, 255, 0.08);
 }
 .btn-copy-link {
-    border-color: rgba(148, 151, 154, 0.30);
+    border-color: rgba(54, 214, 195, 0.3);
     color: var(--accent3);
 }
 .btn-copy-link:hover {
-    border-color: rgba(148, 151, 154, 0.50);
-    background: rgba(148, 151, 154, 0.08);
+    border-color: rgba(54, 214, 195, 0.6);
+    background: rgba(54, 214, 195, 0.08);
     color: var(--accent3);
 }
 
@@ -1494,8 +1384,8 @@ body {
 }
 .btn-advanced-toggle:hover {
     color: var(--text);
-    border-color: rgba(18, 145, 158, 0.38);
-    background: rgba(18, 145, 158, 0.06);
+    border-color: rgba(124, 106, 255, 0.35);
+    background: rgba(124, 106, 255, 0.06);
 }
 
 /* ============================================================
@@ -1548,7 +1438,7 @@ body {
     font-size: 0.78rem;
     font-weight: 700;
     color: var(--text-mid);
-    background: rgba(196, 231, 233, 0.06);
+    background: rgba(255,255,255,0.06);
     padding: 4px 10px;
     border-radius: 50px;
     white-space: nowrap;
@@ -1563,14 +1453,14 @@ body {
     white-space: nowrap;
 }
 .room-badge-open {
-    background: rgba(148, 151, 154, 0.12);
+    background: rgba(54, 214, 195, 0.12);
     color: var(--accent3);
-    border: 1px solid rgba(148, 151, 154, 0.30);
+    border: 1px solid rgba(54, 214, 195, 0.3);
 }
 .room-badge-full {
-    background: rgba(122, 64, 72, 0.10);
-    color: var(--accent-hard);
-    border: 1px solid rgba(122, 64, 72, 0.25);
+    background: rgba(255, 92, 138, 0.1);
+    color: var(--accent2);
+    border: 1px solid rgba(255, 92, 138, 0.25);
 }
 .room-join-btn {
     padding: 8px 16px !important;
@@ -1597,7 +1487,7 @@ body {
     padding: 10px 14px;
     border-radius: 50px;
     border: 1.5px solid var(--glass-border);
-    background: rgba(196,231,233,0.04);
+    background: rgba(255,255,255,0.04);
     color: var(--text);
     font-family: var(--font);
     font-size: 0.85rem;
@@ -1610,7 +1500,7 @@ body {
     width: 40px; height: 40px;
     border-radius: 50%;
     border: none;
-    background: linear-gradient(135deg, var(--accent), #1AACBA);
+    background: linear-gradient(135deg, var(--accent), #9b7aff);
     color: #fff;
     font-size: 1rem;
     cursor: pointer;
@@ -1636,8 +1526,8 @@ body {
     bottom: 80px;
     left: 50%;
     transform: translateX(-50%) translateY(20px);
-    background: rgba(11, 37, 51, 0.97);
-    border: 1.5px solid rgba(122, 64, 72, 0.40);
+    background: rgba(20, 18, 40, 0.96);
+    border: 1.5px solid rgba(255, 92, 138, 0.4);
     color: var(--text);
     font-family: var(--font);
     font-size: 0.92rem;
@@ -1711,8 +1601,8 @@ body {
 .slots-phase-label {
     font-size: 0.75rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.08em;
     padding: 4px 12px; border-radius: 50px;
-    background: rgba(18, 145, 158, 0.15); color: var(--accent);
-    border: 1px solid rgba(18, 145, 158, 0.30);
+    background: rgba(124, 106, 255, 0.15); color: var(--accent);
+    border: 1px solid rgba(124, 106, 255, 0.3);
     transition: background 0.3s, color 0.3s;
 }
 .slots-phase-results {
@@ -1725,7 +1615,7 @@ body {
    ============================================================ */
 .slots-leaderboard { padding: 14px 18px; }
 .slots-lb-title { font-size: 0.78rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-dim); margin-bottom: 10px; }
-.slots-lb-row { display: flex; align-items: center; gap: 8px; padding: 6px 0; border-bottom: 1px solid rgba(196,231,233,0.04); font-size: 0.88rem; }
+.slots-lb-row { display: flex; align-items: center; gap: 8px; padding: 6px 0; border-bottom: 1px solid rgba(255,255,255,0.04); font-size: 0.88rem; }
 .slots-lb-row:last-child { border-bottom: none; }
 .slots-lb-row.is-me { color: var(--accent); font-weight: 700; }
 .slots-lb-rank { width: 28px; text-align: center; flex-shrink: 0; }
@@ -1785,7 +1675,7 @@ body {
 .slots-payouts {
     width: 100%;
     background: rgba(0,0,0,0.25);
-    border-bottom: 1px solid rgba(196,231,233,0.06);
+    border-bottom: 1px solid rgba(255,255,255,0.06);
 }
 .slots-payouts summary {
     padding: 8px 18px;
@@ -1822,7 +1712,7 @@ body {
 .slots-reel-sep { color: rgba(255,255,255,0.15); font-size: 1.6rem; padding: 0 4px; }
 .slots-reel {
     width: 78px; height: 88px;
-    background: linear-gradient(180deg, rgba(196,231,233,0.06) 0%, rgba(0,0,0,0.3) 100%);
+    background: linear-gradient(180deg, rgba(255,255,255,0.06) 0%, rgba(0,0,0,0.3) 100%);
     border: 1.5px solid rgba(255,255,255,0.1);
     border-radius: 12px;
     display: flex; align-items: center; justify-content: center;
@@ -1878,7 +1768,7 @@ body {
     animation: winLabelPop 0.5s ease;
 }
 .slots-win-jackpot {
-    background: linear-gradient(135deg, #fff700, #fbbf24, #7A4048);
+    background: linear-gradient(135deg, #fff700, #fbbf24, #ff5c8a);
     -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
     font-size: 1.35rem;
     animation: jackpotLabel 0.6s ease infinite alternate;
@@ -1895,7 +1785,7 @@ body {
 .slots-bet-chip {
     padding:7px 16px; border-radius:50px;
     border:1.5px solid var(--glass-border);
-    background:rgba(196,231,233,0.04);
+    background:rgba(255,255,255,0.04);
     color:var(--text-mid);
     font-family:var(--font); font-size:0.82rem; font-weight:700;
     cursor:pointer; transition:all var(--transition);
@@ -1936,9 +1826,9 @@ body {
     background:#fbbf24; box-shadow:0 0 6px rgba(251,191,36,0.5);
     animation:baseLightBlink 1.8s ease-in-out infinite;
 }
-.slots-base-lights span:nth-child(odd)  { animation-delay:0s;   background:#7A4048; box-shadow:0 0 6px rgba(122,64,72,0.5); }
-.slots-base-lights span:nth-child(even) { animation-delay:0.9s; background:#12919E; box-shadow:0 0 6px rgba(18,145,158,0.5); }
-.slots-base-lights span:nth-child(3n)   { background:#94979A; box-shadow:0 0 6px rgba(148,151,154,0.5); }
+.slots-base-lights span:nth-child(odd)  { animation-delay:0s;   background:#ff5c8a; box-shadow:0 0 6px rgba(255,92,138,0.5); }
+.slots-base-lights span:nth-child(even) { animation-delay:0.9s; background:#7c6aff; box-shadow:0 0 6px rgba(124,106,255,0.5); }
+.slots-base-lights span:nth-child(3n)   { background:#36d6c3; box-shadow:0 0 6px rgba(54,214,195,0.5); }
 @keyframes baseLightBlink { 0%,100%{opacity:0.3} 50%{opacity:1} }
 
 /* Final scores */
@@ -1952,97 +1842,3 @@ body {
 }
 
 
-/* ============================================================
-   LIGHT MODE — "Bleached Wreck at Noon"
-   Inverts the depth: pale Carrara surfaces, dark Firefly text.
-   Activated automatically via OS preference.
-   ============================================================ */
-@media (prefers-color-scheme: light) {
-    :root {
-        /* Backgrounds — ocean under midday sun */
-        --bg:            #E8F2F3;          /* very pale ice wash */
-        --bg-subtle:     #F2F4F1;          /* Carrara White */
-        --surface-solid: #FFFFFF;
-        --glass:         rgba(18, 145, 158, 0.06);
-        --glass-border:  rgba(22, 82, 103, 0.15);   /* Oceanic border on light */
-
-        /* Accents — unchanged (teal reads well on light too) */
-        --accent:        #0E7A86;          /* slightly darkened teal for contrast */
-        --accent-glow:   rgba(14, 122, 134, 0.30);
-        --accent2:       #165267;          /* Oceanic Teal as secondary on light */
-        --accent2-glow:  rgba(22, 82, 103, 0.20);
-        --accent3:       #6B6E70;          /* darker Elephant for light bg */
-        --accent-hard:   #8B3A42;          /* slightly darker rust for light ⚠ */
-        --accent-hard-glow: rgba(139, 58, 66, 0.30);
-
-        /* Typography */
-        --text:          #112D38;          /* Firefly — max contrast */
-        --text-mid:      #165267;          /* Oceanic Teal */
-        --text-dim:      #6B6E70;          /* darkened Elephant */
-
-        /* Shadow */
-        --shadow-glow:   0 0 40px -8px rgba(14, 122, 134, 0.20),
-                         0 0 80px -24px rgba(22, 82, 103, 0.12);
-    }
-
-    /* Navbar gets a light frosted surface */
-    .navbar {
-        background: rgba(242, 244, 241, 0.88);
-        border-bottom-color: rgba(22, 82, 103, 0.15);
-    }
-
-    /* Cells and glass cards on light */
-    .cell {
-        background: rgba(22, 82, 103, 0.04);
-        border-color: rgba(22, 82, 103, 0.12);
-    }
-    .cell:hover:not(.taken) {
-        border-color: rgba(14, 122, 134, 0.30);
-    }
-
-    /* Modal overlay on light */
-    .modal,
-    .result-overlay {
-        background: rgba(196, 231, 233, 0.70);
-    }
-
-    /* Game toast on light */
-    .game-toast {
-        background: rgba(242, 244, 241, 0.97);
-        color: #112D38;
-        border-color: rgba(14, 122, 134, 0.40);
-    }
-}
-
-/* ============================================================
-   GRADIENT UTILITIES — optional hero / result highlights
-   ============================================================ */
-
-/* Ocean Surge — primary CTA / result win headline */
-.grad-ocean-surge {
-    background: linear-gradient(135deg, #12919E 0%, #1AACBA 100%);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
-}
-
-/* Deep Dive — ambient / hero background overlay */
-.grad-deep-dive {
-    background: linear-gradient(180deg, #0C2230 0%, #112D38 60%, #165267 100%);
-}
-
-/* Ice Wash — achievement / bonus callout */
-.grad-ice-wash {
-    background: linear-gradient(135deg, #C4E7E9 0%, #F2F4F1 100%);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
-}
-
-/* Coral Ruin — destructive / warning callout  ⚠ accessibility exception */
-.grad-coral-ruin {
-    background: linear-gradient(135deg, #7A4048 0%, #94979A 100%);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
-}
