@@ -26,6 +26,7 @@ let spinning = false;
 let _lastBalance = null;
 let _prevPhase = null;
 let _prevSpun = false;
+let _reelsAnimating = false;
 
 function esc(s) { const d = document.createElement("div"); d.textContent = s; return d.innerHTML; }
 function totalBet() { return selectedBetPerLine * selectedPaylines; }
@@ -212,7 +213,7 @@ function drawPaylineOverlay(winningLines) {
     }
 
     const startTime = performance.now();
-    const DURATION = 4200; // ms the overlay lives
+    const DURATION = 7000; // ms the overlay lives
 
     function frame(now) {
         const elapsed = now - startTime;
@@ -309,6 +310,7 @@ function highlightWinningPaylines(winning = []) {
 function animateReels(reels, onDone) {
     stopReelTicks();
     startReelTicks();
+    _reelsAnimating = true;
     let finished = 0;
     const total = 9;
     for (let c = 0; c < 3; c++) {
@@ -327,7 +329,7 @@ function animateReels(reels, onDone) {
                     setTimeout(() => {
                         el.classList.remove("slots-reel-bounce");
                         finished++;
-                        if (finished >= total) { stopReelTicks(); onDone?.(); }
+                        if (finished >= total) { stopReelTicks(); _reelsAnimating = false; onDone?.(); }
                     }, 180);
                 }, 70);
             }, 420 + c * 220 + r * 55);
@@ -458,7 +460,7 @@ function render(room) {
             for (let r = 0; r < 3; r++) for (let c = 0; c < 3; c++) reelEl(r, c).textContent = "?";
             document.getElementById("winLabel").textContent = "";
             clearPaylineHighlights();
-        } else if (myPlayer.lastWin > 0) {
+        } else if (!_reelsAnimating && myPlayer.lastWin > 0) {
             highlightWinningPaylines(myPlayer.winningPaylines || []);
             renderPaylineLegend(activeLines, myPlayer.winningPaylines || []);
         }
