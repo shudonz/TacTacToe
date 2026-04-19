@@ -164,6 +164,57 @@ public class GameHub : Hub
             });
         }
 
+        // Defer Solitaire waiting-room cleanup
+        var solitaireWaitSnapshot = _lobby.GetSolitaireRoomsForConnection(disconnectedConnectionId).ToList();
+        if (solitaireWaitSnapshot.Count > 0)
+        {
+            _ = Task.Run(async () =>
+            {
+                await Task.Delay(TimeSpan.FromSeconds(8));
+                bool changed = false;
+                foreach (var snap in solitaireWaitSnapshot)
+                {
+                    var room = _lobby.GetSolitaireRoom(snap.Id);
+                    if (room == null || room.Started) continue;
+                    var player = room.Players.FirstOrDefault(p => p.Name == name);
+                    if (player == null || player.ConnectionId != disconnectedConnectionId) continue;
+                    room.Players.Remove(player);
+                    changed = true;
+                    if (room.Players.Count == 0 || room.HostName == name)
+                    { await _hubContext.Clients.Group(room.Id).SendAsync("SolitaireRoomDissolved"); _lobby.RemoveSolitaireRoom(room.Id); }
+                    else
+                    { await _hubContext.Clients.Group(room.Id).SendAsync("SolitaireRoomUpdated", room); }
+                }
+                if (changed) await _hubContext.Clients.All.SendAsync("SolitaireRoomList", SolitaireRoomSummaries());
+            });
+        }
+
+        // Defer Solitaire active-game disconnect
+        var solitaireGameSnapshot = _lobby.GetActiveSolitaireRoomsForConnection(disconnectedConnectionId).ToList();
+        if (solitaireGameSnapshot.Count > 0)
+        {
+            _ = Task.Run(async () =>
+            {
+                await Task.Delay(TimeSpan.FromSeconds(8));
+                foreach (var snap in solitaireGameSnapshot)
+                {
+                    var room = _lobby.GetSolitaireRoom(snap.Id);
+                    if (room == null || room.IsOver) continue;
+                    var player = room.Players.FirstOrDefault(p => p.Name == name && !p.IsBot);
+                    if (player == null || player.ConnectionId != disconnectedConnectionId) continue;
+                    player.Connected = false;
+                    await _hubContext.Clients.Group(room.Id).SendAsync("PlayerLeft", name);
+                    if (room.Players.Where(p => !p.IsBot).All(p => !p.Connected))
+                    { _lobby.RemoveSolitaireRoom(room.Id); }
+                    else
+                    {
+                        await _hubContext.Clients.Group(room.Id).SendAsync("SolitaireUpdated", room);
+                        CheckSolitaireOver(room);
+                    }
+                }
+            });
+        }
+
         // Defer TTT room cleanup — the same grace period used for Yahtzee is needed here
         // because creating/joining a room causes a page navigation which disconnects the
         // lobby connection before RejoinTttRoom can update the player's ConnectionId.
@@ -1828,4 +1879,234 @@ public class GameHub : Hub
             .OrderByDescending(c => YahtzeeScoring.CalculateScore(c, room.Dice, room.Settings))
             .First();
     }
+
+    /* ================================================================
+       Solitaire Methods
+       ================================================================ */
+
+    public async Task CreateSolitaireRoom(string? roomName = null)
+    {
+        var roomId = Guid.NewGuid().ToString("N");
+        var room = _lobby.CreateSolitaireRoom(roomId, Context.ConnectionId);
+        if (!string.IsNullOrWhiteSpace(roomName))
+            room.Settings.RoomName = roomName.Trim()[..Math.Min(roomName.Trim().Length, 30)];
+        await Groups.AddToGroupAsync(Context.ConnectionId, roomId);
+        await Clients.Caller.SendAsync("SolitaireRoomCreated", roomId);
+        await BroadcastSolitaireRooms();
+    }
+
+    public async Task GetSolitaireRooms() =>
+        await Clients.Caller.SendAsync("SolitaireRoomList", SolitaireRoomSummaries());
+
+    public async Task JoinSolitaireRoom(string roomId)
+    {
+        var room = _lobby.GetSolitaireRoom(roomId);
+        if (room == null || room.Started || room.IsOver) return;
+        if (room.Players.Count >= room.Settings.MaxPlayers) return;
+        if (room.Players.Any(p => p.ConnectionId == Context.ConnectionId)) return;
+        var name = Context.User?.FindFirst(ClaimTypes.Name)?.Value ?? "Unknown";
+        room.Players.Add(new SolitairePlayer { ConnectionId = Context.ConnectionId, Name = name, Connected = true });
+        await Groups.AddToGroupAsync(Context.ConnectionId, roomId);
+        await Clients.Group(roomId).SendAsync("SolitaireRoomUpdated", room);
+        await BroadcastSolitaireRooms();
+    }
+
+    public async Task RejoinSolitaireRoom(string roomId)
+    {
+        if (string.IsNullOrEmpty(roomId)) return;
+        var room = _lobby.GetSolitaireRoom(roomId);
+        if (room == null) return;
+        var name = Context.User?.FindFirst(ClaimTypes.Name)?.Value ?? "Unknown";
+        var player = room.Players.FirstOrDefault(p => p.Name == name && !p.IsBot);
+        if (player == null) return;
+        player.ConnectionId = Context.ConnectionId;
+        player.Connected = true;
+        if (room.HostName == name) room.HostConnectionId = Context.ConnectionId;
+        await Groups.AddToGroupAsync(Context.ConnectionId, roomId);
+        if (room.Started)
+        {
+            _lobby.SetInGame(Context.ConnectionId, true);
+            await BroadcastLobby();
+            await Clients.Caller.SendAsync("SolitaireUpdated", room);
+        }
+        else
+        {
+            await Clients.Group(roomId).SendAsync("SolitaireRoomUpdated", room);
+        }
+    }
+
+    public async Task StartSolitaireGame(string roomId)
+    {
+        var room = _lobby.GetSolitaireRoom(roomId);
+        if (room == null || room.Started) return;
+        if (Context.ConnectionId != room.HostConnectionId) return;
+        if (room.Players.Count < 2) return;
+        int seed = Random.Shared.Next();
+        room.DeckSeed = seed;
+        room.Started = true;
+        long now = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+        foreach (var p in room.Players)
+        {
+            p.Game = SolitaireEngine.Deal(seed);
+            p.StartedAtMs = now;
+        }
+        await Clients.Group(roomId).SendAsync("SolitaireGameStarted", room);
+        await BroadcastSolitaireRooms();
+    }
+
+    public async Task StartSolitaireSinglePlayer()
+    {
+        var name = Context.User?.FindFirst(ClaimTypes.Name)?.Value ?? "Unknown";
+        var roomId = Guid.NewGuid().ToString("N");
+        int seed = Random.Shared.Next();
+        long now = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+        var room = new SolitaireRoom
+        {
+            Id = roomId,
+            HostConnectionId = Context.ConnectionId,
+            HostName = name,
+            IsSinglePlayer = true,
+            Started = true,
+            DeckSeed = seed,
+            Players = [new SolitairePlayer
+            {
+                ConnectionId = Context.ConnectionId,
+                Name = name,
+                Connected = true,
+                Game = SolitaireEngine.Deal(seed),
+                StartedAtMs = now
+            }]
+        };
+        room.Settings.RoomName = "Solitaire";
+        room.Settings.MaxPlayers = 1;
+        _lobby.StoreSolitaireRoom(roomId, room);
+        await Groups.AddToGroupAsync(Context.ConnectionId, roomId);
+        await Clients.Caller.SendAsync("SolitaireSinglePlayerStarted", roomId);
+    }
+
+    public async Task LeaveSolitaireRoom(string roomId)
+    {
+        var room = _lobby.GetSolitaireRoom(roomId);
+        if (room == null) return;
+        var player = room.Players.FirstOrDefault(p => p.ConnectionId == Context.ConnectionId);
+        await Groups.RemoveFromGroupAsync(Context.ConnectionId, roomId);
+        if (!room.Started)
+        {
+            if (player != null) room.Players.Remove(player);
+            if (room.Players.Count == 0 || Context.ConnectionId == room.HostConnectionId)
+            { await Clients.Group(roomId).SendAsync("SolitaireRoomDissolved"); _lobby.RemoveSolitaireRoom(roomId); }
+            else
+            { await Clients.Group(roomId).SendAsync("SolitaireRoomUpdated", room); }
+        }
+        else
+        {
+            if (player != null) player.Connected = false;
+            await Clients.Group(roomId).SendAsync("PlayerLeft", player?.Name ?? "Someone");
+            if (room.Players.Where(p => !p.IsBot).All(p => !p.Connected))
+                _lobby.RemoveSolitaireRoom(roomId);
+            else
+            {
+                await Clients.Group(roomId).SendAsync("SolitaireUpdated", room);
+                CheckSolitaireOver(room);
+            }
+        }
+        await BroadcastSolitaireRooms();
+    }
+
+    public async Task KickSolitairePlayer(string roomId, string playerName)
+    {
+        var room = _lobby.GetSolitaireRoom(roomId);
+        if (room == null || Context.ConnectionId != room.HostConnectionId) return;
+        var player = room.Players.FirstOrDefault(p => p.Name == playerName && p.ConnectionId != room.HostConnectionId);
+        if (player == null) return;
+        await Clients.Client(player.ConnectionId).SendAsync("KickedFromRoom");
+        await Groups.RemoveFromGroupAsync(player.ConnectionId, roomId);
+        room.Players.Remove(player);
+        await Clients.Group(roomId).SendAsync("SolitaireRoomUpdated", room);
+        await BroadcastSolitaireRooms();
+    }
+
+    public async Task MakeSolitaireMove(string roomId, string moveType, int cardId, int toPile)
+    {
+        var room = _lobby.GetSolitaireRoom(roomId);
+        if (room == null || !room.Started || room.IsOver) return;
+        var player = room.Players.FirstOrDefault(p => p.ConnectionId == Context.ConnectionId && !p.IsBot);
+        if (player == null || player.HasFinished) return;
+
+        var g = player.Game;
+        bool moved = moveType switch
+        {
+            "stock-flip" => SolitaireEngine.FlipStock(g),
+            "waste-to-foundation" => SolitaireEngine.WasteToFoundation(g),
+            "waste-to-tableau" => SolitaireEngine.WasteToTableau(g, toPile),
+            "tableau-to-foundation" => HandleTableauToFoundation(g, cardId),
+            "tableau-to-tableau" => HandleTableauToTableau(g, cardId, toPile),
+            "auto-complete" => HandleAutoComplete(g),
+            _ => false
+        };
+
+        if (!moved) return;
+
+        player.Score = SolitaireEngine.ScoreFor(player);
+
+        if (g.IsComplete && !player.HasFinished)
+        {
+            player.HasFinished = true;
+            room.FinishCount++;
+            player.FinishRank = room.FinishCount;
+            player.FinishedAtMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+            player.Score = SolitaireEngine.ScoreFor(player);
+        }
+
+        await Clients.Group(roomId).SendAsync("SolitaireUpdated", room);
+
+        if (!room.IsSinglePlayer) CheckSolitaireOver(room);
+    }
+
+    private static bool HandleTableauToFoundation(SolitaireGameState g, int cardId)
+    {
+        var (pile, _) = SolitaireEngine.FindInTableau(g, cardId);
+        if (pile < 0) return false;
+        return SolitaireEngine.TableauToFoundation(g, pile);
+    }
+
+    private static bool HandleTableauToTableau(SolitaireGameState g, int cardId, int toPile)
+    {
+        var (pile, idx) = SolitaireEngine.FindInTableau(g, cardId);
+        if (pile < 0) return false;
+        return SolitaireEngine.TableauToTableau(g, pile, idx, toPile);
+    }
+
+    private static bool HandleAutoComplete(SolitaireGameState g)
+    {
+        if (!SolitaireEngine.CanAutoComplete(g)) return false;
+        bool any = false;
+        while (SolitaireEngine.AutoCompleteStep(g)) any = true;
+        return any;
+    }
+
+    private void CheckSolitaireOver(SolitaireRoom room)
+    {
+        if (room.IsOver) return;
+        bool allDone = room.Players.Where(p => !p.IsBot).All(p => p.HasFinished || !p.Connected);
+        if (allDone)
+        {
+            room.IsOver = true;
+            _ = _hubContext.Clients.Group(room.Id).SendAsync("SolitaireUpdated", room);
+        }
+    }
+
+    private IEnumerable<object> SolitaireRoomSummaries() =>
+        _lobby.GetOpenSolitaireRooms().Select(r => new
+        {
+            r.Id,
+            r.HostName,
+            RoomName = r.Settings.RoomName,
+            PlayerCount = r.Players.Count,
+            r.Settings.MaxPlayers,
+            IsFull = r.Players.Count >= r.Settings.MaxPlayers
+        });
+
+    private async Task BroadcastSolitaireRooms() =>
+        await Clients.All.SendAsync("SolitaireRoomList", SolitaireRoomSummaries());
 }

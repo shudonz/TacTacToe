@@ -27,7 +27,8 @@ async function init() {
             tictactoe:     "tttPanel",
             yahtzee:       "yahtzeePanel",
             slots:         "slotsPanel",
-            concentration: "concentrationPanel"
+            concentration: "concentrationPanel",
+            solitaire:     "solitairePanel"
         };
 
         // Show welcome state when no game is selected, otherwise hide it
@@ -42,6 +43,7 @@ async function init() {
         if (selectedGame === "tictactoe")     connection.invoke("GetTttRooms");
         else if (selectedGame === "slots")    connection.invoke("GetSlotsRooms");
         else if (selectedGame === "concentration") connection.invoke("GetConcentrationRooms");
+        else if (selectedGame === "solitaire")     connection.invoke("GetSolitaireRooms");
         else if (selectedGame === "yahtzee")  connection.invoke("GetYahtzeeRooms");
     }
 
@@ -177,6 +179,49 @@ async function init() {
         window.location.href = "/concentration";
     });
 
+    // Solitaire room list
+    connection.on("SolitaireRoomList", rooms => {
+        const list = document.getElementById("solitaireRoomList");
+        const noRooms = document.getElementById("noSolitaireRooms");
+        list.innerHTML = "";
+        const open = rooms.filter(r => !r.started);
+        if (open.length === 0) {
+            noRooms.style.display = "block";
+        } else {
+            noRooms.style.display = "none";
+            open.forEach(r => {
+                const isFull = r.isFull;
+                const card = document.createElement("div");
+                card.className = "player-card room-list-card" + (isFull ? " room-full" : "");
+                const badge = isFull ? '<span class="room-badge room-badge-full">Full</span>' : '<span class="room-badge room-badge-open">Open</span>';
+                card.innerHTML =
+                    '<span class="game-option-icon" style="font-size:1.4rem;">🂡</span>'
+                    + '<div class="room-card-info"><span class="name">' + escapeHtml(r.roomName) + '</span>'
+                    + '<span class="room-card-host">Hosted by ' + escapeHtml(r.hostName) + '</span></div>'
+                    + '<div class="room-card-right"><span class="room-player-count-badge">' + r.playerCount + '/' + r.maxPlayers + '</span>'
+                    + badge + (!isFull ? '<button class="btn btn-accept room-join-btn">Join &rarr;</button>' : '') + '</div>';
+                if (!isFull) {
+                    card.querySelector(".room-join-btn").addEventListener("click", e => { e.stopPropagation(); joinSolitaireRoom(r.id); });
+                    card.onclick = () => joinSolitaireRoom(r.id);
+                }
+                list.appendChild(card);
+            });
+        }
+    });
+
+    connection.on("SolitaireRoomCreated", roomId => {
+        sessionStorage.setItem("solitaireRoomId", roomId);
+        sessionStorage.setItem("isSinglePlayer", "0");
+        window.location.href = "/solitaire-room";
+    });
+
+    connection.on("SolitaireSinglePlayerStarted", roomId => {
+        sessionStorage.setItem("solitaireRoomId", roomId);
+        sessionStorage.setItem("myName", me.name);
+        sessionStorage.setItem("isSinglePlayer", "1");
+        window.location.href = "/solitaire";
+    });
+
     // Yahtzee room list
     connection.on("YahtzeeRoomList", rooms => {
         const list = document.getElementById("roomList");
@@ -259,6 +304,7 @@ async function init() {
         if (gameParam === "ttt") joinTttRoom(joinParam);
         else if (gameParam === "slots") joinSlotsRoom(joinParam);
         else if (gameParam === "concentration") joinConcentrationRoom(joinParam);
+        else if (gameParam === "solitaire") joinSolitaireRoom(joinParam);
         else joinYahtzeeRoom(joinParam);
     }
 
@@ -304,6 +350,31 @@ async function init() {
     document.getElementById("newSlotsRoomName").addEventListener("keydown", e => {
         if (e.key === "Enter") document.getElementById("createSlotsRoomConfirmBtn").click();
         if (e.key === "Escape") document.getElementById("createSlotsRoomCancelBtn").click();
+    });
+
+    // Solitaire single player
+    document.getElementById("solitaireSpBtn").addEventListener("click", () => {
+        sessionStorage.setItem("myName", me.name);
+        connection.invoke("StartSolitaireSinglePlayer");
+    });
+
+    // Create Solitaire room
+    document.getElementById("createSolitaireRoomBtn").addEventListener("click", () => {
+        document.getElementById("newSolitaireRoomName").value = "";
+        document.getElementById("createSolitaireRoomModal").style.display = "flex";
+        setTimeout(() => document.getElementById("newSolitaireRoomName").focus(), 50);
+    });
+    document.getElementById("createSolitaireRoomCancelBtn").addEventListener("click", () => {
+        document.getElementById("createSolitaireRoomModal").style.display = "none";
+    });
+    document.getElementById("createSolitaireRoomConfirmBtn").addEventListener("click", () => {
+        const name = document.getElementById("newSolitaireRoomName").value.trim() || "Solitaire Room";
+        document.getElementById("createSolitaireRoomModal").style.display = "none";
+        connection.invoke("CreateSolitaireRoom", name);
+    });
+    document.getElementById("newSolitaireRoomName").addEventListener("keydown", e => {
+        if (e.key === "Enter") document.getElementById("createSolitaireRoomConfirmBtn").click();
+        if (e.key === "Escape") document.getElementById("createSolitaireRoomCancelBtn").click();
     });
 
     // Concentration single player
@@ -382,6 +453,14 @@ function joinConcentrationRoom(roomId) {
     connection.invoke("JoinConcentrationRoom", roomId).then(() => {
         sessionStorage.setItem("concentrationRoomId", roomId);
         window.location.href = "/concentration-room";
+    });
+}
+
+function joinSolitaireRoom(roomId) {
+    sessionStorage.setItem("isSinglePlayer", "0");
+    connection.invoke("JoinSolitaireRoom", roomId).then(() => {
+        sessionStorage.setItem("solitaireRoomId", roomId);
+        window.location.href = "/solitaire-room";
     });
 }
 

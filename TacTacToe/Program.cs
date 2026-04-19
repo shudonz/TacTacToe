@@ -131,6 +131,20 @@ app.MapGet("/concentration-room", (HttpContext ctx) =>
     return Results.File("concentration-room.html", "text/html");
 });
 
+app.MapGet("/solitaire", (HttpContext ctx) =>
+{
+    if (ctx.User.Identity?.IsAuthenticated != true)
+        return Results.Redirect("/login");
+    return Results.File("solitaire.html", "text/html");
+});
+
+app.MapGet("/solitaire-room", (HttpContext ctx) =>
+{
+    if (ctx.User.Identity?.IsAuthenticated != true)
+        return Results.Redirect("/login");
+    return Results.File("solitaire-room.html", "text/html");
+});
+
 app.MapGet("/api/me", (HttpContext ctx) =>
 {
     if (ctx.User.Identity?.IsAuthenticated != true)

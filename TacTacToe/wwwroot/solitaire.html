@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>TacTacToe &#8211; Solitaire</title>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="/css/style.css" rel="stylesheet">
+</head>
+<body>
+    <div class="ambient"></div>
+    <div class="noise"></div>
+
+    <div class="page-content sol-page">
+        <nav class="navbar">
+            <div class="logo-sm"><span class="logo-x">Tac</span><span class="logo-o">Tac</span><span class="logo-x">Toe</span></div>
+            <div class="sol-nav-info">
+                <span id="timerDisplay" class="sol-timer">0:00</span>
+                <span id="movesDisplay" class="sol-moves">0 moves</span>
+                <span id="scoreDisplay" class="sol-score">0 pts</span>
+            </div>
+            <button id="backBtn" class="btn-logout">Back to Lobby</button>
+        </nav>
+
+        <main class="sol-main">
+            <!-- Multiplayer leaderboard (hidden in solo) -->
+            <div id="solLeaderboard" class="sol-leaderboard glass-card" style="display:none"></div>
+
+            <!-- Game board -->
+            <div class="sol-board-wrap">
+                <div class="sol-board" id="solBoard">
+                    <!-- Top row: stock, waste, gap, 4 foundations -->
+                    <div class="sol-top-row" id="solTopRow">
+                        <div class="sol-stock-slot sol-slot" id="stockSlot" data-role="stock" title="Click to flip card">
+                            <div id="stockCard" class="sol-stock-inner"></div>
+                        </div>
+                        <div class="sol-waste-slot sol-slot" id="wasteSlot">
+                            <div id="wasteCard"></div>
+                        </div>
+                        <div class="sol-gap"></div>
+                        <div class="sol-foundation sol-slot" id="foundation-0" data-role="foundation" data-pile="0" title="Spades foundation">&#9824;</div>
+                        <div class="sol-foundation sol-slot" id="foundation-1" data-role="foundation" data-pile="1" title="Hearts foundation">&#9829;</div>
+                        <div class="sol-foundation sol-slot" id="foundation-2" data-role="foundation" data-pile="2" title="Diamonds foundation">&#9830;</div>
+                        <div class="sol-foundation sol-slot" id="foundation-3" data-role="foundation" data-pile="3" title="Clubs foundation">&#9827;</div>
+                    </div>
+
+                    <!-- Tableau -->
+                    <div class="sol-tableau" id="solTableau">
+                        <div class="sol-pile-wrap" id="pile-0"><div class="sol-pile-slot sol-slot" data-pile="0"></div></div>
+                        <div class="sol-pile-wrap" id="pile-1"><div class="sol-pile-slot sol-slot" data-pile="1"></div></div>
+                        <div class="sol-pile-wrap" id="pile-2"><div class="sol-pile-slot sol-slot" data-pile="2"></div></div>
+                        <div class="sol-pile-wrap" id="pile-3"><div class="sol-pile-slot sol-slot" data-pile="3"></div></div>
+                        <div class="sol-pile-wrap" id="pile-4"><div class="sol-pile-slot sol-slot" data-pile="4"></div></div>
+                        <div class="sol-pile-wrap" id="pile-5"><div class="sol-pile-slot sol-slot" data-pile="5"></div></div>
+                        <div class="sol-pile-wrap" id="pile-6"><div class="sol-pile-slot sol-slot" data-pile="6"></div></div>
+                    </div>
+                </div>
+
+                <!-- Auto-complete button (shows when no more face-down cards) -->
+                <div id="autoCompleteBar" class="sol-autocomplete-bar" style="display:none">
+                    <button id="autoCompleteBtn" class="btn sol-autocomplete-btn">&#9654; Auto-Complete</button>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Win / result overlay -->
+    <div id="resultOverlay" class="result-overlay" style="display:none">
+        <div class="result-card sol-result-card">
+            <div id="resultEmoji" class="sol-result-emoji">&#127881;</div>
+            <h2 id="resultText"></h2>
+            <div id="resultStats" class="sol-result-stats"></div>
+            <div id="finalScores" class="sol-final-scores"></div>
+            <button id="backToLobby" class="btn btn-outline" style="margin-top:1.5rem;">Back to Lobby</button>
+        </div>
+    </div>
+
+    <!-- Chat Widget (multiplayer only) -->
+    <div id="chatWidget" class="chat-widget" style="display:none">
+        <button id="chatToggle" class="chat-toggle">&#128172; <span id="chatBadge" class="chat-badge" style="display:none">0</span></button>
+        <div id="chatPanel" class="chat-panel" style="display:none">
+            <div class="chat-header"><span>Game Chat</span><button id="chatClose" class="chat-close">&#x2715;</button></div>
+            <div id="chatMessages" class="chat-messages"></div>
+            <div class="chat-input-row"><input id="chatInput" class="chat-input" placeholder="Type a message&#8230;" maxlength="500"><button id="chatSend" class="chat-send">&#10148;</button></div>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/8.0.0/signalr.min.js"></script>
+    <script src="/js/solitaire.js"></script>
+</body>
+</html>

@@ -2621,3 +2621,367 @@ body {
 [data-tooltip].tooltip-active::before {
     opacity: 1;
 }
+
+/* ============================================================
+   SOLITAIRE — Klondike card game
+   ============================================================ */
+
+/* ── CSS Variables (responsive card sizes) ─────────────────── */
+:root {
+    --sol-card-w:  78px;
+    --sol-card-h: 109px;
+    --sol-card-r:   8px;
+    --sol-fan-fu:   28px;   /* face-up vertical offset */
+    --sol-fan-fd:   18px;   /* face-down vertical offset */
+    --sol-gap:       8px;
+    --sol-felt:    #0d3322;
+    --sol-felt-2:  #0a2a1c;
+}
+@media (max-width: 640px) {
+    :root {
+        --sol-card-w:  58px;
+        --sol-card-h:  81px;
+        --sol-card-r:   6px;
+        --sol-fan-fu:   22px;
+        --sol-fan-fd:   14px;
+        --sol-gap:       5px;
+    }
+}
+@media (max-width: 420px) {
+    :root {
+        --sol-card-w:  44px;
+        --sol-card-h:  62px;
+        --sol-card-r:   5px;
+        --sol-fan-fu:   17px;
+        --sol-fan-fd:   11px;
+        --sol-gap:       4px;
+    }
+}
+
+/* ── Page layout ────────────────────────────────────────────── */
+.sol-page { overflow-x: hidden; }
+.sol-main {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1rem;
+    padding: 1rem 1rem 2rem;
+    min-height: calc(100vh - 64px);
+}
+
+/* ── Navbar extras ──────────────────────────────────────────── */
+.sol-nav-info {
+    display: flex;
+    gap: 1rem;
+    align-items: center;
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: var(--text-mid);
+}
+.sol-timer  { color: var(--accent); font-variant-numeric: tabular-nums; }
+.sol-moves  { color: var(--text-dim); }
+.sol-score  { color: var(--text-mid); }
+@media (max-width: 520px) {
+    .sol-nav-info { gap: 0.5rem; font-size: 0.72rem; }
+}
+
+/* ── Board wrapper ──────────────────────────────────────────── */
+.sol-board-wrap {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.75rem;
+    width: 100%;
+    max-width: 700px;
+}
+
+.sol-board {
+    background: var(--sol-felt);
+    border-radius: 14px;
+    padding: 12px 10px 16px;
+    box-shadow: 0 8px 40px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.04);
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    width: 100%;
+    position: relative;
+}
+
+/* ── Top row ────────────────────────────────────────────────── */
+.sol-top-row {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: var(--sol-gap);
+    align-items: start;
+}
+.sol-gap { /* middle spacer */ }
+
+/* ── Card slot (placeholder) ────────────────────────────────── */
+.sol-slot {
+    width: var(--sol-card-w);
+    height: var(--sol-card-h);
+    border-radius: var(--sol-card-r);
+    border: 2px dashed rgba(196,231,233,0.20);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    cursor: pointer;
+    transition: border-color 0.15s, background 0.15s;
+}
+.sol-slot:hover { border-color: rgba(196,231,233,0.40); }
+
+.sol-foundation {
+    font-size: 1.5rem;
+    color: rgba(196,231,233,0.30);
+    user-select: none;
+}
+.sol-foundation-empty { color: rgba(196,231,233,0.25); }
+
+/* ── Stock / waste ──────────────────────────────────────────── */
+.sol-stock-slot, .sol-waste-slot {
+    position: relative;
+    width: var(--sol-card-w);
+    height: var(--sol-card-h);
+}
+.sol-stock-inner, .sol-waste-slot { width: 100%; height: 100%; }
+
+.sol-stock-empty {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: var(--sol-card-w);
+    height: var(--sol-card-h);
+    border-radius: var(--sol-card-r);
+    border: 2px dashed rgba(196,231,233,0.30);
+    font-size: 1.8rem;
+    color: rgba(196,231,233,0.40);
+    cursor: pointer;
+    transition: color 0.15s, border-color 0.15s;
+}
+.sol-stock-empty:hover { color: rgba(196,231,233,0.75); border-color: rgba(196,231,233,0.55); }
+.sol-stock-card { cursor: pointer; }
+.sol-empty-slot-outline { border-color: rgba(196,231,233,0.35) !important; }
+
+/* ── Playing cards ──────────────────────────────────────────── */
+.sol-card {
+    width: var(--sol-card-w);
+    height: var(--sol-card-h);
+    border-radius: var(--sol-card-r);
+    background: #fff;
+    border: 1px solid rgba(0,0,0,0.12);
+    box-shadow: 0 2px 6px rgba(0,0,0,0.35);
+    position: relative;
+    cursor: pointer;
+    user-select: none;
+    transition: transform 0.12s, box-shadow 0.12s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+.sol-card:active { transform: scale(0.97); }
+.sol-card.red   { color: #c62828; }
+.sol-card.black { color: #1a1a2e; }
+
+/* Corner labels */
+.sol-card-tl, .sol-card-br {
+    position: absolute;
+    font-size: calc(var(--sol-card-w) * 0.155);
+    font-weight: 800;
+    line-height: 1.1;
+    text-align: center;
+}
+.sol-card-tl { top: 4px; left: 5px; }
+.sol-card-br { bottom: 4px; right: 5px; transform: rotate(180deg); }
+
+/* Center suit */
+.sol-card-center {
+    font-size: calc(var(--sol-card-w) * 0.35);
+    line-height: 1;
+    opacity: 0.75;
+}
+
+/* Card back — teal diagonal stripe (matches app theme) */
+.sol-card-back {
+    background:
+        repeating-linear-gradient(
+            45deg,
+            #12919E 0px,  #12919E 3px,
+            #0a6b75 3px,  #0a6b75 9px
+        );
+    border: 1px solid rgba(0,0,0,0.2);
+    cursor: default;
+}
+.sol-stock-card.sol-card-back { cursor: pointer; }
+
+/* Selected card highlight */
+.sol-selected {
+    box-shadow: 0 0 0 3px #C4E7E9, 0 4px 18px rgba(18,145,158,0.55);
+    transform: translateY(-4px);
+    z-index: 10;
+}
+
+/* ── Tableau ────────────────────────────────────────────────── */
+.sol-tableau {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: var(--sol-gap);
+    align-items: start;
+}
+
+.sol-pile-wrap {
+    position: relative;
+    width: var(--sol-card-w);
+    min-height: var(--sol-card-h);
+}
+
+.sol-pile-card {
+    position: absolute;
+    left: 0;
+}
+
+.sol-empty-slot {
+    width: var(--sol-card-w);
+    height: var(--sol-card-h);
+    border-radius: var(--sol-card-r);
+    border: 2px dashed rgba(196,231,233,0.20);
+    cursor: pointer;
+    transition: border-color 0.15s, background 0.15s;
+}
+.sol-empty-slot:hover { border-color: rgba(196,231,233,0.45); background: rgba(196,231,233,0.04); }
+
+/* ── Auto-complete bar ──────────────────────────────────────── */
+.sol-autocomplete-bar {
+    display: flex;
+    justify-content: center;
+    margin-top: 0.25rem;
+}
+.sol-autocomplete-btn {
+    background: linear-gradient(135deg, #12919E, #1aacba);
+    color: #fff;
+    font-weight: 700;
+    font-size: 0.88rem;
+    padding: 0.55rem 1.4rem;
+    border-radius: 8px;
+    border: none;
+    cursor: pointer;
+    box-shadow: 0 2px 12px rgba(18,145,158,0.40);
+    transition: transform 0.1s, box-shadow 0.15s;
+}
+.sol-autocomplete-btn:hover { transform: translateY(-2px); box-shadow: 0 4px 18px rgba(18,145,158,0.55); }
+.sol-autocomplete-btn:active { transform: scale(0.97); }
+
+/* ── Leaderboard ────────────────────────────────────────────── */
+.sol-leaderboard {
+    width: 100%;
+    max-width: 700px;
+    padding: 0.75rem 1rem;
+}
+.sol-lb-title {
+    font-size: 0.78rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--text-dim);
+    margin-bottom: 0.5rem;
+}
+.sol-lb-row {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    padding: 0.35rem 0.25rem;
+    border-radius: 6px;
+    transition: background 0.15s;
+}
+.sol-lb-row + .sol-lb-row { border-top: 1px solid rgba(196,231,233,0.08); }
+.sol-lb-me { background: rgba(18,145,158,0.10); }
+.sol-lb-medal { font-size: 1rem; width: 1.4rem; text-align: center; flex-shrink: 0; }
+.sol-lb-info { flex: 1; min-width: 0; }
+.sol-lb-name { font-size: 0.82rem; font-weight: 600; color: var(--text); display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.sol-lb-sub  { font-size: 0.72rem; color: var(--text-dim); }
+.sol-lb-progress-bar {
+    width: 100%;
+    height: 5px;
+    background: rgba(196,231,233,0.12);
+    border-radius: 3px;
+    margin: 3px 0;
+    overflow: hidden;
+}
+.sol-lb-progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #12919E, #1aacba);
+    border-radius: 3px;
+    transition: width 0.4s ease;
+}
+.sol-lb-rank-badge {
+    font-size: 0.72rem;
+    font-weight: 700;
+    color: #fbbf24;
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
+/* ── Result overlay extras ──────────────────────────────────── */
+.sol-result-card { max-width: 480px; width: 90vw; }
+.sol-result-emoji { font-size: 3rem; margin-bottom: 0.5rem; }
+.sol-result-stats {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    justify-content: center;
+    margin: 1rem 0 0.5rem;
+}
+.sol-stat {
+    background: rgba(196,231,233,0.07);
+    border: 1px solid rgba(196,231,233,0.12);
+    border-radius: 8px;
+    padding: 0.5rem 0.85rem;
+    text-align: center;
+    min-width: 72px;
+}
+.sol-stat span { display: block; font-size: 0.7rem; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.06em; }
+.sol-stat strong { display: block; font-size: 1rem; font-weight: 700; color: var(--text); margin-top: 2px; }
+.sol-stat-score strong { color: var(--accent); font-size: 1.1rem; }
+
+.sol-final-scores { margin-top: 0.75rem; width: 100%; }
+.sol-final-row {
+    padding: 0.4rem 0.75rem;
+    border-radius: 6px;
+    font-size: 0.88rem;
+    color: var(--text-dim);
+}
+.sol-final-row.is-me { background: rgba(18,145,158,0.12); color: var(--text); font-weight: 600; }
+.sol-final-row + .sol-final-row { border-top: 1px solid rgba(196,231,233,0.08); }
+
+/* ── Drag-and-drop ──────────────────────────────────────────── */
+
+/* Grab cursor on draggable cards */
+.sol-draggable          { cursor: grab; }
+.sol-draggable:active   { cursor: grabbing; }
+
+/* Floating ghost card stack during drag */
+.sol-ghost {
+    position: fixed;
+    z-index: 9000;
+    pointer-events: none;
+    transform: rotate(3deg);
+    filter: drop-shadow(0 8px 20px rgba(0,0,0,0.55));
+    transition: none;
+}
+
+/* Drop-zone highlight overlays */
+.sol-drop-valid {
+    outline: 3px solid #4ade80 !important;
+    outline-offset: 2px;
+    border-radius: var(--sol-card-r);
+    background: rgba(74,222,128,0.08) !important;
+}
+.sol-drop-invalid {
+    outline: 3px solid rgba(248,113,113,0.60) !important;
+    outline-offset: 2px;
+    border-radius: var(--sol-card-r);
+}
+/* Prevent text selection during drag */
+.sol-board { user-select: none; -webkit-user-select: none; }
+

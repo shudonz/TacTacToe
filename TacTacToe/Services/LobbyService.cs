@@ -202,6 +202,39 @@ public class LobbyService
             r.Players.Any(p => p.ConnectionId == connectionId && !p.IsBot));
 
     public void RemoveConcentrationRoom(string id) => _concentrationRooms.TryRemove(id, out _);
+
+    // --- Solitaire Rooms ---
+
+    private readonly ConcurrentDictionary<string, SolitaireRoom> _solitaireRooms = new();
+
+    public SolitaireRoom CreateSolitaireRoom(string id, string hostConnectionId)
+    {
+        var host = _players.GetValueOrDefault(hostConnectionId);
+        var room = new SolitaireRoom
+        {
+            Id = id,
+            HostConnectionId = hostConnectionId,
+            HostName = host?.Name ?? "Host",
+            Players = [new SolitairePlayer { ConnectionId = hostConnectionId, Name = host?.Name ?? "Host", Connected = true }]
+        };
+        _solitaireRooms[id] = room;
+        return room;
+    }
+
+    public SolitaireRoom? GetSolitaireRoom(string id) { _solitaireRooms.TryGetValue(id, out var r); return r; }
+    public void StoreSolitaireRoom(string id, SolitaireRoom room) => _solitaireRooms[id] = room;
+
+    public IEnumerable<SolitaireRoom> GetOpenSolitaireRooms() =>
+        _solitaireRooms.Values.Where(r => !r.Started && !r.IsOver);
+
+    public IEnumerable<SolitaireRoom> GetSolitaireRoomsForConnection(string connectionId) =>
+        _solitaireRooms.Values.Where(r => !r.Started && r.Players.Any(p => p.ConnectionId == connectionId));
+
+    public IEnumerable<SolitaireRoom> GetActiveSolitaireRoomsForConnection(string connectionId) =>
+        _solitaireRooms.Values.Where(r => r.Started && !r.IsOver &&
+            r.Players.Any(p => p.ConnectionId == connectionId && !p.IsBot));
+
+    public void RemoveSolitaireRoom(string id) => _solitaireRooms.TryRemove(id, out _);
 }
 
 public class LobbyPlayer
