@@ -367,6 +367,9 @@ let _prevTurnIdx = -1;
 let _gameOverSoundPlayed = false;
 let _prevDice = [];
 let _diceAnimating = false;
+let _prevRollsLeft = -1;
+// Tracks in-flight per-die animation timers so they can be cancelled on the next update
+let _diceAnimTimers = []; // Array of { tid, ivid } — one entry per queued animation
 
 connection.on("YahtzeeUpdated", room => {
     currentRoom = room;
@@ -384,20 +387,41 @@ connection.on("YahtzeeUpdated", room => {
     renderPlayerBar(room);
 
     // Play your-turn ping when the turn switches to you
-    if (!room.isOver && isMyTurn && room.currentPlayerIndex !== _prevTurnIdx && _prevTurnIdx !== -1) {
+    const turnJustChanged = room.currentPlayerIndex !== _prevTurnIdx && _prevTurnIdx !== -1;
+    if (!room.isOver && isMyTurn && turnJustChanged) {
         playTurnSound();
     }
     _prevTurnIdx = room.currentPlayerIndex;
+
+    // Cancel any in-flight animations from a previous update (e.g. bot's turn) before
+    // rendering new state, so stale intervals cannot overwrite the current dice display.
+    _diceAnimTimers.forEach(t => {
+        if (t.tid  != null) clearTimeout(t.tid);
+        if (t.ivid != null) clearInterval(t.ivid);
+    });
+
+
+    // A roll just happened if rollsLeft decreased within the same turn, or if the turn
+    // just changed and a roll has already been made (rollsLeft < rollsPerTurn).
+    // Using this instead of value-change detection ensures dice that roll the same
+    // number as before still play their animation.
+    const rollJustHappened = room.rollsLeft < _prevRollsLeft ||
+        (turnJustChanged && room.rollsLeft < (room.settings?.rollsPerTurn ?? 3));
+    _prevRollsLeft = room.rollsLeft;
 
     // Dice
     const diceEls = document.querySelectorAll(".die");
     room.dice.forEach((val, i) => {
         if (i >= diceEls.length) return;
         const el = diceEls[i];
+        el.classList.remove("die-rolling", "die-land");
         el.classList.toggle("held", room.held[i]);
 
+        // Animate if: a roll just happened AND this die was not held AND it has a value.
+        // Falls back to value-change check for the very first roll (no prevRollsLeft yet).
         const prevVal = _prevDice[i] ?? 0;
-        const shouldAnimate = val > 0 && !room.held[i] && (val !== prevVal || !el.dataset.shown);
+        const shouldAnimate = val > 0 && !room.held[i] &&
+            (rollJustHappened || val !== prevVal || !el.dataset.shown);
 
         if (shouldAnimate) {
             // Stagger each die slightly for a cascading feel
@@ -406,17 +430,24 @@ connection.on("YahtzeeUpdated", room => {
             const cycleMs = 80;
             let tick = 0;
 
-            el.classList.remove("die-land", "die-rolling");
             el.style.setProperty("--land-spin", (Math.random() < 0.5 ? 1 : -1) * (10 + Math.floor(Math.random() * 15)) + "deg");
 
-            setTimeout(() => {
+            // Show a placeholder while waiting for the stagger delay
+            el.innerHTML = dieSVG(val, room.held[i]);
+
+            const timers = { tid: null, ivid: null };
+            _diceAnimTimers.push(timers);
+
+            timers.tid = setTimeout(() => {
+                timers.tid = null;
                 el.classList.add("die-rolling");
-                const iv = setInterval(() => {
+                timers.ivid = setInterval(() => {
                     tick++;
                     if (tick < cycleCount) {
                         el.innerHTML = dieSVG(Math.ceil(Math.random() * 6), false);
                     } else {
-                        clearInterval(iv);
+                        clearInterval(timers.ivid);
+                        timers.ivid = null;
                         el.classList.remove("die-rolling");
                         el.innerHTML = dieSVG(val, room.held[i]);
                         void el.offsetWidth; // force reflow
@@ -426,7 +457,7 @@ connection.on("YahtzeeUpdated", room => {
                 }, cycleMs);
             }, delay);
         } else {
-            // Held die or no change — just update SVG (colour may change on hold)
+            // Held die, no change, or value reset to 0 — render immediately
             el.innerHTML = dieSVG(val, room.held[i]);
         }
 
