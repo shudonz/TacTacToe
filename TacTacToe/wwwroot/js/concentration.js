@@ -7,6 +7,86 @@ let gameState = null;
 
 if (isSinglePlayer) document.getElementById("chatWidget").style.display = "none";
 
+/* ============================================================
+   Sound Engine (Web Audio API — no external files required)
+   ============================================================ */
+const _ac = new (window.AudioContext || window.webkitAudioContext)();
+function _resumeAudio() { if (_ac.state === 'suspended') _ac.resume(); }
+function _tone(freq, type, start, dur, vol) {
+    const osc = _ac.createOscillator(), gain = _ac.createGain();
+    osc.connect(gain); gain.connect(_ac.destination);
+    osc.type = type; osc.frequency.setValueAtTime(freq, start);
+    gain.gain.setValueAtTime(vol, start);
+    gain.gain.exponentialRampToValueAtTime(0.001, start + dur);
+    osc.start(start); osc.stop(start + dur + 0.05);
+}
+
+// Soft card flip — quick descending sine sweep
+function soundFlip() {
+    _resumeAudio();
+    const t = _ac.currentTime;
+    const osc = _ac.createOscillator(), gain = _ac.createGain();
+    osc.connect(gain); gain.connect(_ac.destination);
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(600, t);
+    osc.frequency.exponentialRampToValueAtTime(280, t + 0.12);
+    gain.gain.setValueAtTime(0.18, t);
+    gain.gain.exponentialRampToValueAtTime(0.001, t + 0.14);
+    osc.start(t); osc.stop(t + 0.18);
+}
+
+// Matched pair — bright two-note sparkle chime
+function soundMatch() {
+    _resumeAudio();
+    const t = _ac.currentTime;
+    _tone(880,  'sine', t,        0.22, 0.30);
+    _tone(1320, 'sine', t + 0.10, 0.28, 0.28);
+    _tone(1760, 'sine', t + 0.20, 0.30, 0.22);
+}
+
+// No match — soft low thud
+function soundMiss() {
+    _resumeAudio();
+    const t = _ac.currentTime;
+    _tone(220, 'triangle', t,        0.18, 0.22);
+    _tone(180, 'triangle', t + 0.10, 0.22, 0.16);
+}
+
+// Win — ascending sparkle fanfare
+function soundWin() {
+    _resumeAudio();
+    const t = _ac.currentTime;
+    [523, 659, 784, 1047, 1319].forEach((f, i) => _tone(f, 'sine', t + i * 0.11, 0.32, 0.32));
+}
+
+// Lose — descending droop
+function soundLose() {
+    _resumeAudio();
+    const t = _ac.currentTime;
+    [440, 350, 280, 220].forEach((f, i) => _tone(f, 'triangle', t + i * 0.15, 0.36, 0.26));
+}
+
+// Tie — neutral double ping
+function soundTie() {
+    _resumeAudio();
+    const t = _ac.currentTime;
+    _tone(528, 'sine', t,       0.28, 0.22);
+    _tone(528, 'sine', t + 0.35, 0.25, 0.14);
+}
+
+// Chat sounds (shared pattern)
+function playChatSendSound() {
+    _resumeAudio();
+    _tone(880,  'sine', _ac.currentTime,        0.08, 0.14);
+    _tone(1100, 'sine', _ac.currentTime + 0.06, 0.07, 0.10);
+}
+function playChatReceiveSound() {
+    _resumeAudio();
+    const t = _ac.currentTime;
+    _tone(740, 'sine', t,        0.10, 0.18);
+    _tone(988, 'sine', t + 0.09, 0.10, 0.18);
+}
+
 function esc(s) { const d = document.createElement("div"); d.textContent = s; return d.innerHTML; }
 
 async function init() {
@@ -17,7 +97,31 @@ async function init() {
     }
 
     connection.on("ConcentrationUpdated", state => {
+        const prev = gameState;
         gameState = state;
+
+        if (prev && !state.isOver) {
+            const newlyRevealed = state.cards.filter(c =>
+                c.isRevealed && !c.isMatched &&
+                !prev.cards[c.index]?.isRevealed
+            );
+            const newlyMatched = state.cards.filter(c =>
+                c.isMatched && !prev.cards[c.index]?.isMatched
+            );
+            const wasRevealed = prev.cards.filter(c => c.isRevealed && !c.isMatched);
+            const nowHidden   = wasRevealed.filter(c => !state.cards[c.index]?.isRevealed && !state.cards[c.index]?.isMatched);
+
+            if (newlyMatched.length > 0)      soundMatch();
+            else if (nowHidden.length > 0)    soundMiss();
+            else if (newlyRevealed.length > 0) soundFlip();
+        }
+
+        if (state.isOver && (!prev || !prev.isOver)) {
+            if (!state.winnerName)                         soundTie();
+            else if (state.winnerName === myName)          soundWin();
+            else                                           soundLose();
+        }
+
         renderState(state);
     });
 
@@ -84,14 +188,14 @@ function initChat(conn, groupId) {
           badge = document.getElementById("chatBadge");
     toggle.onclick = () => { chatOpen = !chatOpen; panel.style.display = chatOpen ? "flex" : "none"; if (chatOpen) { unread = 0; badge.style.display = "none"; msgs.scrollTop = msgs.scrollHeight; input.focus(); } };
     close.onclick = () => { chatOpen = false; panel.style.display = "none"; };
-    function doSend() { const m = input.value.trim(); if (!m) return; conn.invoke("SendChat", groupId, m); input.value = ""; }
+    function doSend() { const m = input.value.trim(); if (!m) return; conn.invoke("SendChat", groupId, m); input.value = ""; playChatSendSound(); }
     send.onclick = doSend;
     input.addEventListener("keydown", e => { if (e.key === "Enter") doSend(); });
     conn.on("ChatMessage", (name, message) => {
         const el = document.createElement("div"); el.className = "chat-msg";
         el.innerHTML = '<span class="chat-name">' + esc(name) + '</span> <span class="chat-text">' + esc(message) + '</span>';
         msgs.appendChild(el); msgs.scrollTop = msgs.scrollHeight;
-        if (!chatOpen) { unread++; badge.textContent = unread; badge.style.display = "inline-flex"; }
+        if (!chatOpen) { unread++; badge.textContent = unread; badge.style.display = "inline-flex"; playChatReceiveSound(); }
     });
 }
 
