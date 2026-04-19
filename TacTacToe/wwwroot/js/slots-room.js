@@ -1,5 +1,9 @@
 const connection = new signalR.HubConnectionBuilder().withUrl("/gamehub").withAutomaticReconnect().build();
 const roomId = sessionStorage.getItem("slotsRoomId");
+if (!roomId) {
+    window.location.replace("/lobby");
+    throw new Error("Missing Slots room id");
+}
 let myName = "";
 let isHost = false;
 

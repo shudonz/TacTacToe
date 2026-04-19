@@ -4,6 +4,10 @@
 const connection = new signalR.HubConnectionBuilder().withUrl("/gamehub").withAutomaticReconnect().build();
 const roomId = sessionStorage.getItem("solitaireRoomId");
 const isSinglePlayer = sessionStorage.getItem("isSinglePlayer") === "1";
+if (!roomId) {
+    window.location.replace("/lobby");
+    throw new Error("Missing Solitaire game room id");
+}
 
 // Card helpers
 const RANKS  = ['A','2','3','4','5','6','7','8','9','10','J','Q','K'];

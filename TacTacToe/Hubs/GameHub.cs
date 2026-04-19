@@ -8,12 +8,12 @@ namespace TacTacToe.Hubs;
 [Authorize]
 public class GameHub : Hub
 {
+    private const int RoomNameMaxLength = 30;
     private const int ConcentrationMismatchDelayMs = 5000;
     private const int ConcentrationBotFirstMoveMinDelayMs = 500;
     private const int ConcentrationBotFirstMoveMaxDelayMs = 1000;
     private const int ConcentrationBotSecondMoveMinDelayMs = 400;
     private const int ConcentrationBotSecondMoveMaxDelayMs = 900;
-    private const int ConcentrationRoomNameMaxLength = 30;
 
     private readonly LobbyService _lobby;
     private readonly IHubContext<GameHub> _hubContext;
@@ -79,6 +79,23 @@ public class GameHub : Hub
                     if (player == null || player.ConnectionId != disconnectedConnectionId) continue;
                     player.Connected = false;
                     await _hubContext.Clients.Group(room.Id).SendAsync("PlayerLeft", name);
+
+                    var connectedHumans = room.Players.Where(p => !p.IsBot && p.Connected).ToList();
+                    if (connectedHumans.Count == 0)
+                    {
+                        _lobby.RemoveSlotsRoom(room.Id);
+                        await BroadcastSlotsRooms();
+                        continue;
+                    }
+                    if (connectedHumans.Count == 1 && !room.IsSinglePlayer)
+                    {
+                        room.IsOver = true;
+                        room.WinnerName = connectedHumans[0].Name;
+                        await _hubContext.Clients.Group(room.Id).SendAsync("SlotsUpdated", room);
+                        await BroadcastSlotsRooms();
+                        continue;
+                    }
+
                     if (!player.HasSpun && room.Phase == SlotsPhase.Betting)
                     {
                         if (player.Balance > 0)
@@ -148,9 +165,17 @@ public class GameHub : Hub
                     player.Connected = false;
                     await _hubContext.Clients.Group(room.Id).SendAsync("PlayerLeft", name);
 
-                    if (room.Players.Where(p => !p.IsBot).All(p => !p.Connected))
+                    var connectedHumans = room.Players.Where(p => !p.IsBot && p.Connected).ToList();
+                    if (connectedHumans.Count == 0)
                     {
                         _lobby.RemoveConcentrationRoom(room.Id);
+                        continue;
+                    }
+                    if (connectedHumans.Count == 1 && !room.IsSinglePlayer)
+                    {
+                        room.IsOver = true;
+                        room.WinnerName = connectedHumans[0].Name;
+                        await _hubContext.Clients.Group(room.Id).SendAsync("ConcentrationUpdated", BuildConcentrationState(room));
                         continue;
                     }
 
@@ -204,8 +229,24 @@ public class GameHub : Hub
                     if (player == null || player.ConnectionId != disconnectedConnectionId) continue;
                     player.Connected = false;
                     await _hubContext.Clients.Group(room.Id).SendAsync("PlayerLeft", name);
-                    if (room.Players.Where(p => !p.IsBot).All(p => !p.Connected))
+
+                    var connectedHumans = room.Players.Where(p => !p.IsBot && p.Connected).ToList();
+                    if (connectedHumans.Count == 0)
                     { _lobby.RemoveSolitaireRoom(room.Id); }
+                    else if (connectedHumans.Count == 1 && !room.IsSinglePlayer)
+                    {
+                        var winner = connectedHumans[0];
+                        if (!winner.HasFinished)
+                        {
+                            winner.HasFinished = true;
+                            room.FinishCount = Math.Max(room.FinishCount, 1);
+                            winner.FinishRank = 1;
+                            winner.FinishedAtMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+                            winner.Score = SolitaireEngine.ScoreFor(winner);
+                        }
+                        room.IsOver = true;
+                        await _hubContext.Clients.Group(room.Id).SendAsync("SolitaireUpdated", room);
+                    }
                     else
                     {
                         await _hubContext.Clients.Group(room.Id).SendAsync("SolitaireUpdated", room);
@@ -280,6 +321,41 @@ public class GameHub : Hub
             });
         }
 
+        // Defer Yahtzee waiting-room cleanup (navigation/rejoin grace period)
+        var yahtzeeWaitSnapshot = _lobby.GetPublicRooms()
+            .Where(r => r.Players.Any(p => p.ConnectionId == disconnectedConnectionId))
+            .Select(r => r.Id)
+            .ToList();
+        if (yahtzeeWaitSnapshot.Count > 0)
+        {
+            _ = Task.Run(async () =>
+            {
+                await Task.Delay(TimeSpan.FromSeconds(8));
+                bool changed = false;
+                foreach (var roomId in yahtzeeWaitSnapshot)
+                {
+                    var room = _lobby.GetRoom(roomId);
+                    if (room == null || room.Started || room.IsOver) continue;
+                    var player = room.Players.FirstOrDefault(p => p.ConnectionId == disconnectedConnectionId);
+                    if (player == null) continue;
+
+                    room.Players.Remove(player);
+                    changed = true;
+                    if (room.Players.Count == 0 || room.HostConnectionId == disconnectedConnectionId)
+                    {
+                        _lobby.RemoveRoom(room.Id);
+                    }
+                    else
+                    {
+                        room.HostConnectionId = room.Players[0].ConnectionId;
+                        room.HostName = room.Players[0].Name;
+                        await _hubContext.Clients.Group(room.Id).SendAsync("YahtzeeRoomUpdated", room);
+                    }
+                }
+                if (changed) await BroadcastYahtzeeRooms();
+            });
+        }
+
         // Defer Yahtzee mid-game disconnect handling to give page-navigations time to rejoin
         var roomsSnapshot = _lobby.GetActiveRoomsForConnection(disconnectedConnectionId).ToList();
         if (roomsSnapshot.Count > 0)
@@ -300,6 +376,7 @@ public class GameHub : Hub
 
         _lobby.RemovePlayer(disconnectedConnectionId);
         await BroadcastLobby();
+        await BroadcastAllRoomLists();
         await base.OnDisconnectedAsync(exception);
     }
 
@@ -314,9 +391,18 @@ public class GameHub : Hub
         await _hubContext.Clients.Group(room.Id).SendAsync("PlayerLeft", playerName);
 
         // If no human players remain, clean up silently
-        if (room.Players.Where(p => !p.IsBot).All(p => !p.Connected))
+        var connectedHumans = room.Players.Where(p => !p.IsBot && p.Connected).ToList();
+        if (connectedHumans.Count == 0)
         {
             _lobby.RemoveRoom(room.Id);
+            return;
+        }
+        if (connectedHumans.Count == 1 && !room.IsSinglePlayer)
+        {
+            room.IsOver = true;
+            room.WinnerName = connectedHumans[0].Name;
+            await _hubContext.Clients.Group(room.Id).SendAsync("YahtzeeUpdated", room);
+            await BroadcastYahtzeeRooms();
             return;
         }
 
@@ -356,7 +442,7 @@ public class GameHub : Hub
         var roomId = Guid.NewGuid().ToString("N");
         var room = _lobby.CreateTttRoom(roomId, Context.ConnectionId);
         if (!string.IsNullOrWhiteSpace(roomName))
-            room.RoomName = roomName.Trim()[..Math.Min(roomName.Trim().Length, 30)];
+            room.RoomName = roomName.Trim()[..Math.Min(roomName.Trim().Length, RoomNameMaxLength)];
         await Groups.AddToGroupAsync(Context.ConnectionId, roomId);
         await Clients.Caller.SendAsync("TttRoomCreated", roomId);
         await BroadcastTttRooms();
@@ -485,7 +571,7 @@ public class GameHub : Hub
         var roomId = Guid.NewGuid().ToString("N");
         var room = _lobby.CreateSlotsRoom(roomId, Context.ConnectionId);
         if (!string.IsNullOrWhiteSpace(roomName))
-            room.Settings.RoomName = roomName.Trim()[..Math.Min(roomName.Trim().Length, 30)];
+            room.Settings.RoomName = roomName.Trim()[..Math.Min(roomName.Trim().Length, RoomNameMaxLength)];
         await Groups.AddToGroupAsync(Context.ConnectionId, roomId);
         await Clients.Caller.SendAsync("SlotsRoomCreated", roomId);
         await BroadcastSlotsRooms();
@@ -562,8 +648,16 @@ public class GameHub : Hub
             if (player != null) player.Connected = false;
             await Groups.RemoveFromGroupAsync(Context.ConnectionId, roomId);
             await Clients.Group(roomId).SendAsync("PlayerLeft", player?.Name ?? "Someone");
-            if (room.Players.Where(p => !p.IsBot).All(p => !p.Connected))
+
+            var connectedHumans = room.Players.Where(p => !p.IsBot && p.Connected).ToList();
+            if (connectedHumans.Count == 0)
                 _lobby.RemoveSlotsRoom(roomId);
+            else if (connectedHumans.Count == 1 && !room.IsSinglePlayer)
+            {
+                room.IsOver = true;
+                room.WinnerName = connectedHumans[0].Name;
+                await Clients.Group(roomId).SendAsync("SlotsUpdated", room);
+            }
             else if (player != null && !player.HasSpun && room.Phase == SlotsPhase.Betting && player.Balance > 0)
             {
                 var (betPerLine, activePaylines) = ChooseAutoSlotsBet(player.Balance);
@@ -765,7 +859,7 @@ public class GameHub : Hub
         if (!string.IsNullOrWhiteSpace(roomName))
         {
             var trimmedName = roomName.Trim();
-            room.Settings.RoomName = trimmedName[..Math.Min(trimmedName.Length, ConcentrationRoomNameMaxLength)];
+            room.Settings.RoomName = trimmedName[..Math.Min(trimmedName.Length, RoomNameMaxLength)];
         }
         await Groups.AddToGroupAsync(Context.ConnectionId, roomId);
         await Clients.Caller.SendAsync("ConcentrationRoomCreated", roomId);
@@ -972,9 +1066,17 @@ public class GameHub : Hub
 
         player.Connected = false;
         await Clients.Group(roomId).SendAsync("PlayerLeft", player.Name);
-        if (room.Players.Where(p => !p.IsBot).All(p => !p.Connected))
+        var connectedHumans = room.Players.Where(p => !p.IsBot && p.Connected).ToList();
+        if (connectedHumans.Count == 0)
         {
             _lobby.RemoveConcentrationRoom(roomId);
+            return;
+        }
+        if (connectedHumans.Count == 1 && !room.IsSinglePlayer)
+        {
+            room.IsOver = true;
+            room.WinnerName = connectedHumans[0].Name;
+            await Clients.Group(roomId).SendAsync("ConcentrationUpdated", BuildConcentrationState(room));
             return;
         }
 
@@ -1288,6 +1390,15 @@ public class GameHub : Hub
         await Clients.All.SendAsync("LobbyUpdated", players);
     }
 
+    private async Task BroadcastAllRoomLists()
+    {
+        await BroadcastTttRooms();
+        await BroadcastSlotsRooms();
+        await BroadcastConcentrationRooms();
+        await BroadcastSolitaireRooms();
+        await BroadcastYahtzeeRooms();
+    }
+
     private static bool CheckWin(string[] board, string mark)
     {
         int[][] wins =
@@ -1308,7 +1419,7 @@ public class GameHub : Hub
         var roomId = Guid.NewGuid().ToString("N");
         var room = _lobby.CreateRoom(roomId, Context.ConnectionId);
         if (!string.IsNullOrWhiteSpace(roomName))
-            room.Settings.RoomName = roomName.Trim()[..Math.Min(roomName.Trim().Length, 30)];
+            room.Settings.RoomName = roomName.Trim()[..Math.Min(roomName.Trim().Length, RoomNameMaxLength)];
         await Groups.AddToGroupAsync(Context.ConnectionId, roomId);
         await Clients.Caller.SendAsync("YahtzeeRoomCreated", roomId);
         await BroadcastYahtzeeRooms();
@@ -1385,7 +1496,7 @@ public class GameHub : Hub
         settings.LargeStraightScore = Math.Clamp(settings.LargeStraightScore, 0, 100);
         settings.YahtzeeScore = Math.Clamp(settings.YahtzeeScore, 0, 100);
         if (!string.IsNullOrWhiteSpace(settings.RoomName))
-            settings.RoomName = settings.RoomName.Trim()[..Math.Min(settings.RoomName.Trim().Length, 30)];
+            settings.RoomName = settings.RoomName.Trim()[..Math.Min(settings.RoomName.Trim().Length, RoomNameMaxLength)];
 
         room.Settings = settings;
         await Clients.Group(roomId).SendAsync("YahtzeeRoomUpdated", room);
@@ -1562,9 +1673,16 @@ public class GameHub : Hub
         else
         {
             // Mid-game: if all disconnected, clean up
-            if (room.Players.All(p => !p.Connected))
+            var connectedHumans = room.Players.Where(p => !p.IsBot && p.Connected).ToList();
+            if (connectedHumans.Count == 0)
             {
                 _lobby.RemoveRoom(roomId);
+            }
+            else if (connectedHumans.Count == 1 && !room.IsSinglePlayer)
+            {
+                room.IsOver = true;
+                room.WinnerName = connectedHumans[0].Name;
+                await Clients.Group(roomId).SendAsync("YahtzeeUpdated", room);
             }
             else
             {
@@ -1889,7 +2007,7 @@ public class GameHub : Hub
         var roomId = Guid.NewGuid().ToString("N");
         var room = _lobby.CreateSolitaireRoom(roomId, Context.ConnectionId);
         if (!string.IsNullOrWhiteSpace(roomName))
-            room.Settings.RoomName = roomName.Trim()[..Math.Min(roomName.Trim().Length, 30)];
+            room.Settings.RoomName = roomName.Trim()[..Math.Min(roomName.Trim().Length, RoomNameMaxLength)];
         await Groups.AddToGroupAsync(Context.ConnectionId, roomId);
         await Clients.Caller.SendAsync("SolitaireRoomCreated", roomId);
         await BroadcastSolitaireRooms();
@@ -2002,8 +2120,23 @@ public class GameHub : Hub
         {
             if (player != null) player.Connected = false;
             await Clients.Group(roomId).SendAsync("PlayerLeft", player?.Name ?? "Someone");
-            if (room.Players.Where(p => !p.IsBot).All(p => !p.Connected))
+            var connectedHumans = room.Players.Where(p => !p.IsBot && p.Connected).ToList();
+            if (connectedHumans.Count == 0)
                 _lobby.RemoveSolitaireRoom(roomId);
+            else if (connectedHumans.Count == 1 && !room.IsSinglePlayer)
+            {
+                var winner = connectedHumans[0];
+                if (!winner.HasFinished)
+                {
+                    winner.HasFinished = true;
+                    room.FinishCount = Math.Max(room.FinishCount, 1);
+                    winner.FinishRank = 1;
+                    winner.FinishedAtMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+                    winner.Score = SolitaireEngine.ScoreFor(winner);
+                }
+                room.IsOver = true;
+                await Clients.Group(roomId).SendAsync("SolitaireUpdated", room);
+            }
             else
             {
                 await Clients.Group(roomId).SendAsync("SolitaireUpdated", room);

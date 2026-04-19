@@ -260,6 +260,10 @@ const connection = new signalR.HubConnectionBuilder().withUrl("/gamehub").withAu
 const gameId = sessionStorage.getItem("gameId");
 const myName = sessionStorage.getItem("myName");
 const isSinglePlayer = sessionStorage.getItem("isSinglePlayer") === "1";
+if (!gameId || !myName) {
+    window.location.replace("/lobby");
+    throw new Error("Missing Yahtzee game session data");
+}
 
 if (isSinglePlayer) {
     document.getElementById("chatWidget").style.display = "none";

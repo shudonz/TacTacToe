@@ -1,5 +1,9 @@
 const connection = new signalR.HubConnectionBuilder().withUrl("/gamehub").withAutomaticReconnect().build();
 const roomId = sessionStorage.getItem("yahtzeeRoomId");
+if (!roomId) {
+    window.location.replace("/lobby");
+    throw new Error("Missing Yahtzee room id");
+}
 let myName = "";
 let isHost = false;
 
@@ -88,7 +92,7 @@ function renderRoom(room) {
         if (p.name === room.hostName) html += '<span class="room-host-badge">HOST</span>';
         if (p.name === myName) html += '<span class="you-tag">You</span>';
         if (isHost && p.name !== myName) {
-            html += '<button class="btn-kick" onclick="kickPlayer(\'' + escapeHtml(p.name) + '\')">✕</button>';
+            html += '<button class="btn-kick" onclick="kickPlayer(\'' + escapeHtml(p.name).replace(/'/g, "\\'") + '\')">✕</button>';
         }
         el.innerHTML = html;
         list.appendChild(el);
