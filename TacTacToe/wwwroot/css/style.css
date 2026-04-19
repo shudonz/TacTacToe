@@ -226,7 +226,7 @@ body {
     letter-spacing: -2px;
     line-height: 1;
 }
-.logo     { font-size: 3.2rem; }
+.logo     { font-size: clamp(1.6rem, 10vw, 3.2rem); }
 .logo-sm  { font-size: 1.4rem; letter-spacing: -1px; }
 .logo-x   { color: var(--accent); }
 .logo-o   { color: var(--accent2); }
@@ -256,6 +256,12 @@ body {
 @keyframes cardEnter {
     from { opacity: 0; transform: translateY(30px) scale(0.96); }
     to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.login-card .logo {
+    display: block;
+    font-size: 2.4rem;
+    white-space: nowrap;
 }
 
 .login-subtitle {
