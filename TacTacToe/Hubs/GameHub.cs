@@ -810,6 +810,7 @@ public class GameHub : Hub
         if (current.ConnectionId != Context.ConnectionId || current.IsBot) return;
 
         room.TurnRevealedIndexes.Add(cardIndex);
+        room.SeenCardIndexes.Add(cardIndex);
         await Clients.Group(roomId).SendAsync("ConcentrationUpdated", BuildConcentrationState(room));
 
         if (room.TurnRevealedIndexes.Count < 2) return;
@@ -962,6 +963,7 @@ public class GameHub : Hub
 
         int first = available[Random.Shared.Next(available.Count)];
         room.TurnRevealedIndexes.Add(first);
+        room.SeenCardIndexes.Add(first);
         await _hubContext.Clients.Group(roomId).SendAsync("ConcentrationUpdated", BuildConcentrationState(room));
 
         await Task.Delay(Random.Shared.Next(ConcentrationBotSecondMoveMinDelayMs, ConcentrationBotSecondMoveMaxDelayMs));
@@ -970,11 +972,28 @@ public class GameHub : Hub
             .ToList();
         if (available.Count == 0) return;
 
-        var secondCandidates = available.Where(i => room.Deck[i] == room.Deck[first]).ToList();
-        int second = secondCandidates.Count > 0
-            ? secondCandidates[0]
-            : available[Random.Shared.Next(available.Count)];
+        // Bot only uses memory of previously-seen cards — not perfect deck knowledge.
+        // Even when the match is known, a ~30% chance of a mistake keeps the game winnable.
+        const double BotMissChance = 0.30;
+        var knownMatchIdx = available
+            .Where(i => room.SeenCardIndexes.Contains(i) && room.Deck[i] == room.Deck[first])
+            .Cast<int?>()
+            .FirstOrDefault();
+        int second;
+        if (knownMatchIdx.HasValue && Random.Shared.NextDouble() >= BotMissChance)
+        {
+            second = knownMatchIdx.Value;
+        }
+        else
+        {
+            // Pick randomly from unseen cards first (looks more natural)
+            var unseen = available.Where(i => !room.SeenCardIndexes.Contains(i)).ToList();
+            second = unseen.Count > 0
+                ? unseen[Random.Shared.Next(unseen.Count)]
+                : available[Random.Shared.Next(available.Count)];
+        }
         room.TurnRevealedIndexes.Add(second);
+        room.SeenCardIndexes.Add(second);
         await _hubContext.Clients.Group(roomId).SendAsync("ConcentrationUpdated", BuildConcentrationState(room));
 
         bool isMatch = room.Deck[first] == room.Deck[second];

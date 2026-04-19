@@ -15,6 +15,9 @@ public class ConcentrationRoom
     public bool[] Matched { get; set; } = [];
     public int CurrentPlayerIndex { get; set; }
     public List<int> TurnRevealedIndexes { get; set; } = [];
+    // Tracks every card index that has been flipped face-up at any point during the game.
+    // The bot only uses this set to find known matches — cards never flipped remain hidden.
+    public HashSet<int> SeenCardIndexes { get; set; } = [];
 }
 
 public class ConcentrationSettings
