@@ -14,17 +14,33 @@ function launchConfetti() {
     let w = canvas.width = window.innerWidth;
     let h = canvas.height = window.innerHeight;
     const particles = [];
-    for (let i = 0; i < 200; i++) {
-        const angle = Math.random() * Math.PI * 2;
-        const speed = 4 + Math.random() * 10;
-        particles.push({ x: w / 2 + (Math.random() - 0.5) * w * 0.3, y: h * 0.45,
-            vx: Math.cos(angle) * speed * (0.6 + Math.random()), vy: Math.sin(angle) * speed * -1.2 - Math.random() * 6,
-            size: 4 + Math.random() * 6, color: confettiColors[Math.floor(Math.random() * confettiColors.length)],
-            rotation: Math.random() * 360, rotSpeed: (Math.random() - 0.5) * 12,
-            shape: Math.random() < 0.4 ? 'circle' : Math.random() < 0.7 ? 'rect' : 'strip',
-            opacity: 1, gravity: 0.12 + Math.random() * 0.08, drag: 0.98 + Math.random() * 0.015,
-            wobble: Math.random() * Math.PI * 2, wobbleSpeed: 0.03 + Math.random() * 0.06 });
+
+    function spawn(count, ox, oy, speedScale, fadeStart) {
+        for (let i = 0; i < count; i++) {
+            const angle = Math.random() * Math.PI * 2;
+            const speed = (3 + Math.random() * 10) * speedScale;
+            particles.push({
+                x: ox, y: oy,
+                vx: Math.cos(angle) * speed * (0.6 + Math.random()),
+                vy: Math.sin(angle) * speed * -1.2 - Math.random() * 6,
+                size: 4 + Math.random() * 6,
+                color: confettiColors[Math.floor(Math.random() * confettiColors.length)],
+                rotation: Math.random() * 360, rotSpeed: (Math.random() - 0.5) * 12,
+                shape: Math.random() < 0.4 ? 'circle' : Math.random() < 0.7 ? 'rect' : 'strip',
+                opacity: 1, gravity: 0.12 + Math.random() * 0.08, drag: 0.98 + Math.random() * 0.015,
+                wobble: Math.random() * Math.PI * 2, wobbleSpeed: 0.03 + Math.random() * 0.06,
+                fadeStart
+            });
+        }
     }
+
+    // Wave 1 — centre burst
+    spawn(200, w / 2 + (Math.random() - 0.5) * w * 0.3, h * 0.45, 1.0, 180);
+    // Wave 2 — left and right sides
+    setTimeout(() => { spawn(90, w * 0.12, h * 0.4, 0.9, 160); spawn(90, w * 0.88, h * 0.4, 0.9, 160); }, 300);
+    // Wave 3 — rain from top
+    setTimeout(() => { for (let i = 0; i < 60; i++) spawn(1, Math.random() * w, -10, 0.5, 120); }, 550);
+
     let frame = 0;
     function draw() {
         ctx.clearRect(0, 0, w, h);
@@ -33,7 +49,7 @@ function launchConfetti() {
             p.vy += p.gravity; p.vx *= p.drag; p.vy *= p.drag;
             p.x += p.vx + Math.sin(p.wobble) * 1.5; p.y += p.vy;
             p.rotation += p.rotSpeed; p.wobble += p.wobbleSpeed;
-            if (frame > 180) p.opacity -= 0.015;
+            if (frame > (p.fadeStart || 180)) p.opacity -= 0.015;
             if (p.opacity <= 0) continue;
             alive = true;
             ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.rotation * Math.PI / 180);
@@ -44,7 +60,7 @@ function launchConfetti() {
             ctx.restore();
         }
         frame++;
-        if (alive && frame < 300) requestAnimationFrame(draw); else canvas.remove();
+        if (alive && frame < 360) requestAnimationFrame(draw); else canvas.remove();
     }
     requestAnimationFrame(draw);
 }
@@ -341,6 +357,8 @@ function buildScorecard(players, settings) {
             const preview = calcScore(cat, currentRoom.dice, currentRoom.settings);
             const isYahtzee = cat === 'yahtzee' && preview === (currentRoom.settings?.yahtzeeScore ?? 50);
             playScoreSound(preview, isYahtzee);
+            // Immediate confetti for Yahtzee! — don't wait for server round-trip
+            if (isYahtzee) launchConfetti();
             connection.invoke("YahtzeeScore", gameId, cat);
         });
     });
@@ -370,6 +388,7 @@ let _diceAnimating = false;
 let _prevRollsLeft = -1;
 // Tracks in-flight per-die animation timers so they can be cancelled on the next update
 let _diceAnimTimers = []; // Array of { tid, ivid } — one entry per queued animation
+let _upperBonusEarned = false; // fire confetti only once when bonus is first earned
 
 connection.on("YahtzeeUpdated", room => {
     currentRoom = room;
@@ -505,7 +524,14 @@ connection.on("YahtzeeUpdated", room => {
         if (bonusEl) {
             const upper = upperCats.reduce((s, c) => s + (p.scores[c] ?? 0), 0);
             const threshold = room.settings?.upperBonusThreshold ?? 63;
-            bonusEl.textContent = upper >= threshold ? (room.settings?.upperBonusPoints ?? 35) : upper + "/" + threshold;
+            const hasBonus = upper >= threshold;
+            bonusEl.textContent = hasBonus ? (room.settings?.upperBonusPoints ?? 35) : upper + "/" + threshold;
+            // Pop confetti the first time MY upper bonus is earned
+            if (hasBonus && !_upperBonusEarned && p.name === myName) {
+                _upperBonusEarned = true;
+                launchConfetti();
+                showToast("🎉 Upper bonus earned!");
+            }
         }
         if (totalEl) totalEl.textContent = totalScore(p.scores, room.settings);
     });
