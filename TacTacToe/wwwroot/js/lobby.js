@@ -1,5 +1,7 @@
 const connection = new signalR.HubConnectionBuilder().withUrl("/gamehub").withAutomaticReconnect().build();
-let selectedGame = "tictactoe";
+// No game selected on initial load — user must pick one. This hides all game
+// sections so the page shows only the game picker buttons.
+let selectedGame = "";
 
 async function init() {
     const res = await fetch("/api/me");
@@ -18,18 +20,26 @@ async function init() {
     });
 
     function updateSections() {
+        // Determine which section to show (only when a game is explicitly selected).
         const ttt = selectedGame === "tictactoe";
         const slots = selectedGame === "slots";
         const concentration = selectedGame === "concentration";
+        const yahtzee = selectedGame === "yahtzee";
+
+        // Hide all sections unless their game is selected. This ensures that on
+        // initial page load (selectedGame == "") only the game picker is visible.
         document.getElementById("tttSinglePlayer").style.display = ttt ? "" : "none";
         document.getElementById("tttRoomsSection").style.display = ttt ? "" : "none";
-        document.getElementById("yahtzeeSection").style.display = (!ttt && !slots && !concentration) ? "" : "none";
+        document.getElementById("yahtzeeSection").style.display = yahtzee ? "" : "none";
         document.getElementById("slotsSection").style.display = slots ? "" : "none";
         document.getElementById("concentrationSection").style.display = concentration ? "" : "none";
+
+        // Only request room lists for the selected game to avoid loading extra
+        // data when no game is chosen.
         if (ttt) connection.invoke("GetTttRooms");
         else if (slots) connection.invoke("GetSlotsRooms");
         else if (concentration) connection.invoke("GetConcentrationRooms");
-        else connection.invoke("GetYahtzeeRooms");
+        else if (yahtzee) connection.invoke("GetYahtzeeRooms");
     }
 
     // TTT room list
