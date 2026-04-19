@@ -165,8 +165,124 @@ function stopReelTicks() { if (_tickInterval) { clearInterval(_tickInterval); _t
 /* ============================================================
    Reel animation + paylines
    ============================================================ */
+
+// One distinct, vivid color per payline (Top, Middle, Bottom, Diag↘, Diag↗)
+const PAYLINE_COLORS = ["#4ade80", "#fbbf24", "#38bdf8", "#f472b6", "#fb923c"];
+
+let _paylineAnimFrame = null;
+
+function clearPaylineCanvas() {
+    if (_paylineAnimFrame) { cancelAnimationFrame(_paylineAnimFrame); _paylineAnimFrame = null; }
+    const canvas = document.getElementById("paylineCanvas");
+    if (!canvas) return;
+    canvas.getContext("2d").clearRect(0, 0, canvas.width, canvas.height);
+}
+
+function drawPaylineOverlay(winningLines) {
+    clearPaylineCanvas();
+    if (!winningLines || !winningLines.length) return;
+
+    const canvas = document.getElementById("paylineCanvas");
+    const windowEl = canvas.parentElement;
+
+    // Size canvas in physical pixels for crisp drawing
+    const dpr = window.devicePixelRatio || 1;
+    canvas.width  = windowEl.offsetWidth  * dpr;
+    canvas.height = windowEl.offsetHeight * dpr;
+    canvas.style.width  = windowEl.offsetWidth  + "px";
+    canvas.style.height = windowEl.offsetHeight + "px";
+
+    const ctx = canvas.getContext("2d");
+    ctx.scale(dpr, dpr);
+
+    // Compute logical cell centers relative to the window container
+    const parentRect = windowEl.getBoundingClientRect();
+    const centers = [];
+    for (let r = 0; r < 3; r++) {
+        centers[r] = [];
+        for (let c = 0; c < 3; c++) {
+            const cell = reelEl(r, c);
+            if (!cell) continue;
+            const cr = cell.getBoundingClientRect();
+            centers[r][c] = {
+                x: cr.left - parentRect.left + cr.width  / 2,
+                y: cr.top  - parentRect.top  + cr.height / 2,
+            };
+        }
+    }
+
+    const startTime = performance.now();
+    const DURATION = 4200; // ms the overlay lives
+
+    function frame(now) {
+        const elapsed = now - startTime;
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        const t = elapsed / 1000;
+        // Fast pulse: 2 Hz sine, clamped to a nice range
+        const alpha = 0.55 + 0.45 * Math.abs(Math.sin(t * Math.PI * 2));
+
+        winningLines.forEach(lineIdx => {
+            const payline = PAYLINES[lineIdx];
+            if (!payline) return;
+            const color = PAYLINE_COLORS[lineIdx % PAYLINE_COLORS.length];
+
+            // Gather points
+            const pts = payline.map(([r, c]) => centers[r]?.[c]).filter(Boolean);
+            if (pts.length < 2) return;
+
+            // Extend the line slightly beyond the outer cells so it visually
+            // "crosses" the edge cells rather than stopping at their centers.
+            const dx = pts[pts.length - 1].x - pts[0].x;
+            const dy = pts[pts.length - 1].y - pts[0].y;
+            const len = Math.sqrt(dx * dx + dy * dy) || 1;
+            const ext = 24; // pixels to extend past each end
+            const startPt = { x: pts[0].x - (dx / len) * ext,  y: pts[0].y - (dy / len) * ext  };
+            const endPt   = { x: pts[pts.length - 1].x + (dx / len) * ext, y: pts[pts.length - 1].y + (dy / len) * ext };
+
+            ctx.save();
+            ctx.globalAlpha = alpha;
+
+            // Outer glow pass
+            ctx.strokeStyle = color;
+            ctx.lineWidth   = 12;
+            ctx.lineCap     = "round";
+            ctx.shadowColor = color;
+            ctx.shadowBlur  = 22;
+            ctx.beginPath();
+            ctx.moveTo(startPt.x, startPt.y);
+            pts.forEach(pt => ctx.lineTo(pt.x, pt.y));
+            ctx.lineTo(endPt.x, endPt.y);
+            ctx.stroke();
+
+            // Bright inner line
+            ctx.globalAlpha = alpha * 0.95;
+            ctx.strokeStyle = "#ffffff";
+            ctx.lineWidth   = 3;
+            ctx.shadowBlur  = 6;
+            ctx.beginPath();
+            ctx.moveTo(startPt.x, startPt.y);
+            pts.forEach(pt => ctx.lineTo(pt.x, pt.y));
+            ctx.lineTo(endPt.x, endPt.y);
+            ctx.stroke();
+
+            ctx.restore();
+        });
+
+        if (elapsed < DURATION) {
+            _paylineAnimFrame = requestAnimationFrame(frame);
+        } else {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            _paylineAnimFrame = null;
+        }
+    }
+
+    _paylineAnimFrame = requestAnimationFrame(frame);
+}
+
 function clearPaylineHighlights() {
     document.querySelectorAll(".slots-reel.line-win, .slots-payline-badge.win").forEach(el => el.classList.remove("line-win", "win"));
+    clearPaylineCanvas();
 }
 function renderPaylineLegend(activeLines, winning = []) {
     const legend = document.getElementById("paylineLegend");
@@ -188,6 +304,7 @@ function highlightWinningPaylines(winning = []) {
         line.forEach(([r, c]) => reelEl(r, c)?.classList.add("line-win"));
         document.querySelector(`.slots-payline-badge[data-line='${lineIdx}']`)?.classList.add("win");
     });
+    drawPaylineOverlay(winning);
 }
 function animateReels(reels, onDone) {
     stopReelTicks();
