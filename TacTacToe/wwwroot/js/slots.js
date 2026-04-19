@@ -213,7 +213,6 @@ function drawPaylineOverlay(winningLines) {
     }
 
     const startTime = performance.now();
-    const DURATION = 7000; // ms the overlay lives
 
     function frame(now) {
         const elapsed = now - startTime;
@@ -270,12 +269,7 @@ function drawPaylineOverlay(winningLines) {
             ctx.restore();
         });
 
-        if (elapsed < DURATION) {
-            _paylineAnimFrame = requestAnimationFrame(frame);
-        } else {
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            _paylineAnimFrame = null;
-        }
+        _paylineAnimFrame = requestAnimationFrame(frame);
     }
 
     _paylineAnimFrame = requestAnimationFrame(frame);
