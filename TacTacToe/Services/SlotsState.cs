@@ -146,11 +146,9 @@ public static class SlotsEngine
         };
     }
 
-    public static string GetWinLabel(int[][] reels, int[]? preferredLine = null)
+    public static string GetWinLabel(int[][] reels, int preferredLine = 1)
     {
-        var coords = preferredLine is { Length: 3 }
-            ? preferredLine.Select(idx => Paylines[Math.Clamp(idx, 0, Paylines.Length - 1)]).First()
-            : Paylines[1];
+        var coords = Paylines[Math.Clamp(preferredLine, 0, Paylines.Length - 1)];
 
         var line = coords.Select(p => reels[p.Row][p.Col]).ToArray();
         int a = line[0], b = line[1], c = line[2];

@@ -265,20 +265,11 @@ function syncBetDisplay() {
 }
 function applyAffordableSelection(balance) {
     if (balance <= 0) return;
-    let lines = selectedPaylines;
-    let perLine = selectedBetPerLine;
+    const bestLineChoice = [...PAYLINE_OPTIONS].sort((a, b) => b - a).find(lines => selectedBetPerLine * lines <= balance);
+    selectedPaylines = bestLineChoice || 1;
 
-    while (lines > 1 && perLine * lines > balance) lines = lines === 5 ? 3 : 1;
-    while (perLine > 1 && perLine * lines > balance) {
-        const lower = [...BET_PER_LINE_OPTIONS].reverse().find(v => v < perLine) || 1;
-        perLine = lower;
-        if (perLine === 1) break;
-    }
-    while (perLine * lines > balance && lines > 1) lines = lines === 5 ? 3 : 1;
-    while (perLine * lines > balance && perLine > 1) perLine = Math.max(1, perLine - 1);
-
-    selectedPaylines = lines;
-    selectedBetPerLine = perLine;
+    const bestBetPerLine = [...BET_PER_LINE_OPTIONS].sort((a, b) => b - a).find(bet => bet * selectedPaylines <= balance);
+    selectedBetPerLine = bestBetPerLine || 1;
 
     document.querySelectorAll(".slots-line-chip").forEach(b => b.classList.toggle("active", Number(b.dataset.lines) === selectedPaylines));
     document.querySelectorAll(".slots-bet-chip").forEach(b => b.classList.toggle("active", Number(b.dataset.betPerLine) === selectedBetPerLine));

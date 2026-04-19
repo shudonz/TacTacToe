@@ -700,8 +700,7 @@ public class GameHub : Hub
             }
         }
 
-        int fallbackLines = Math.Min(SlotsEngine.MaxPaylines, Math.Max(1, balance));
-        return (1, fallbackLines);
+        return (1, 1);
     }
 
     /* ================================================================
