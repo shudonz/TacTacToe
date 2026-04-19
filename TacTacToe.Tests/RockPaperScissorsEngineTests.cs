@@ -77,6 +77,8 @@ public class RockPaperScissorsEngineTests
     public void Randomizer_ShouldApproximateTwentyFivePercentIncreasedWinChance()
     {
         const int trials = 20000;
+        const double weightedRandomWinBoost = 1.25d;
+        const double toleranceMargin = 0.03d;
         var random = new Random(42);
         var wins = 0;
 
@@ -87,8 +89,8 @@ public class RockPaperScissorsEngineTests
         }
 
         var observed = wins / (double)trials;
-        var expected = (1d / 3d) * 1.25d;
+        var expected = (1d / 3d) * weightedRandomWinBoost;
 
-        Assert.InRange(observed, expected - 0.03d, expected + 0.03d);
+        Assert.InRange(observed, expected - toleranceMargin, expected + toleranceMargin);
     }
 }

@@ -264,7 +264,7 @@ function renderPowerUps() {
     const player = state.players[actor];
 
     const cooldownInfo = state.powerMode === "cooldown"
-        ? `<div class="lobby-hint">Cooldowns: ${PowerUpList.map(p => `${PowerUpLabels[p]} ${player.cooldowns[p] > 0 ? `(${player.cooldowns[p]})` : ""}`).join(" · ")}</div>`
+        ? `<div class="lobby-hint">Cooldowns: ${PowerUpList.map(p => `${PowerUpLabels[p]} ${player.cooldowns[p] > 0 ? `(${player.cooldowns[p]})` : "(ready)"}`).join(" · ")}</div>`
         : "";
 
     els.powerPanel.innerHTML = `
@@ -326,7 +326,7 @@ function renderPeekPanel() {
 function lockSelection() {
     if (state.gameOver) return;
     if (!state.selectedMove) {
-        alert("Pick Rock, Paper, or Scissors first.");
+        renderStatus("Pick Rock, Paper, or Scissors first.");
         return;
     }
 
@@ -596,7 +596,7 @@ function hardAiMove() {
     for (const m of recent) counts[m] += 1;
 
     // Simple predictive weighting with recency bias
-    let predicted = recent[recent.length - 1];
+    let predicted;
     if (counts.Rock >= counts.Paper && counts.Rock >= counts.Scissors) predicted = Moves.Rock;
     else if (counts.Paper >= counts.Scissors) predicted = Moves.Paper;
     else predicted = Moves.Scissors;
