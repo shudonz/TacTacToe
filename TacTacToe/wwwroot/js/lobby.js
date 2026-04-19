@@ -20,12 +20,15 @@ async function init() {
     function updateSections() {
         const ttt = selectedGame === "tictactoe";
         const slots = selectedGame === "slots";
+        const concentration = selectedGame === "concentration";
         document.getElementById("tttSinglePlayer").style.display = ttt ? "" : "none";
         document.getElementById("tttRoomsSection").style.display = ttt ? "" : "none";
-        document.getElementById("yahtzeeSection").style.display = (!ttt && !slots) ? "" : "none";
+        document.getElementById("yahtzeeSection").style.display = (!ttt && !slots && !concentration) ? "" : "none";
         document.getElementById("slotsSection").style.display = slots ? "" : "none";
+        document.getElementById("concentrationSection").style.display = concentration ? "" : "none";
         if (ttt) connection.invoke("GetTttRooms");
         else if (slots) connection.invoke("GetSlotsRooms");
+        else if (concentration) connection.invoke("GetConcentrationRooms");
         else connection.invoke("GetYahtzeeRooms");
     }
 
@@ -118,6 +121,49 @@ async function init() {
         window.location.href = "/slots";
     });
 
+    // Concentration room list
+    connection.on("ConcentrationRoomList", rooms => {
+        const list = document.getElementById("concentrationRoomList");
+        const noRooms = document.getElementById("noConcentrationRooms");
+        list.innerHTML = "";
+        const open = rooms.filter(r => !r.started);
+        if (open.length === 0) {
+            noRooms.style.display = "block";
+        } else {
+            noRooms.style.display = "none";
+            open.forEach(r => {
+                const isFull = r.isFull;
+                const card = document.createElement("div");
+                card.className = "player-card room-list-card" + (isFull ? " room-full" : "");
+                const badge = isFull ? '<span class="room-badge room-badge-full">Full</span>' : '<span class="room-badge room-badge-open">Open</span>';
+                card.innerHTML =
+                    '<span class="game-option-icon" style="font-size:1.4rem;">🧩</span>'
+                    + '<div class="room-card-info"><span class="name">' + escapeHtml(r.roomName) + '</span>'
+                    + '<span class="room-card-host">Hosted by ' + escapeHtml(r.hostName) + '</span></div>'
+                    + '<div class="room-card-right"><span class="room-player-count-badge">' + r.playerCount + '/' + r.maxPlayers + '</span>'
+                    + badge + (!isFull ? '<button class="btn btn-accept room-join-btn">Join &rarr;</button>' : '') + '</div>';
+                if (!isFull) {
+                    card.querySelector(".room-join-btn").addEventListener("click", e => { e.stopPropagation(); joinConcentrationRoom(r.id); });
+                    card.onclick = () => joinConcentrationRoom(r.id);
+                }
+                list.appendChild(card);
+            });
+        }
+    });
+
+    connection.on("ConcentrationRoomCreated", roomId => {
+        sessionStorage.setItem("concentrationRoomId", roomId);
+        sessionStorage.setItem("isSinglePlayer", "0");
+        window.location.href = "/concentration-room";
+    });
+
+    connection.on("ConcentrationSinglePlayerStarted", roomId => {
+        sessionStorage.setItem("concentrationRoomId", roomId);
+        sessionStorage.setItem("myName", me.name);
+        sessionStorage.setItem("isSinglePlayer", "1");
+        window.location.href = "/concentration";
+    });
+
     // Yahtzee room list
     connection.on("YahtzeeRoomList", rooms => {
         const list = document.getElementById("roomList");
@@ -191,13 +237,15 @@ async function init() {
     document.getElementById("yahtzeeRegularBtn").addEventListener("click", () => spInvoke("StartYahtzeeSinglePlayer", "regular"));
     document.getElementById("yahtzeeHardBtn").addEventListener("click",    () => spInvoke("StartYahtzeeSinglePlayer", "hard"));
 
-    // Auto-join via invite link (?join=roomId&game=ttt or ?join=roomId for Yahtzee)
+    // Auto-join via invite link
     const params = new URLSearchParams(window.location.search);
     const joinParam = params.get("join");
     const gameParam = params.get("game");
     if (joinParam) {
         window.history.replaceState({}, "", "/lobby");
         if (gameParam === "ttt") joinTttRoom(joinParam);
+        else if (gameParam === "slots") joinSlotsRoom(joinParam);
+        else if (gameParam === "concentration") joinConcentrationRoom(joinParam);
         else joinYahtzeeRoom(joinParam);
     }
 
@@ -245,6 +293,31 @@ async function init() {
         if (e.key === "Escape") document.getElementById("createSlotsRoomCancelBtn").click();
     });
 
+    // Concentration single player
+    document.getElementById("concentrationSpBtn").addEventListener("click", () => {
+        sessionStorage.setItem("myName", me.name);
+        connection.invoke("StartConcentrationSinglePlayer");
+    });
+
+    // Create Concentration room
+    document.getElementById("createConcentrationRoomBtn").addEventListener("click", () => {
+        document.getElementById("newConcentrationRoomName").value = "";
+        document.getElementById("createConcentrationRoomModal").style.display = "flex";
+        setTimeout(() => document.getElementById("newConcentrationRoomName").focus(), 50);
+    });
+    document.getElementById("createConcentrationRoomCancelBtn").addEventListener("click", () => {
+        document.getElementById("createConcentrationRoomModal").style.display = "none";
+    });
+    document.getElementById("createConcentrationRoomConfirmBtn").addEventListener("click", () => {
+        const name = document.getElementById("newConcentrationRoomName").value.trim() || "Concentration Madness";
+        document.getElementById("createConcentrationRoomModal").style.display = "none";
+        connection.invoke("CreateConcentrationRoom", name);
+    });
+    document.getElementById("newConcentrationRoomName").addEventListener("keydown", e => {
+        if (e.key === "Enter") document.getElementById("createConcentrationRoomConfirmBtn").click();
+        if (e.key === "Escape") document.getElementById("createConcentrationRoomCancelBtn").click();
+    });
+
     // Create Yahtzee room
     document.getElementById("createRoomBtn").addEventListener("click", () => {
         document.getElementById("newRoomName").value = "";
@@ -289,6 +362,14 @@ function joinYahtzeeRoom(roomId) {
     connection.invoke("JoinYahtzeeRoom", roomId).then(() => {
         sessionStorage.setItem("yahtzeeRoomId", roomId);
         window.location.href = "/yahtzee-room";
+    });
+}
+
+function joinConcentrationRoom(roomId) {
+    sessionStorage.setItem("isSinglePlayer", "0");
+    connection.invoke("JoinConcentrationRoom", roomId).then(() => {
+        sessionStorage.setItem("concentrationRoomId", roomId);
+        window.location.href = "/concentration-room";
     });
 }
 

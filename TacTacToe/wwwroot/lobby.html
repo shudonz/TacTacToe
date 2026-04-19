@@ -34,6 +34,10 @@
                     <span class="game-option-icon">&#127920;</span>
                     <span class="game-option-label">Slots</span>
                 </button>
+                <button class="game-option" data-game="concentration">
+                    <span class="game-option-icon">&#129513;</span>
+                    <span class="game-option-label">Concentration</span>
+                </button>
             </div>
             <div id="tttSinglePlayer" class="sp-section" style="margin-top:2rem;">
                 <span class="sp-label">&#129302; vs Computer</span>
@@ -64,6 +68,21 @@
                 <button id="createSlotsRoomBtn" class="btn btn-accept" style="margin-bottom:1rem;">+ Create Room</button>
                 <div id="slotsRoomList" class="player-list"></div>
                 <p id="noSlotsRooms" class="lobby-hint" style="display:none;">No open rooms right now. Create one!</p>
+            </div>
+
+            <!-- Concentration Section -->
+            <div id="concentrationSection" style="display:none;">
+                <div class="sp-section" style="margin-top:2rem;">
+                    <span class="sp-label">&#129302; vs Computer</span>
+                    <div class="sp-btns">
+                        <button id="concentrationSpBtn" class="btn btn-sp">Play Solo</button>
+                    </div>
+                </div>
+                <h2 class="lobby-title" style="margin-top:1.5rem;">Concentration Madness Rooms</h2>
+                <p class="lobby-hint">Create a room (2-4 players) or join an open one.</p>
+                <button id="createConcentrationRoomBtn" class="btn btn-accept" style="margin-bottom:1rem;">+ Create Room</button>
+                <div id="concentrationRoomList" class="player-list"></div>
+                <p id="noConcentrationRooms" class="lobby-hint" style="display:none;">No open rooms right now. Create one!</p>
             </div>
 
             <!-- Yahtzee Room Section -->
@@ -113,6 +132,17 @@
                 <div class="modal-actions">
                     <button id="createRoomConfirmBtn" class="btn btn-accept">Create Room</button>
                     <button id="createRoomCancelBtn" class="btn btn-decline">Cancel</button>
+                </div>
+            </div>
+        </div>
+        <div id="createConcentrationRoomModal" class="modal" style="display:none">
+            <div class="modal-content">
+                <h3>&#129513; Create Concentration Room</h3>
+                <p>Give your room a name so friends can find it.</p>
+                <input id="newConcentrationRoomName" class="guest-input" type="text" placeholder="e.g. Emoji Masters" maxlength="30" style="margin-top:1.25rem;width:100%;">
+                <div class="modal-actions">
+                    <button id="createConcentrationRoomConfirmBtn" class="btn btn-accept">Create Room</button>
+                    <button id="createConcentrationRoomCancelBtn" class="btn btn-decline">Cancel</button>
                 </div>
             </div>
         </div>

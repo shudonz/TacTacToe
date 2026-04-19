@@ -1,12 +1,13 @@
 ﻿# TacTacToeHub
 
-A real-time multiplayer game hub with Google login, a shared lobby, and live gameplay via SignalR. Currently features three games: **Tic Tac Toe**, **Yahtzee**, and **Slots**.
+A real-time multiplayer game hub with Google login, a shared lobby, and live gameplay via SignalR. Currently features four games: **Tic Tac Toe**, **Yahtzee**, **Slots**, and **Concentration Madness**.
 
 ## Games
 
 - **Tic Tac Toe** — Classic 1v1 board game. Challenge another online player and play in real-time.
 - **Yahtzee** — Multiplayer dice game. Roll and score across standard Yahtzee categories with other players in a shared room.
 - **Slots** — Spin the reels and try your luck in a shared slots room.
+- **Concentration Madness** — Emoji memory matching game with 1vCPU mode and online rooms for 2–4 players.
 
 ## Tech Stack
 
@@ -56,4 +57,4 @@ dotnet run
 2. See online players in the lobby
 3. Choose a game to play
 4. **Tic Tac Toe:** Click a player to challenge them — they accept or decline, then play in real-time
-5. **Yahtzee / Slots:** Join a shared room and play together with other online players
+5. **Yahtzee / Slots / Concentration Madness:** Join a shared room and play together with other online players

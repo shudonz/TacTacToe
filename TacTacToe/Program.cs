@@ -117,6 +117,20 @@ app.MapGet("/yahtzee-room", (HttpContext ctx) =>
     return Results.File("yahtzee-room.html", "text/html");
 });
 
+app.MapGet("/concentration", (HttpContext ctx) =>
+{
+    if (ctx.User.Identity?.IsAuthenticated != true)
+        return Results.Redirect("/login");
+    return Results.File("concentration.html", "text/html");
+});
+
+app.MapGet("/concentration-room", (HttpContext ctx) =>
+{
+    if (ctx.User.Identity?.IsAuthenticated != true)
+        return Results.Redirect("/login");
+    return Results.File("concentration-room.html", "text/html");
+});
+
 app.MapGet("/api/me", (HttpContext ctx) =>
 {
     if (ctx.User.Identity?.IsAuthenticated != true)

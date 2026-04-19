@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TacTacToe &#8211; Concentration Madness</title>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="/css/style.css" rel="stylesheet">
+</head>
+<body>
+    <div class="ambient"></div>
+    <div class="noise"></div>
+    <div class="page-content">
+        <nav class="navbar">
+            <div class="logo-sm"><span class="logo-x">Tac</span><span class="logo-o">Tac</span><span class="logo-x">Toe</span></div>
+            <button id="backBtn" class="btn-logout">Back to Lobby</button>
+        </nav>
+        <main class="concentration-container">
+            <div class="concentration-header glass-card">
+                <h2 class="lobby-title">Concentration Madness</h2>
+                <div id="statusText" class="turn-indicator" style="margin:0;">Loading game&#8230;</div>
+            </div>
+            <div id="concentrationPlayers" class="player-bar"></div>
+            <div id="concentrationBoard" class="concentration-board"></div>
+        </main>
+    </div>
+
+    <div id="resultOverlay" class="result-overlay" style="display:none">
+        <div class="result-card">
+            <h2 id="resultText"></h2>
+            <button id="backToLobby" class="btn btn-outline">Back to Lobby</button>
+        </div>
+    </div>
+
+    <div id="chatWidget" class="chat-widget">
+        <button id="chatToggle" class="chat-toggle">&#128172; <span id="chatBadge" class="chat-badge" style="display:none">0</span></button>
+        <div id="chatPanel" class="chat-panel" style="display:none">
+            <div class="chat-header"><span>Game Chat</span><button id="chatClose" class="chat-close">&#x2715;</button></div>
+            <div id="chatMessages" class="chat-messages"></div>
+            <div class="chat-input-row"><input id="chatInput" class="chat-input" placeholder="Type a message&#8230;" maxlength="500"><button id="chatSend" class="chat-send">&#10148;</button></div>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/8.0.0/signalr.min.js"></script>
+    <script src="/js/concentration.js"></script>
+</body>
+</html>

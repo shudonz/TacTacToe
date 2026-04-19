@@ -9,6 +9,7 @@ public class LobbyService
     private readonly ConcurrentDictionary<string, YahtzeeRoom> _yahtzeeRooms = new();
     private readonly ConcurrentDictionary<string, TttRoom> _tttRooms = new();
     private readonly ConcurrentDictionary<string, SlotsRoom> _slotsRooms = new();
+    private readonly ConcurrentDictionary<string, ConcentrationRoom> _concentrationRooms = new();
 
     public bool AddPlayer(string connectionId, string name, string email, string picture)
     {
@@ -165,6 +166,42 @@ public class LobbyService
             r.Players.Any(p => p.ConnectionId == connectionId && !p.IsBot));
 
     public void RemoveSlotsRoom(string id) => _slotsRooms.TryRemove(id, out _);
+
+    // --- Concentration Rooms ---
+
+    public ConcentrationRoom CreateConcentrationRoom(string id, string hostConnectionId)
+    {
+        var host = _players.GetValueOrDefault(hostConnectionId);
+        var room = new ConcentrationRoom
+        {
+            Id = id,
+            HostConnectionId = hostConnectionId,
+            HostName = host?.Name ?? "Host",
+            Players = [new ConcentrationPlayer { ConnectionId = hostConnectionId, Name = host?.Name ?? "Host", Connected = true }]
+        };
+        _concentrationRooms[id] = room;
+        return room;
+    }
+
+    public ConcentrationRoom? GetConcentrationRoom(string id)
+    {
+        _concentrationRooms.TryGetValue(id, out var r);
+        return r;
+    }
+
+    public void StoreConcentrationRoom(string id, ConcentrationRoom room) => _concentrationRooms[id] = room;
+
+    public IEnumerable<ConcentrationRoom> GetOpenConcentrationRooms() =>
+        _concentrationRooms.Values.Where(r => !r.Started && !r.IsOver);
+
+    public IEnumerable<ConcentrationRoom> GetConcentrationRoomsForConnection(string connectionId) =>
+        _concentrationRooms.Values.Where(r => !r.Started && r.Players.Any(p => p.ConnectionId == connectionId));
+
+    public IEnumerable<ConcentrationRoom> GetActiveConcentrationRoomsForConnection(string connectionId) =>
+        _concentrationRooms.Values.Where(r => r.Started && !r.IsOver &&
+            r.Players.Any(p => p.ConnectionId == connectionId && !p.IsBot));
+
+    public void RemoveConcentrationRoom(string id) => _concentrationRooms.TryRemove(id, out _);
 }
 
 public class LobbyPlayer

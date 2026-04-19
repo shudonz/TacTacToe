@@ -2093,3 +2093,73 @@ body {
     -webkit-text-fill-color: transparent;
     background-clip: text;
 }
+
+/* ============================================================
+   CONCENTRATION MADNESS
+   ============================================================ */
+.concentration-container {
+    max-width: 920px;
+    margin: 2rem auto;
+    padding: 0 1.5rem;
+    animation: fadeInUp 0.5s var(--transition) both;
+}
+.concentration-header {
+    padding: 16px 20px;
+    margin-bottom: 1rem;
+}
+.concentration-board {
+    display: grid;
+    grid-template-columns: repeat(6, minmax(90px, 1fr));
+    gap: 10px;
+}
+.concentration-card {
+    position: relative;
+    min-height: 96px;
+    border-radius: var(--radius-sm);
+    border: 1.5px solid var(--glass-border);
+    background: rgba(196, 231, 233, 0.03);
+    cursor: pointer;
+    transition: transform var(--transition), border-color var(--transition), box-shadow var(--transition);
+    font-size: 2rem;
+    overflow: hidden;
+}
+.concentration-card:hover:not(:disabled) {
+    transform: translateY(-2px);
+    border-color: rgba(18, 145, 158, 0.35);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.28);
+}
+.concentration-card:disabled { cursor: default; opacity: 0.95; }
+.concentration-card-front,
+.concentration-card-back {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: opacity .2s ease, transform .2s ease;
+}
+.concentration-card-front {
+    color: var(--text-mid);
+    opacity: 1;
+}
+.concentration-card-back {
+    opacity: 0;
+    transform: scale(0.9);
+}
+.concentration-card.revealed .concentration-card-front,
+.concentration-card.matched .concentration-card-front {
+    opacity: 0;
+}
+.concentration-card.revealed .concentration-card-back,
+.concentration-card.matched .concentration-card-back {
+    opacity: 1;
+    transform: scale(1);
+}
+.concentration-card.matched {
+    border-color: rgba(18, 145, 158, 0.45);
+    box-shadow: 0 0 18px var(--accent-glow);
+}
+
+@media (max-width: 800px) {
+    .concentration-board { grid-template-columns: repeat(4, minmax(70px, 1fr)); }
+}

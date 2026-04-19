@@ -91,6 +91,68 @@ public class GameHub : Hub
             });
         }
 
+        // Defer Concentration waiting-room cleanup (same navigation grace period)
+        var concentrationWaitSnapshot = _lobby.GetConcentrationRoomsForConnection(disconnectedConnectionId).ToList();
+        if (concentrationWaitSnapshot.Count > 0)
+        {
+            _ = Task.Run(async () =>
+            {
+                await Task.Delay(TimeSpan.FromSeconds(8));
+                bool changed = false;
+                foreach (var snap in concentrationWaitSnapshot)
+                {
+                    var room = _lobby.GetConcentrationRoom(snap.Id);
+                    if (room == null || room.Started) continue;
+                    var player = room.Players.FirstOrDefault(p => p.Name == name);
+                    if (player == null || player.ConnectionId != disconnectedConnectionId) continue;
+                    room.Players.Remove(player);
+                    changed = true;
+                    if (room.Players.Count == 0 || room.HostName == name)
+                    {
+                        await _hubContext.Clients.Group(room.Id).SendAsync("ConcentrationRoomDissolved");
+                        _lobby.RemoveConcentrationRoom(room.Id);
+                    }
+                    else
+                    {
+                        await _hubContext.Clients.Group(room.Id).SendAsync("ConcentrationRoomUpdated", room);
+                    }
+                }
+                if (changed) await _hubContext.Clients.All.SendAsync("ConcentrationRoomList", ConcentrationRoomSummaries());
+            });
+        }
+
+        // Defer Concentration active-game disconnect handling
+        var concentrationGameSnapshot = _lobby.GetActiveConcentrationRoomsForConnection(disconnectedConnectionId).ToList();
+        if (concentrationGameSnapshot.Count > 0)
+        {
+            _ = Task.Run(async () =>
+            {
+                await Task.Delay(TimeSpan.FromSeconds(8));
+                foreach (var snap in concentrationGameSnapshot)
+                {
+                    var room = _lobby.GetConcentrationRoom(snap.Id);
+                    if (room == null || room.IsOver) continue;
+                    var player = room.Players.FirstOrDefault(p => p.Name == name && !p.IsBot);
+                    if (player == null || player.ConnectionId != disconnectedConnectionId) continue;
+                    player.Connected = false;
+                    await _hubContext.Clients.Group(room.Id).SendAsync("PlayerLeft", name);
+
+                    if (room.Players.Where(p => !p.IsBot).All(p => !p.Connected))
+                    {
+                        _lobby.RemoveConcentrationRoom(room.Id);
+                        continue;
+                    }
+
+                    if (room.Players[room.CurrentPlayerIndex].ConnectionId == disconnectedConnectionId)
+                    {
+                        MoveToNextConcentrationPlayer(room);
+                        await _hubContext.Clients.Group(room.Id).SendAsync("ConcentrationUpdated", BuildConcentrationState(room));
+                        if (!room.IsOver) _ = TakeConcentrationBotTurnAsync(room.Id);
+                    }
+                }
+            });
+        }
+
         // Defer TTT room cleanup — the same grace period used for Yahtzee is needed here
         // because creating/joining a room causes a page navigation which disconnects the
         // lobby connection before RejoinTttRoom can update the player's ConnectionId.
@@ -586,6 +648,340 @@ public class GameHub : Hub
 
     private async Task BroadcastSlotsRooms() =>
         await Clients.All.SendAsync("SlotsRoomList", SlotsRoomSummaries());
+
+    /* ================================================================
+       Concentration Madness Methods
+       ================================================================ */
+
+    public async Task CreateConcentrationRoom(string? roomName = null)
+    {
+        var roomId = Guid.NewGuid().ToString("N");
+        var room = _lobby.CreateConcentrationRoom(roomId, Context.ConnectionId);
+        if (!string.IsNullOrWhiteSpace(roomName))
+            room.Settings.RoomName = roomName.Trim()[..Math.Min(roomName.Trim().Length, 30)];
+        await Groups.AddToGroupAsync(Context.ConnectionId, roomId);
+        await Clients.Caller.SendAsync("ConcentrationRoomCreated", roomId);
+        await BroadcastConcentrationRooms();
+    }
+
+    public async Task GetConcentrationRooms() =>
+        await Clients.Caller.SendAsync("ConcentrationRoomList", ConcentrationRoomSummaries());
+
+    public async Task JoinConcentrationRoom(string roomId)
+    {
+        var room = _lobby.GetConcentrationRoom(roomId);
+        if (room == null || room.Started || room.IsOver) return;
+        if (room.Players.Count >= room.Settings.MaxPlayers) return;
+        if (room.Players.Any(p => p.ConnectionId == Context.ConnectionId)) return;
+        var name = Context.User?.FindFirst(ClaimTypes.Name)?.Value ?? "Unknown";
+        room.Players.Add(new ConcentrationPlayer { ConnectionId = Context.ConnectionId, Name = name, Connected = true });
+        await Groups.AddToGroupAsync(Context.ConnectionId, roomId);
+        await Clients.Group(roomId).SendAsync("ConcentrationRoomUpdated", room);
+        await BroadcastConcentrationRooms();
+    }
+
+    public async Task RejoinConcentrationRoom(string roomId)
+    {
+        if (string.IsNullOrEmpty(roomId)) return;
+        var room = _lobby.GetConcentrationRoom(roomId);
+        if (room == null) return;
+        var name = Context.User?.FindFirst(ClaimTypes.Name)?.Value ?? "Unknown";
+        var player = room.Players.FirstOrDefault(p => p.Name == name && !p.IsBot);
+        if (player == null) return;
+        player.ConnectionId = Context.ConnectionId;
+        player.Connected = true;
+        if (room.HostName == name) room.HostConnectionId = Context.ConnectionId;
+        await Groups.AddToGroupAsync(Context.ConnectionId, roomId);
+        if (room.Started)
+        {
+            _lobby.SetInGame(Context.ConnectionId, true);
+            await BroadcastLobby();
+            await Clients.Caller.SendAsync("ConcentrationUpdated", BuildConcentrationState(room));
+        }
+        else
+        {
+            await Clients.Group(roomId).SendAsync("ConcentrationRoomUpdated", room);
+        }
+    }
+
+    public async Task StartConcentrationGame(string roomId)
+    {
+        var room = _lobby.GetConcentrationRoom(roomId);
+        if (room == null || room.Started) return;
+        if (Context.ConnectionId != room.HostConnectionId) return;
+        if (room.Players.Count < 2) return;
+
+        room.Started = true;
+        room.Settings.MaxPlayers = Math.Clamp(room.Settings.MaxPlayers, 2, 4);
+        room.Settings.PairCount = 12;
+        room.Deck = ConcentrationEngine.CreateDeck(room.Settings.PairCount);
+        room.Matched = new bool[room.Deck.Count];
+        room.CurrentPlayerIndex = 0;
+        room.TurnRevealedIndexes.Clear();
+        room.IsOver = false;
+        room.WinnerName = null;
+        foreach (var p in room.Players) p.Score = 0;
+
+        await Clients.Group(roomId).SendAsync("ConcentrationGameStarted", room);
+        await Clients.Group(roomId).SendAsync("ConcentrationUpdated", BuildConcentrationState(room));
+        await BroadcastConcentrationRooms();
+    }
+
+    public async Task LeaveConcentrationRoom(string roomId)
+    {
+        var room = _lobby.GetConcentrationRoom(roomId);
+        if (room == null) return;
+        var player = room.Players.FirstOrDefault(p => p.ConnectionId == Context.ConnectionId);
+        await Groups.RemoveFromGroupAsync(Context.ConnectionId, roomId);
+        if (player != null) room.Players.Remove(player);
+        if (room.Players.Count == 0 || Context.ConnectionId == room.HostConnectionId)
+        {
+            await Clients.Group(roomId).SendAsync("ConcentrationRoomDissolved");
+            _lobby.RemoveConcentrationRoom(roomId);
+        }
+        else
+        {
+            await Clients.Group(roomId).SendAsync("ConcentrationRoomUpdated", room);
+        }
+        await BroadcastConcentrationRooms();
+    }
+
+    public async Task KickConcentrationPlayer(string roomId, string playerName)
+    {
+        var room = _lobby.GetConcentrationRoom(roomId);
+        if (room == null) return;
+        if (Context.ConnectionId != room.HostConnectionId) return;
+        var player = room.Players.FirstOrDefault(p => p.Name == playerName && p.ConnectionId != room.HostConnectionId);
+        if (player == null) return;
+        await Clients.Client(player.ConnectionId).SendAsync("KickedFromRoom");
+        await Groups.RemoveFromGroupAsync(player.ConnectionId, roomId);
+        room.Players.Remove(player);
+        await Clients.Group(roomId).SendAsync("ConcentrationRoomUpdated", room);
+        await BroadcastConcentrationRooms();
+    }
+
+    public async Task StartConcentrationSinglePlayer()
+    {
+        var name = Context.User?.FindFirst(ClaimTypes.Name)?.Value ?? "Unknown";
+        var roomId = Guid.NewGuid().ToString("N");
+        var room = new ConcentrationRoom
+        {
+            Id = roomId,
+            HostConnectionId = Context.ConnectionId,
+            HostName = name,
+            IsSinglePlayer = true,
+            Started = true,
+            Players =
+            [
+                new ConcentrationPlayer { ConnectionId = Context.ConnectionId, Name = name, Connected = true },
+                new ConcentrationPlayer { ConnectionId = "BOT_" + roomId, Name = "🤖 Computer", IsBot = true, Connected = true }
+            ]
+        };
+        room.Settings.RoomName = "Concentration vs Computer";
+        room.Settings.MaxPlayers = 2;
+        room.Settings.PairCount = 12;
+        room.Deck = ConcentrationEngine.CreateDeck(room.Settings.PairCount);
+        room.Matched = new bool[room.Deck.Count];
+        room.CurrentPlayerIndex = 0;
+        _lobby.StoreConcentrationRoom(roomId, room);
+        await Groups.AddToGroupAsync(Context.ConnectionId, roomId);
+        await Clients.Caller.SendAsync("ConcentrationSinglePlayerStarted", roomId);
+        await Clients.Caller.SendAsync("ConcentrationUpdated", BuildConcentrationState(room));
+    }
+
+    public async Task ConcentrationFlipCard(string roomId, int cardIndex)
+    {
+        var room = _lobby.GetConcentrationRoom(roomId);
+        if (room == null || !room.Started || room.IsOver) return;
+        if (cardIndex < 0 || cardIndex >= room.Deck.Count) return;
+        if (room.Matched[cardIndex] || room.TurnRevealedIndexes.Contains(cardIndex)) return;
+        if (room.TurnRevealedIndexes.Count >= 2) return;
+        var current = room.Players[room.CurrentPlayerIndex];
+        if (current.ConnectionId != Context.ConnectionId || current.IsBot) return;
+
+        room.TurnRevealedIndexes.Add(cardIndex);
+        await Clients.Group(roomId).SendAsync("ConcentrationUpdated", BuildConcentrationState(room));
+
+        if (room.TurnRevealedIndexes.Count < 2) return;
+
+        var a = room.TurnRevealedIndexes[0];
+        var b = room.TurnRevealedIndexes[1];
+        bool isMatch = room.Deck[a] == room.Deck[b];
+        if (isMatch)
+        {
+            room.Matched[a] = true;
+            room.Matched[b] = true;
+            current.Score++;
+            room.TurnRevealedIndexes.Clear();
+            EvaluateConcentrationWinner(room);
+            await Clients.Group(roomId).SendAsync("ConcentrationUpdated", BuildConcentrationState(room));
+            if (!room.IsOver && room.Players[room.CurrentPlayerIndex].IsBot)
+                _ = TakeConcentrationBotTurnAsync(roomId);
+            return;
+        }
+
+        await Clients.Group(roomId).SendAsync("ConcentrationUpdated", BuildConcentrationState(room));
+        await Task.Delay(850);
+        room.TurnRevealedIndexes.Clear();
+        MoveToNextConcentrationPlayer(room);
+        await Clients.Group(roomId).SendAsync("ConcentrationUpdated", BuildConcentrationState(room));
+        if (!room.IsOver && room.Players[room.CurrentPlayerIndex].IsBot)
+            _ = TakeConcentrationBotTurnAsync(roomId);
+    }
+
+    public async Task LeaveConcentrationGame(string roomId)
+    {
+        var room = _lobby.GetConcentrationRoom(roomId);
+        if (room == null) return;
+        var player = room.Players.FirstOrDefault(p => p.ConnectionId == Context.ConnectionId);
+        await Groups.RemoveFromGroupAsync(Context.ConnectionId, roomId);
+        if (player == null) return;
+
+        if (!room.Started)
+        {
+            room.Players.Remove(player);
+            if (room.Players.Count == 0 || Context.ConnectionId == room.HostConnectionId)
+                _lobby.RemoveConcentrationRoom(roomId);
+            else
+                await Clients.Group(roomId).SendAsync("ConcentrationRoomUpdated", room);
+            await BroadcastConcentrationRooms();
+            return;
+        }
+
+        if (room.IsSinglePlayer)
+        {
+            _lobby.RemoveConcentrationRoom(roomId);
+            return;
+        }
+
+        player.Connected = false;
+        await Clients.Group(roomId).SendAsync("PlayerLeft", player.Name);
+        if (room.Players.Where(p => !p.IsBot).All(p => !p.Connected))
+        {
+            _lobby.RemoveConcentrationRoom(roomId);
+            return;
+        }
+
+        if (room.Players[room.CurrentPlayerIndex].ConnectionId == Context.ConnectionId)
+            MoveToNextConcentrationPlayer(room);
+
+        await Clients.Group(roomId).SendAsync("ConcentrationUpdated", BuildConcentrationState(room));
+        if (!room.IsOver && room.Players[room.CurrentPlayerIndex].IsBot)
+            _ = TakeConcentrationBotTurnAsync(roomId);
+    }
+
+    private IEnumerable<object> ConcentrationRoomSummaries() =>
+        _lobby.GetOpenConcentrationRooms().Select(r => new
+        {
+            r.Id,
+            r.HostName,
+            RoomName = r.Settings.RoomName,
+            PlayerCount = r.Players.Count,
+            r.Settings.MaxPlayers,
+            IsFull = r.Players.Count >= r.Settings.MaxPlayers,
+            r.Started
+        });
+
+    private async Task BroadcastConcentrationRooms() =>
+        await Clients.All.SendAsync("ConcentrationRoomList", ConcentrationRoomSummaries());
+
+    private object BuildConcentrationState(ConcentrationRoom room)
+    {
+        return new
+        {
+            room.Id,
+            room.Started,
+            room.IsOver,
+            room.WinnerName,
+            room.CurrentPlayerIndex,
+            TurnLocked = room.TurnRevealedIndexes.Count >= 2,
+            Players = room.Players.Select(p => new
+            {
+                p.Name,
+                p.Score,
+                p.Connected,
+                p.IsBot
+            }),
+            Cards = room.Deck.Select((emoji, index) => new
+            {
+                Index = index,
+                IsMatched = room.Matched.Length > index && room.Matched[index],
+                IsRevealed = room.TurnRevealedIndexes.Contains(index),
+                Emoji = room.TurnRevealedIndexes.Contains(index) || (room.Matched.Length > index && room.Matched[index]) ? emoji : null
+            })
+        };
+    }
+
+    private void MoveToNextConcentrationPlayer(ConcentrationRoom room)
+    {
+        if (room.IsOver || room.Players.Count == 0) return;
+        int tries = 0;
+        do
+        {
+            room.CurrentPlayerIndex = (room.CurrentPlayerIndex + 1) % room.Players.Count;
+            tries++;
+        }
+        while (!room.Players[room.CurrentPlayerIndex].Connected && tries < room.Players.Count);
+    }
+
+    private void EvaluateConcentrationWinner(ConcentrationRoom room)
+    {
+        if (room.Matched.Any(m => !m)) return;
+        room.IsOver = true;
+        var best = room.Players.Max(p => p.Score);
+        var leaders = room.Players.Where(p => p.Score == best).ToList();
+        room.WinnerName = leaders.Count == 1 ? leaders[0].Name : null;
+    }
+
+    private async Task TakeConcentrationBotTurnAsync(string roomId)
+    {
+        await Task.Delay(Random.Shared.Next(500, 1000));
+        var room = _lobby.GetConcentrationRoom(roomId);
+        if (room == null || room.IsOver || !room.Started) return;
+        var bot = room.Players[room.CurrentPlayerIndex];
+        if (!bot.IsBot || !bot.Connected || room.TurnRevealedIndexes.Count > 0) return;
+
+        var available = Enumerable.Range(0, room.Deck.Count)
+            .Where(i => !room.Matched[i])
+            .ToList();
+        if (available.Count < 2) return;
+
+        int first = available[Random.Shared.Next(available.Count)];
+        room.TurnRevealedIndexes.Add(first);
+        await _hubContext.Clients.Group(roomId).SendAsync("ConcentrationUpdated", BuildConcentrationState(room));
+
+        await Task.Delay(Random.Shared.Next(400, 900));
+        available = Enumerable.Range(0, room.Deck.Count)
+            .Where(i => !room.Matched[i] && !room.TurnRevealedIndexes.Contains(i))
+            .ToList();
+        if (available.Count == 0) return;
+
+        var secondCandidates = available.Where(i => room.Deck[i] == room.Deck[first]).ToList();
+        int second = secondCandidates.Count > 0
+            ? secondCandidates[0]
+            : available[Random.Shared.Next(available.Count)];
+        room.TurnRevealedIndexes.Add(second);
+        await _hubContext.Clients.Group(roomId).SendAsync("ConcentrationUpdated", BuildConcentrationState(room));
+
+        bool isMatch = room.Deck[first] == room.Deck[second];
+        if (isMatch)
+        {
+            room.Matched[first] = true;
+            room.Matched[second] = true;
+            bot.Score++;
+            room.TurnRevealedIndexes.Clear();
+            EvaluateConcentrationWinner(room);
+            await _hubContext.Clients.Group(roomId).SendAsync("ConcentrationUpdated", BuildConcentrationState(room));
+            if (!room.IsOver && room.Players[room.CurrentPlayerIndex].IsBot)
+                _ = TakeConcentrationBotTurnAsync(roomId);
+            return;
+        }
+
+        await Task.Delay(850);
+        room.TurnRevealedIndexes.Clear();
+        MoveToNextConcentrationPlayer(room);
+        await _hubContext.Clients.Group(roomId).SendAsync("ConcentrationUpdated", BuildConcentrationState(room));
+    }
 
     public async Task ReplaySinglePlayerTTT(string gameId)
     {
