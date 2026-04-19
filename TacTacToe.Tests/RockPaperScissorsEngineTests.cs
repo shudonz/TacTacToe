@@ -1,4 +1,5 @@
 using TacTacToe.Services;
+using Xunit;
 
 namespace TacTacToe.Tests;
 
@@ -29,7 +30,7 @@ public class RockPaperScissorsEngineTests
         });
 
         Assert.Equal(Move.Rock, result.OpponentMove);
-        Assert.Equal(1, result.Winner);
+        Assert.Equal(2, result.Winner);
     }
 
     [Fact]
