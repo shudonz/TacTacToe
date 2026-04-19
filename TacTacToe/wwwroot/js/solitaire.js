@@ -183,6 +183,7 @@ function buildEmptySlot(role, extra = "") {
    ============================================================ */
 function renderBoard(game) {
     if (!game) return;
+    if (drag?.active) return; // never tear down DOM while a drag gesture is live
 
     // ── Stock ─────────────────────────────────────────────────
     const stockEl = document.getElementById("stockCard");
@@ -516,36 +517,54 @@ function onPointerDown(e) {
 
     if (src !== "waste" && src !== "tableau") return;
     if (isNaN(cardId) || cardId < 0) return;
-    // Waste: only the top card is draggable
     if (src === "waste" && myGame?.waste.at(-1) !== cardId) return;
 
     const cards = _getDragCards(src, pileIdx, faceUpIdx);
     if (!cards.length) return;
 
-    const rect = cardEl.getBoundingClientRect();
+    // Stop the browser starting a scroll/zoom gesture immediately.
+    // This is the critical fix for touch — without it the page scrolls
+    // and pointer events become unreliable before the threshold is crossed.
+    e.preventDefault();
+
+    const rect   = cardEl.getBoundingClientRect();
+    const isTouch = e.pointerType === "touch" || e.pointerType === "pen";
+    const cw = _parseCSSPx("--sol-card-w", 78);
+    const ch = _parseCSSPx("--sol-card-h", 109);
+
+    // On touch: float the card above the finger so the face is visible.
+    // The bottom of the ghost sits ~16 px above the touch point.
+    const offX = isTouch ? Math.round(cw * 0.5)  : e.clientX - rect.left;
+    const offY = isTouch ? ch + 16               : e.clientY - rect.top;
+
     drag = {
-        active:     false,
-        startX:     e.clientX,
-        startY:     e.clientY,
-        source:     src,
+        active:    false,
+        startX:    e.clientX,
+        startY:    e.clientY,
+        source:    src,
         pileIdx,
         faceUpIdx,
         cardId,
         cards,
-        ghostEl:    null,
-        offX:       e.clientX - rect.left,
-        offY:       e.clientY - rect.top,
-        pointerId:  e.pointerId,
+        ghostEl:   null,
+        offX,
+        offY,
+        pointerId: e.pointerId,
+        isTouch,
     };
     try { cardEl.setPointerCapture(e.pointerId); } catch (_) {}
 }
 
 function onPointerMove(e) {
     if (!drag) return;
+
+    // Prevent scroll/zoom for every move while a drag candidate is live —
+    // not just after the threshold — so the browser never steals the gesture.
+    e.preventDefault();
+
     const dx = e.clientX - drag.startX, dy = e.clientY - drag.startY;
     if (!drag.active) {
         if (Math.hypot(dx, dy) < DRAG_THRESHOLD) return;
-        // Crossed threshold — start visual drag
         drag.active = true;
         drag.ghostEl = _buildGhost(drag.cards);
         _setSourceOpacity("0.22");
@@ -553,7 +572,6 @@ function onPointerMove(e) {
     }
     _moveGhost(e.clientX, e.clientY);
     _applyDropHighlight(_hitTest(e.clientX, e.clientY));
-    e.preventDefault();
 }
 
 function onPointerUp(e) {
@@ -806,8 +824,10 @@ async function init() {
     document.getElementById("solBoard").addEventListener("click",    handleBoardClick);
     document.getElementById("solBoard").addEventListener("dblclick", handleBoardDblClick);
 
-    // Drag-and-drop (pointer events work for both mouse and touch)
-    document.getElementById("solBoard").addEventListener("pointerdown",   onPointerDown);
+    // Drag-and-drop (pointer events — unified mouse + touch)
+    // pointerdown must be { passive: false } so e.preventDefault() can block
+    // the browser's scroll gesture before it starts.
+    document.getElementById("solBoard").addEventListener("pointerdown",   onPointerDown,  { passive: false });
     document.addEventListener("pointermove",  onPointerMove,  { passive: false });
     document.addEventListener("pointerup",    onPointerUp);
     document.addEventListener("pointercancel", onPointerCancel);

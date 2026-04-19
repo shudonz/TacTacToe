@@ -2957,9 +2957,12 @@ body {
 /* ── Drag-and-drop ──────────────────────────────────────────── */
 
 /* Grab cursor on draggable cards */
-.sol-draggable          { cursor: grab; }
-.sol-draggable:active   { cursor: grabbing; }
+.sol-draggable        { cursor: grab; touch-action: none; }
+.sol-draggable:active { cursor: grabbing; }
 
+/* The board itself must opt out of browser touch handling so that
+   pointer events are delivered reliably without scroll interference. */
+.sol-board { user-select: none; -webkit-user-select: none; touch-action: none; }
 /* Floating ghost card stack during drag */
 .sol-ghost {
     position: fixed;
@@ -2983,5 +2986,4 @@ body {
     border-radius: var(--sol-card-r);
 }
 /* Prevent text selection during drag */
-.sol-board { user-select: none; -webkit-user-select: none; }
 
