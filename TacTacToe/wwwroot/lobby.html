@@ -38,6 +38,10 @@
                     <span class="game-option-icon">&#129513;</span>
                     <span class="game-option-label">Concentration</span>
                 </button>
+                <button class="game-option" data-game="rps">
+                    <span class="game-option-icon">&#9994;&#9995;&#9996;</span>
+                    <span class="game-option-label">Rock Paper Scissors</span>
+                </button>
             </div>
             <div id="tttSinglePlayer" class="sp-section" style="margin-top:2rem;">
                 <span class="sp-label">&#129302; vs Computer</span>
@@ -83,6 +87,26 @@
                 <button id="createConcentrationRoomBtn" class="btn btn-accept" style="margin-bottom:1rem;">+ Create Room</button>
                 <div id="concentrationRoomList" class="player-list"></div>
                 <p id="noConcentrationRooms" class="lobby-hint" style="display:none;">No open rooms right now. Create one!</p>
+            </div>
+
+            <!-- Rock Paper Scissors Section -->
+            <div id="rpsSection" style="display:none;">
+                <h2 class="lobby-title" style="margin-top:2rem;">Rock Paper Scissors</h2>
+                <p class="lobby-hint">Play against AI or local multiplayer on one device.</p>
+                <div class="sp-section" style="margin-top:1rem;">
+                    <span class="sp-label">&#129302; vs Computer</span>
+                    <div class="sp-btns">
+                        <button id="rpsEasyBtn" class="btn btn-sp">Easy</button>
+                        <button id="rpsNormalBtn" class="btn btn-sp">Normal</button>
+                        <button id="rpsHardBtn" class="btn btn-sp btn-sp-hard">&#128128; Hard</button>
+                    </div>
+                </div>
+                <div class="sp-section" style="margin-top:1rem;">
+                    <span class="sp-label">&#128101; Local Multiplayer</span>
+                    <div class="sp-btns">
+                        <button id="rpsLocalBtn" class="btn btn-sp">Play Local</button>
+                    </div>
+                </div>
             </div>
 
             <!-- Yahtzee Room Section -->

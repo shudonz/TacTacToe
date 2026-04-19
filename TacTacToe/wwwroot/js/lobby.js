@@ -21,15 +21,17 @@ async function init() {
         const ttt = selectedGame === "tictactoe";
         const slots = selectedGame === "slots";
         const concentration = selectedGame === "concentration";
+        const rps = selectedGame === "rps";
         document.getElementById("tttSinglePlayer").style.display = ttt ? "" : "none";
         document.getElementById("tttRoomsSection").style.display = ttt ? "" : "none";
-        document.getElementById("yahtzeeSection").style.display = (!ttt && !slots && !concentration) ? "" : "none";
+        document.getElementById("yahtzeeSection").style.display = (!ttt && !slots && !concentration && !rps) ? "" : "none";
         document.getElementById("slotsSection").style.display = slots ? "" : "none";
         document.getElementById("concentrationSection").style.display = concentration ? "" : "none";
+        document.getElementById("rpsSection").style.display = rps ? "" : "none";
         if (ttt) connection.invoke("GetTttRooms");
         else if (slots) connection.invoke("GetSlotsRooms");
         else if (concentration) connection.invoke("GetConcentrationRooms");
-        else connection.invoke("GetYahtzeeRooms");
+        else if (!rps) connection.invoke("GetYahtzeeRooms");
     }
 
     // TTT room list
@@ -298,6 +300,12 @@ async function init() {
         sessionStorage.setItem("myName", me.name);
         connection.invoke("StartConcentrationSinglePlayer");
     });
+
+    // Rock Paper Scissors quick launch
+    document.getElementById("rpsEasyBtn").addEventListener("click", () => { window.location.href = "/rps?mode=single&difficulty=easy"; });
+    document.getElementById("rpsNormalBtn").addEventListener("click", () => { window.location.href = "/rps?mode=single&difficulty=normal"; });
+    document.getElementById("rpsHardBtn").addEventListener("click", () => { window.location.href = "/rps?mode=single&difficulty=hard"; });
+    document.getElementById("rpsLocalBtn").addEventListener("click", () => { window.location.href = "/rps?mode=local"; });
 
     // Create Concentration room
     document.getElementById("createConcentrationRoomBtn").addEventListener("click", () => {

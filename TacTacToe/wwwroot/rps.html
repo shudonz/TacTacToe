@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TacTacToe &#8211; Rock Paper Scissors</title>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="/css/style.css" rel="stylesheet">
+</head>
+<body>
+    <div class="ambient"></div>
+    <div class="noise"></div>
+    <div class="page-content">
+        <nav class="navbar">
+            <div class="logo-sm"><span class="logo-x">Tac</span><span class="logo-o">Tac</span><span class="logo-x">Toe</span></div>
+            <button id="backBtn" class="btn-logout">Back to Lobby</button>
+        </nav>
+
+        <main class="rps-container">
+            <section class="glass-card rps-settings" id="settingsCard">
+                <h2 class="lobby-title">Rock Paper Scissors + Power-Ups</h2>
+                <p class="lobby-hint">Single-player (vs AI) or local multiplayer on one device.</p>
+                <div class="rps-grid">
+                    <label>Mode
+                        <select id="modeSelect" class="guest-input">
+                            <option value="single">Single Player (vs AI)</option>
+                            <option value="local">Local Multiplayer</option>
+                        </select>
+                    </label>
+                    <label>AI Difficulty
+                        <select id="difficultySelect" class="guest-input">
+                            <option value="easy">Easy</option>
+                            <option value="normal">Normal</option>
+                            <option value="hard">Hard</option>
+                        </select>
+                    </label>
+                    <label>Match Format
+                        <select id="formatSelect" class="guest-input">
+                            <option value="best5">Best of 5</option>
+                            <option value="best7">Best of 7</option>
+                            <option value="timed">Timed (60s)</option>
+                        </select>
+                    </label>
+                    <label>Power-Up Distribution
+                        <select id="powerModeSelect" class="guest-input">
+                            <option value="random">Mode A: Random Per Round</option>
+                            <option value="cooldown">Mode B: Cooldown System</option>
+                            <option value="shop">Mode C: Shop Mode</option>
+                        </select>
+                    </label>
+                </div>
+                <button id="startBtn" class="btn btn-accept" style="margin-top:1rem;">Start Match</button>
+            </section>
+
+            <section class="glass-card rps-instructions">
+                <h3>How to Play</h3>
+                <ol>
+                    <li>Pick match format, difficulty/mode, and power-up distribution, then start.</li>
+                    <li>Each round, choose <strong>Rock</strong>, <strong>Paper</strong>, or <strong>Scissors</strong>.</li>
+                    <li>You may activate <strong>one power-up</strong> per round (or none).</li>
+                    <li>Power-ups resolve in this fixed order: Sabotage → Lock-In → Reveal → Reverse → Randomizer → Shield → Double Strike → Charge.</li>
+                    <li>In timed mode, the match ends at 60 seconds. In best-of mode, first to required wins ends the match.</li>
+                    <li>In shop mode, wins give coins. Buy power-ups before each round (cost 1-3 coins).</li>
+                </ol>
+            </section>
+
+            <section id="gameCard" class="glass-card rps-game" style="display:none;">
+                <div class="rps-header-row">
+                    <div id="leftName" class="rps-name"></div>
+                    <div id="scoreText" class="turn-indicator"></div>
+                    <div id="rightName" class="rps-name"></div>
+                </div>
+                <div id="statusText" class="turn-indicator"></div>
+                <div id="timerText" class="lobby-hint" style="display:none;"></div>
+
+                <div id="shopPanel" class="rps-shop" style="display:none;"></div>
+
+                <div id="powerPanel" class="rps-power-panel"></div>
+                <div id="peekPanel" class="rps-peek" style="display:none;"></div>
+
+                <div class="rps-move-buttons">
+                    <button class="rps-move-btn" data-move="Rock">Rock</button>
+                    <button class="rps-move-btn" data-move="Paper">Paper</button>
+                    <button class="rps-move-btn" data-move="Scissors">Scissors</button>
+                </div>
+
+                <button id="lockBtn" class="btn btn-accept">Lock In Selection</button>
+
+                <div id="roundSummary" class="rps-summary"></div>
+                <div id="effectBanner" class="rps-effect-banner" style="display:none;"></div>
+
+                <h3 style="margin-top:1rem;">Round History</h3>
+                <div id="historyLog" class="rps-history"></div>
+            </section>
+        </main>
+
+        <div id="resultOverlay" class="result-overlay" style="display:none">
+            <div class="result-card">
+                <h2 id="resultText"></h2>
+                <button id="playAgainBtn" class="btn btn-accept" style="margin-bottom:0.75rem;">Play Again</button>
+                <button id="backToLobby" class="btn btn-outline">Back to Lobby</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="/js/rps.js"></script>
+</body>
+</html>
