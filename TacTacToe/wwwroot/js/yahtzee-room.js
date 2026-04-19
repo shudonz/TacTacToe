@@ -5,6 +5,24 @@ let isHost = false;
 
 function escapeHtml(s) { const d = document.createElement("div"); d.textContent = s; return d.innerHTML; }
 
+function copyToClipboard(text) {
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+        return navigator.clipboard.writeText(text).catch(() => execCopy(text));
+    }
+    execCopy(text);
+}
+function execCopy(text) {
+    const el = document.createElement("textarea");
+    el.value = text;
+    el.setAttribute("readonly", "");
+    el.style.cssText = "position:fixed;top:-9999px;left:-9999px;opacity:0";
+    document.body.appendChild(el);
+    el.select();
+    el.setSelectionRange(0, el.value.length); // iOS
+    document.execCommand("copy");
+    document.body.removeChild(el);
+}
+
 async function init() {
     const res = await fetch("/api/me");
     const me = await res.json();
@@ -16,13 +34,15 @@ async function init() {
 
     // Copy code button
     document.getElementById("copyCodeBtn").addEventListener("click", () => {
-        navigator.clipboard.writeText(shortCode).then(() => showCopyToast("Room code copied!"));
+        copyToClipboard(shortCode);
+        showCopyToast("Room code copied!");
     });
 
     // Copy invite link button
     document.getElementById("copyLinkBtn").addEventListener("click", () => {
         const link = window.location.origin + "/lobby?join=" + roomId;
-        navigator.clipboard.writeText(link).then(() => showCopyToast("Invite link copied!"));
+        copyToClipboard(link);
+        showCopyToast("Invite link copied!");
     });
 
     // Advanced settings toggle

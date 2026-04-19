@@ -142,9 +142,42 @@ function playChatReceiveSound() {
 }
 
 /* ============================================================
-   Dice face unicode
+   Realistic SVG dice faces — white background, black dots
+   Dot positions follow the standard Western die layout.
+   viewBox is 100×100; dots are 9px radius circles.
    ============================================================ */
-const dieFaces = ['', '⚀', '⚁', '⚂', '⚃', '⚄', '⚅'];
+const DOT_POSITIONS = {
+    1: [[50,50]],
+    2: [[25,25],[75,75]],
+    3: [[25,25],[50,50],[75,75]],
+    4: [[25,25],[75,25],[25,75],[75,75]],
+    5: [[25,25],[75,25],[50,50],[25,75],[75,75]],
+    6: [[25,22],[75,22],[25,50],[75,50],[25,78],[75,78]]
+};
+
+function dieSVG(value, held) {
+    if (!value || value < 1 || value > 6) {
+        // Blank / unrolled placeholder
+        return '<div class="die-face die-face-blank">?</div>';
+    }
+    const dots = DOT_POSITIONS[value];
+    const dotColor   = held ? '#0F2533' : '#1a1a1a';
+    const fillColor  = held ? '#d4f5f7' : '#ffffff';
+    const strokeColor = held ? '#12919E' : '#cccccc';
+    const strokeW     = held ? '3' : '2';
+
+    const dotsSVG = dots.map(([cx, cy]) =>
+        `<circle cx="${cx}" cy="${cy}" r="9" fill="${dotColor}"/>`
+    ).join('');
+
+    return `<div class="die-face">
+        <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+            <rect x="3" y="3" width="94" height="94" rx="16" ry="16"
+                  fill="${fillColor}" stroke="${strokeColor}" stroke-width="${strokeW}"/>
+            ${dotsSVG}
+        </svg>
+    </div>`;
+}
 
 /* ============================================================
    Client-side score calculator (mirrors server logic)
@@ -233,7 +266,7 @@ function buildDice(numDice) {
         const d = document.createElement("div");
         d.className = "die";
         d.dataset.i = i;
-        d.innerHTML = '<span class="die-face">?</span>';
+        d.innerHTML = dieSVG(0, false);
         d.addEventListener("click", () => {
             if (currentRoom && currentRoom.held && currentRoom.held[i]) playUnholdSound();
             else playHoldSound();
@@ -351,9 +384,10 @@ connection.on("YahtzeeUpdated", room => {
     room.dice.forEach((val, i) => {
         if (i >= diceEls.length) return;
         const el = diceEls[i];
-        const face = el.querySelector(".die-face");
-        face.textContent = val === 0 ? "?" : (dieFaces[val] || val);
+        const wasHeld = el.classList.contains("held");
         el.classList.toggle("held", room.held[i]);
+        // Re-render the SVG (updates fill/stroke colour when hold state changes)
+        el.innerHTML = dieSVG(val, room.held[i]);
         if (val > 0 && !el.dataset.shown) {
             el.classList.add("die-roll");
             setTimeout(() => el.classList.remove("die-roll"), 400);

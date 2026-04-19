@@ -1,10 +1,10 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TacTacToe — Lobby</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <title>TacTacToe &#8211; Lobby</title>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link href="/css/style.css" rel="stylesheet">
 </head>
 <body>
@@ -23,23 +23,23 @@
             <h2 class="lobby-title">Choose a Game</h2>
             <div class="game-picker">
                 <button class="game-option active" data-game="tictactoe">
-                    <span class="game-option-icon">✕○</span>
+                    <span class="game-option-icon">&#x2715;&#x25CB;</span>
                     <span class="game-option-label">Tic Tac Toe</span>
                 </button>
                 <button class="game-option" data-game="yahtzee">
-                    <span class="game-option-icon">🎲</span>
+                    <span class="game-option-icon">&#127922;</span>
                     <span class="game-option-label">Yahtzee</span>
                 </button>
                 <button class="game-option" data-game="slots">
-                    <span class="game-option-icon">🎰</span>
+                    <span class="game-option-icon">&#127920;</span>
                     <span class="game-option-label">Slots</span>
                 </button>
             </div>
             <div id="tttSinglePlayer" class="sp-section" style="margin-top:2rem;">
-                <span class="sp-label">🤖 vs Computer</span>
+                <span class="sp-label">&#129302; vs Computer</span>
                 <div class="sp-btns">
                     <button id="tttRegularBtn" class="btn btn-sp">Regular</button>
-                    <button id="tttHardBtn" class="btn btn-sp btn-sp-hard">💀 Hard</button>
+                    <button id="tttHardBtn" class="btn btn-sp btn-sp-hard">&#128128; Hard</button>
                 </div>
             </div>
             <!-- TTT Rooms -->
@@ -54,7 +54,7 @@
             <!-- Slots Section -->
             <div id="slotsSection" style="display:none;">
                 <div class="sp-section" style="margin-top:2rem;">
-                    <span class="sp-label">🎰 vs The Machine</span>
+                    <span class="sp-label">&#127920; vs The Machine</span>
                     <div class="sp-btns">
                         <button id="slotsSpBtn" class="btn btn-sp">Play Solo</button>
                     </div>
@@ -71,10 +71,10 @@
                 <h2 class="lobby-title" style="margin-top:2rem;">Yahtzee Rooms</h2>
                 <p class="lobby-hint">Join an open room or create your own and invite friends.</p>
                 <div class="sp-section" style="margin-bottom:1.25rem;">
-                    <span class="sp-label">🤖 Single Player</span>
+                    <span class="sp-label">&#129302; Single Player</span>
                     <div class="sp-btns">
                         <button id="yahtzeeRegularBtn" class="btn btn-sp">Regular</button>
-                        <button id="yahtzeeHardBtn" class="btn btn-sp btn-sp-hard">💀 Hard</button>
+                        <button id="yahtzeeHardBtn" class="btn btn-sp btn-sp-hard">&#128128; Hard</button>
                     </div>
                 </div>
                 <button id="createRoomBtn" class="btn btn-accept" style="margin-bottom:1rem;">+ Create Room</button>
@@ -85,7 +85,7 @@
 
         <div id="createSlotsRoomModal" class="modal" style="display:none">
             <div class="modal-content">
-                <h3>🎰 Create Slots Room</h3>
+                <h3>&#127920; Create Slots Room</h3>
                 <p>Give your room a name so friends can find it.</p>
                 <input id="newSlotsRoomName" class="guest-input" type="text" placeholder="e.g. Vegas Night" maxlength="30" style="margin-top:1.25rem;width:100%;">
                 <div class="modal-actions">
@@ -96,7 +96,7 @@
         </div>
         <div id="createTttRoomModal" class="modal" style="display:none">
             <div class="modal-content">
-                <h3>✕○ Create Tic Tac Toe Room</h3>
+                <h3>&#x2715;&#x25CB; Create Tic Tac Toe Room</h3>
                 <p>Give your room a name so friends can find it.</p>
                 <input id="newTttRoomName" class="guest-input" type="text" placeholder="e.g. Let's Play!" maxlength="30" style="margin-top:1.25rem;width:100%;">
                 <div class="modal-actions">
@@ -107,7 +107,7 @@
         </div>
         <div id="createRoomModal" class="modal" style="display:none">
             <div class="modal-content">
-                <h3>🎲 Create Yahtzee Room</h3>
+                <h3>&#127922; Create Yahtzee Room</h3>
                 <p>Give your room a name so friends can find it.</p>
                 <input id="newRoomName" class="guest-input" type="text" placeholder="e.g. Friday Night Dice" maxlength="30" style="margin-top:1.25rem;width:100%;">
                 <div class="modal-actions">
@@ -119,11 +119,11 @@
 
             <!-- Chat Widget -->
             <div id="chatWidget" class="chat-widget">
-                <button id="chatToggle" class="chat-toggle">💬 <span id="chatBadge" class="chat-badge" style="display:none">0</span></button>
+                <button id="chatToggle" class="chat-toggle">&#128172; <span id="chatBadge" class="chat-badge" style="display:none">0</span></button>
                 <div id="chatPanel" class="chat-panel" style="display:none">
-                    <div class="chat-header"><span>Lobby Chat</span><button id="chatClose" class="chat-close">✕</button></div>
+                    <div class="chat-header"><span>Lobby Chat</span><button id="chatClose" class="chat-close">&#x2715;</button></div>
                     <div id="chatMessages" class="chat-messages"></div>
-                    <div class="chat-input-row"><input id="chatInput" class="chat-input" placeholder="Type a message…" maxlength="500"><button id="chatSend" class="chat-send">➤</button></div>
+                    <div class="chat-input-row"><input id="chatInput" class="chat-input" placeholder="Type a message&#8230;" maxlength="500"><button id="chatSend" class="chat-send">&#10148;</button></div>
                 </div>
             </div>
         </div>

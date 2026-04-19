@@ -1,10 +1,10 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TacTacToe — Slots</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <title>TacTacToe &#8211; Slots</title>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link href="/css/style.css" rel="stylesheet">
 </head>
 <body>
@@ -34,23 +34,23 @@
             <div class="slots-cabinet glass-card" id="slotsCabinet">
                 <!-- Cabinet top marquee -->
                 <div class="slots-marquee">
-                    <span class="slots-marquee-text">🎰&nbsp;&nbsp;LUCKY&nbsp;VEGAS&nbsp;SLOTS&nbsp;&nbsp;🎰&nbsp;&nbsp;LUCKY&nbsp;VEGAS&nbsp;SLOTS&nbsp;&nbsp;🎰&nbsp;&nbsp;LUCKY&nbsp;VEGAS&nbsp;SLOTS&nbsp;&nbsp;</span>
+                    <span class="slots-marquee-text">&#127920;&nbsp;&nbsp;LUCKY&nbsp;VEGAS&nbsp;SLOTS&nbsp;&nbsp;&#127920;&nbsp;&nbsp;LUCKY&nbsp;VEGAS&nbsp;SLOTS&nbsp;&nbsp;&#127920;&nbsp;&nbsp;LUCKY&nbsp;VEGAS&nbsp;SLOTS&nbsp;&nbsp;</span>
                 </div>
 
                 <!-- Payout table -->
                 <details class="slots-payouts">
-                    <summary>💰 Payout Table</summary>
+                    <summary>&#128176; Payout Table</summary>
                     <div class="slots-payout-grid">
-                        <span>7️⃣7️⃣7️⃣</span><span class="slots-payout-val">× 100</span>
-                        <span>💎💎💎</span><span class="slots-payout-val">× 50</span>
-                        <span>⭐⭐⭐</span><span class="slots-payout-val">× 20</span>
-                        <span>🔔🔔🔔</span><span class="slots-payout-val">× 10</span>
-                        <span>🍇🍇🍇</span><span class="slots-payout-val">× 8</span>
-                        <span>🍊🍊🍊</span><span class="slots-payout-val">× 6</span>
-                        <span>🍋🍋🍋</span><span class="slots-payout-val">× 4</span>
-                        <span>🍒🍒🍒</span><span class="slots-payout-val">× 3</span>
-                        <span>🍒🍒 —</span><span class="slots-payout-val">× 2</span>
-                        <span>🍒 — —</span><span class="slots-payout-val">× 1</span>
+                        <span>7&#xFE0F;&#x20E3;7&#xFE0F;&#x20E3;7&#xFE0F;&#x20E3;</span><span class="slots-payout-val">&times; 100</span>
+                        <span>&#128142;&#128142;&#128142;</span><span class="slots-payout-val">&times; 50</span>
+                        <span>⭐⭐⭐</span><span class="slots-payout-val">&times; 20</span>
+                        <span>&#128276;&#128276;&#128276;</span><span class="slots-payout-val">&times; 10</span>
+                        <span>&#127815;&#127815;&#127815;</span><span class="slots-payout-val">&times; 8</span>
+                        <span>&#127819;&#127819;&#127819;</span><span class="slots-payout-val">&times; 6</span>
+                        <span>&#127818;&#127818;&#127818;</span><span class="slots-payout-val">&times; 4</span>
+                        <span>&#127826;&#127826;&#127826;</span><span class="slots-payout-val">&times; 3</span>
+                        <span>&#127826;&#127826; &#x2605;</span><span class="slots-payout-val">&times; 2</span>
+                        <span>&#127826; &#x2605;&#x2605;</span><span class="slots-payout-val">&times; 1</span>
                     </div>
                 </details>
 
@@ -79,7 +79,7 @@
                 <!-- Bet controls -->
                 <div id="betArea" class="slots-bet-area">
                     <div class="slots-balance-row">
-                        <span class="slots-balance-label">💵 Balance</span>
+                        <span class="slots-balance-label">&#128176; Balance</span>
                         <span class="slots-balance-value" id="myBalance">$1,000</span>
                     </div>
                     <div class="slots-bet-row">
@@ -92,12 +92,12 @@
                     <div class="slots-spin-row">
                         <span class="slots-current-bet">Bet: <strong id="betDisplay">$10</strong></span>
                         <button id="spinBtn" class="btn slots-spin-btn">
-                            <span class="slots-spin-btn-inner">🎰 SPIN</span>
+                            <span class="slots-spin-btn-inner">&#127920; SPIN</span>
                         </button>
                     </div>
                 </div>
-                <div id="waitingMsg" class="slots-waiting" style="display:none;">⏳ Waiting for other players…</div>
-                <div id="bustMsg" class="slots-waiting" style="display:none;">💸 Out of chips! Watching the rest…</div>
+                <div id="waitingMsg" class="slots-waiting" style="display:none;">⏳ Waiting for other players&#8230;</div>
+                <div id="bustMsg" class="slots-waiting" style="display:none;">&#128172; Out of chips! Watching the rest&#8230;</div>
 
                 <!-- Cabinet base decorations -->
                 <div class="slots-base-lights" aria-hidden="true">
@@ -122,11 +122,11 @@
 
     <!-- Chat Widget -->
     <div id="chatWidget" class="chat-widget">
-        <button id="chatToggle" class="chat-toggle">💬 <span id="chatBadge" class="chat-badge" style="display:none">0</span></button>
+        <button id="chatToggle" class="chat-toggle">&#128172; <span id="chatBadge" class="chat-badge" style="display:none">0</span></button>
         <div id="chatPanel" class="chat-panel" style="display:none">
-            <div class="chat-header"><span>Game Chat</span><button id="chatClose" class="chat-close">✕</button></div>
+            <div class="chat-header"><span>Game Chat</span><button id="chatClose" class="chat-close">&#x2715;</button></div>
             <div id="chatMessages" class="chat-messages"></div>
-            <div class="chat-input-row"><input id="chatInput" class="chat-input" placeholder="Type a message…" maxlength="500"><button id="chatSend" class="chat-send">➤</button></div>
+            <div class="chat-input-row"><input id="chatInput" class="chat-input" placeholder="Type a message&#8230;" maxlength="500"><button id="chatSend" class="chat-send">&#10148;</button></div>
         </div>
     </div>
 

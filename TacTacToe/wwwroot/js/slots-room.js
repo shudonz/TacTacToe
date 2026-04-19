@@ -5,6 +5,24 @@ let isHost = false;
 
 function esc(s) { const d = document.createElement("div"); d.textContent = s; return d.innerHTML; }
 
+function copyToClipboard(text) {
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+        return navigator.clipboard.writeText(text).catch(() => execCopy(text));
+    }
+    execCopy(text);
+}
+function execCopy(text) {
+    const el = document.createElement("textarea");
+    el.value = text;
+    el.setAttribute("readonly", "");
+    el.style.cssText = "position:fixed;top:-9999px;left:-9999px;opacity:0";
+    document.body.appendChild(el);
+    el.select();
+    el.setSelectionRange(0, el.value.length); // iOS
+    document.execCommand("copy");
+    document.body.removeChild(el);
+}
+
 async function init() {
     const res = await fetch("/api/me");
     const me = await res.json();
@@ -12,11 +30,14 @@ async function init() {
 
     const shortCode = roomId.slice(0, 8).toUpperCase();
     document.getElementById("roomCode").textContent = shortCode;
-    document.getElementById("copyCodeBtn").addEventListener("click", () =>
-        navigator.clipboard.writeText(shortCode).then(() => showCopyToast("Room code copied!")));
-    document.getElementById("copyLinkBtn").addEventListener("click", () =>
-        navigator.clipboard.writeText(window.location.origin + "/lobby?join=" + roomId + "&game=slots")
-            .then(() => showCopyToast("Invite link copied!")));
+    document.getElementById("copyCodeBtn").addEventListener("click", () => {
+        copyToClipboard(shortCode);
+        showCopyToast("Room code copied!");
+    });
+    document.getElementById("copyLinkBtn").addEventListener("click", () => {
+        copyToClipboard(window.location.origin + "/lobby?join=" + roomId + "&game=slots");
+        showCopyToast("Invite link copied!");
+    });
 
     connection.on("SlotsRoomUpdated", room => renderRoom(room));
     connection.on("SlotsRoomDissolved", () => { alert("The room was closed."); window.location.href = "/lobby"; });
