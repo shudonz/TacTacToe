@@ -1,6 +1,7 @@
 const connection = new signalR.HubConnectionBuilder().withUrl("/gamehub").withAutomaticReconnect().build();
 const roomId = sessionStorage.getItem("concentrationRoomId");
 const isSinglePlayer = sessionStorage.getItem("isSinglePlayer") === "1";
+const CARD_BACK_EMOJI = "🧠";
 let myName = sessionStorage.getItem("myName") || "";
 let gameState = null;
 
@@ -53,7 +54,7 @@ function renderState(state) {
         if (card.isMatched) btn.classList.add("matched");
         if (card.isRevealed || card.isMatched) btn.classList.add("revealed");
         btn.disabled = state.isOver || !myTurn || card.isMatched || card.isRevealed || state.turnLocked;
-        btn.innerHTML = '<span class="concentration-card-front">🧠</span><span class="concentration-card-back">' + (card.emoji || "") + "</span>";
+        btn.innerHTML = '<span class="concentration-card-front">' + CARD_BACK_EMOJI + '</span><span class="concentration-card-back">' + (card.emoji || "") + "</span>";
         btn.onclick = () => connection.invoke("ConcentrationFlipCard", roomId, card.index);
         board.appendChild(btn);
     });

@@ -237,7 +237,7 @@ async function init() {
     document.getElementById("yahtzeeRegularBtn").addEventListener("click", () => spInvoke("StartYahtzeeSinglePlayer", "regular"));
     document.getElementById("yahtzeeHardBtn").addEventListener("click",    () => spInvoke("StartYahtzeeSinglePlayer", "hard"));
 
-    // Auto-join via invite link
+    // Auto-join via invite link (defaults to Yahtzee when no game query is provided)
     const params = new URLSearchParams(window.location.search);
     const joinParam = params.get("join");
     const gameParam = params.get("game");

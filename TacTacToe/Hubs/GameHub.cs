@@ -8,6 +8,13 @@ namespace TacTacToe.Hubs;
 [Authorize]
 public class GameHub : Hub
 {
+    private const int ConcentrationMismatchDelayMs = 850;
+    private const int ConcentrationBotFirstMoveMinDelayMs = 500;
+    private const int ConcentrationBotFirstMoveMaxDelayMs = 1000;
+    private const int ConcentrationBotSecondMoveMinDelayMs = 400;
+    private const int ConcentrationBotSecondMoveMaxDelayMs = 900;
+    private const int ConcentrationRoomNameMaxLength = 30;
+
     private readonly LobbyService _lobby;
     private readonly IHubContext<GameHub> _hubContext;
 
@@ -658,7 +665,10 @@ public class GameHub : Hub
         var roomId = Guid.NewGuid().ToString("N");
         var room = _lobby.CreateConcentrationRoom(roomId, Context.ConnectionId);
         if (!string.IsNullOrWhiteSpace(roomName))
-            room.Settings.RoomName = roomName.Trim()[..Math.Min(roomName.Trim().Length, 30)];
+        {
+            var trimmedName = roomName.Trim();
+            room.Settings.RoomName = trimmedName[..Math.Min(trimmedName.Length, ConcentrationRoomNameMaxLength)];
+        }
         await Groups.AddToGroupAsync(Context.ConnectionId, roomId);
         await Clients.Caller.SendAsync("ConcentrationRoomCreated", roomId);
         await BroadcastConcentrationRooms();
@@ -821,11 +831,15 @@ public class GameHub : Hub
         }
 
         await Clients.Group(roomId).SendAsync("ConcentrationUpdated", BuildConcentrationState(room));
-        await Task.Delay(850);
-        room.TurnRevealedIndexes.Clear();
-        MoveToNextConcentrationPlayer(room);
-        await Clients.Group(roomId).SendAsync("ConcentrationUpdated", BuildConcentrationState(room));
-        if (!room.IsOver && room.Players[room.CurrentPlayerIndex].IsBot)
+        var revealedSnapshot = room.TurnRevealedIndexes.ToArray();
+        await Task.Delay(ConcentrationMismatchDelayMs);
+        var refreshed = _lobby.GetConcentrationRoom(roomId);
+        if (refreshed == null || refreshed.IsOver || refreshed.TurnRevealedIndexes.Count != 2) return;
+        if (!revealedSnapshot.All(i => refreshed.TurnRevealedIndexes.Contains(i))) return;
+        refreshed.TurnRevealedIndexes.Clear();
+        MoveToNextConcentrationPlayer(refreshed);
+        await Clients.Group(roomId).SendAsync("ConcentrationUpdated", BuildConcentrationState(refreshed));
+        if (!refreshed.IsOver && refreshed.Players[refreshed.CurrentPlayerIndex].IsBot)
             _ = TakeConcentrationBotTurnAsync(roomId);
     }
 
@@ -935,7 +949,7 @@ public class GameHub : Hub
 
     private async Task TakeConcentrationBotTurnAsync(string roomId)
     {
-        await Task.Delay(Random.Shared.Next(500, 1000));
+        await Task.Delay(Random.Shared.Next(ConcentrationBotFirstMoveMinDelayMs, ConcentrationBotFirstMoveMaxDelayMs));
         var room = _lobby.GetConcentrationRoom(roomId);
         if (room == null || room.IsOver || !room.Started) return;
         var bot = room.Players[room.CurrentPlayerIndex];
@@ -950,7 +964,7 @@ public class GameHub : Hub
         room.TurnRevealedIndexes.Add(first);
         await _hubContext.Clients.Group(roomId).SendAsync("ConcentrationUpdated", BuildConcentrationState(room));
 
-        await Task.Delay(Random.Shared.Next(400, 900));
+        await Task.Delay(Random.Shared.Next(ConcentrationBotSecondMoveMinDelayMs, ConcentrationBotSecondMoveMaxDelayMs));
         available = Enumerable.Range(0, room.Deck.Count)
             .Where(i => !room.Matched[i] && !room.TurnRevealedIndexes.Contains(i))
             .ToList();
@@ -977,10 +991,14 @@ public class GameHub : Hub
             return;
         }
 
-        await Task.Delay(850);
-        room.TurnRevealedIndexes.Clear();
-        MoveToNextConcentrationPlayer(room);
-        await _hubContext.Clients.Group(roomId).SendAsync("ConcentrationUpdated", BuildConcentrationState(room));
+        var botRevealSnapshot = room.TurnRevealedIndexes.ToArray();
+        await Task.Delay(ConcentrationMismatchDelayMs);
+        var refreshed = _lobby.GetConcentrationRoom(roomId);
+        if (refreshed == null || refreshed.IsOver || refreshed.TurnRevealedIndexes.Count != 2) return;
+        if (!botRevealSnapshot.All(i => refreshed.TurnRevealedIndexes.Contains(i))) return;
+        refreshed.TurnRevealedIndexes.Clear();
+        MoveToNextConcentrationPlayer(refreshed);
+        await _hubContext.Clients.Group(roomId).SendAsync("ConcentrationUpdated", BuildConcentrationState(refreshed));
     }
 
     public async Task ReplaySinglePlayerTTT(string gameId)
