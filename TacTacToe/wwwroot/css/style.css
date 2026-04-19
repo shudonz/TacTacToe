@@ -2186,3 +2186,62 @@ body {
 @media (max-width: 800px) {
     .concentration-board { grid-template-columns: repeat(4, minmax(70px, 1fr)); }
 }
+
+/* ============================================================
+   DIFFICULTY TOOLTIP  (data-tooltip attribute)
+   Used on concentration single-player difficulty buttons.
+   Hover on desktop · tap to reveal on mobile.
+   ============================================================ */
+[data-tooltip] {
+    position: relative;
+}
+[data-tooltip]::after {
+    content: attr(data-tooltip);
+    position: absolute;
+    bottom: calc(100% + 8px);
+    left: 50%;
+    transform: translateX(-50%) scale(0.92);
+    /* Keep tooltip inside the viewport on small screens */
+    max-width: min(220px, 90vw);
+    white-space: pre;               /* honours &#10; newlines      */
+    background: var(--surface-solid, #0e1e28);
+    color: var(--text, #c4e7e9);
+    border: 1px solid var(--glass-border, rgba(196,231,233,0.15));
+    border-radius: 8px;
+    padding: 7px 14px;
+    font-family: var(--font, 'DM Sans', sans-serif);
+    font-size: 0.78rem;
+    font-weight: 600;
+    line-height: 1.7;
+    letter-spacing: 0.03em;
+    box-shadow: 0 6px 24px rgba(0,0,0,0.45);
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.18s ease, transform 0.18s ease;
+    z-index: 500;
+}
+/* small arrow */
+[data-tooltip]::before {
+    content: '';
+    position: absolute;
+    bottom: calc(100% + 2px);
+    left: 50%;
+    transform: translateX(-50%);
+    border: 6px solid transparent;
+    border-top-color: var(--glass-border, rgba(196,231,233,0.15));
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.18s ease;
+    z-index: 500;
+}
+[data-tooltip]:hover::after,
+[data-tooltip]:focus-visible::after,
+[data-tooltip].tooltip-active::after {
+    opacity: 1;
+    transform: translateX(-50%) scale(1);
+}
+[data-tooltip]:hover::before,
+[data-tooltip]:focus-visible::before,
+[data-tooltip].tooltip-active::before {
+    opacity: 1;
+}

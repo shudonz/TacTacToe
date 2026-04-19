@@ -770,10 +770,13 @@ public class GameHub : Hub
         await BroadcastConcentrationRooms();
     }
 
-    public async Task StartConcentrationSinglePlayer()
+    public async Task StartConcentrationSinglePlayer(string difficulty = "regular")
     {
         var name = Context.User?.FindFirst(ClaimTypes.Name)?.Value ?? "Unknown";
         var roomId = Guid.NewGuid().ToString("N");
+        var botName = difficulty == "easy" ? "🤖 Computer (Easy)"
+                    : difficulty == "hard"  ? "🤖 Computer (Hard)"
+                    : "🤖 Computer";
         var room = new ConcentrationRoom
         {
             Id = roomId,
@@ -784,7 +787,7 @@ public class GameHub : Hub
             Players =
             [
                 new ConcentrationPlayer { ConnectionId = Context.ConnectionId, Name = name, Connected = true },
-                new ConcentrationPlayer { ConnectionId = "BOT_" + roomId, Name = "🤖 Computer", IsBot = true, Connected = true }
+                new ConcentrationPlayer { ConnectionId = "BOT_" + roomId, Name = botName, IsBot = true, Connected = true, AiDifficulty = difficulty }
             ]
         };
         room.Settings.RoomName = "Concentration vs Computer";
@@ -973,14 +976,22 @@ public class GameHub : Hub
         if (available.Count == 0) return;
 
         // Bot only uses memory of previously-seen cards — not perfect deck knowledge.
-        // Even when the match is known, a ~30% chance of a mistake keeps the game winnable.
-        const double BotMissChance = 0.30;
+        // Miss chance varies by difficulty:
+        //   easy    — remembers  10% of the time (90% miss)
+        //   regular — remembers  70% of the time (30% miss, default)
+        //   hard    — remembers  90% of the time (10% miss)
+        double botMissChance = bot.AiDifficulty switch
+        {
+            "easy" => 0.90,
+            "hard" => 0.10,
+            _      => 0.30
+        };
         var knownMatchIdx = available
             .Where(i => room.SeenCardIndexes.Contains(i) && room.Deck[i] == room.Deck[first])
             .Cast<int?>()
             .FirstOrDefault();
         int second;
-        if (knownMatchIdx.HasValue && Random.Shared.NextDouble() >= BotMissChance)
+        if (knownMatchIdx.HasValue && Random.Shared.NextDouble() >= botMissChance)
         {
             second = knownMatchIdx.Value;
         }
@@ -1374,7 +1385,8 @@ public class GameHub : Hub
 
             room.RollsLeft = room.Settings.RollsPerTurn;
             room.Held = new bool[room.Settings.NumberOfDice];
-            room.Dice = new int[room.Settings.NumberOfDice];
+            // Dice are kept from the previous turn so the board looks realistic
+            // between turns rather than resetting to blank placeholders.
 
             await _hubContext.Clients.Group(gameId).SendAsync("YahtzeeUpdated", room);
 

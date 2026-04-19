@@ -34,6 +34,7 @@ public class ConcentrationPlayer
     public int Score { get; set; }
     public bool Connected { get; set; } = true;
     public bool IsBot { get; set; }
+    public string AiDifficulty { get; set; } = "regular";
 }
 
 public static class ConcentrationEngine

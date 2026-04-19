@@ -294,10 +294,9 @@ async function init() {
     });
 
     // Concentration single player
-    document.getElementById("concentrationSpBtn").addEventListener("click", () => {
-        sessionStorage.setItem("myName", me.name);
-        connection.invoke("StartConcentrationSinglePlayer");
-    });
+    document.getElementById("concentrationEasyBtn").addEventListener("click",    () => spConcentration("easy"));
+    document.getElementById("concentrationRegularBtn").addEventListener("click", () => spConcentration("regular"));
+    document.getElementById("concentrationHardBtn").addEventListener("click",    () => spConcentration("hard"));
 
     // Create Concentration room
     document.getElementById("createConcentrationRoomBtn").addEventListener("click", () => {
@@ -396,6 +395,54 @@ function spInvoke(method, difficulty) {
         });
     }
 }
+
+function spConcentration(difficulty) {
+    const ids = { easy: "concentrationEasyBtn", regular: "concentrationRegularBtn", hard: "concentrationHardBtn" };
+    const labels = { easy: "Easy", regular: "Regular", hard: "💀 Hard" };
+    const btn = document.getElementById(ids[difficulty]);
+    if (btn) { btn.disabled = true; btn.textContent = "Starting…"; }
+
+    const doInvoke = () => connection.invoke("StartConcentrationSinglePlayer", difficulty).catch(err => {
+        console.error("spConcentration failed:", err);
+        if (btn) { btn.disabled = false; btn.textContent = labels[difficulty]; }
+    });
+
+    if (connection.state === signalR.HubConnectionState.Connected) {
+        doInvoke();
+    } else {
+        connection.start().then(doInvoke).catch(err => {
+            console.error("Reconnect failed:", err);
+            if (btn) { btn.disabled = false; btn.textContent = labels[difficulty]; }
+        });
+    }
+}
+
+/* ----------------------------------------------------------------
+   Mobile tooltip support — tap a [data-tooltip] button to reveal,
+   tap anywhere else (or wait 2.5 s) to dismiss.
+----------------------------------------------------------------- */
+(function initTooltipTouch() {
+    let _activeTooltip = null;
+    let _dismissTimer  = null;
+
+    function dismiss() {
+        if (_activeTooltip) { _activeTooltip.classList.remove("tooltip-active"); _activeTooltip = null; }
+        clearTimeout(_dismissTimer);
+    }
+
+    document.addEventListener("touchstart", e => {
+        const target = e.target.closest("[data-tooltip]");
+        if (target) {
+            if (_activeTooltip === target) { dismiss(); return; }   // second tap hides it
+            dismiss();
+            _activeTooltip = target;
+            target.classList.add("tooltip-active");
+            _dismissTimer = setTimeout(dismiss, 2500);
+        } else {
+            dismiss();
+        }
+    }, { passive: true });
+})();
 
 function escapeHtml(s) {
     const d = document.createElement("div");
