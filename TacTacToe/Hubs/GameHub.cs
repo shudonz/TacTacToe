@@ -8,7 +8,7 @@ namespace TacTacToe.Hubs;
 [Authorize]
 public class GameHub : Hub
 {
-    private const int ConcentrationMismatchDelayMs = 850;
+    private const int ConcentrationMismatchDelayMs = 5000;
     private const int ConcentrationBotFirstMoveMinDelayMs = 500;
     private const int ConcentrationBotFirstMoveMaxDelayMs = 1000;
     private const int ConcentrationBotSecondMoveMinDelayMs = 400;
