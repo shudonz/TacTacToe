@@ -2183,6 +2183,18 @@ body {
     box-shadow: 0 0 18px var(--accent-glow);
 }
 
+/* Gold highlight — cards the current player just flipped this turn */
+.concentration-card.just-flipped {
+    border-color: #f59e0b;
+    border-width: 2.5px;
+    box-shadow: 0 0 0 2px rgba(245,158,11,0.35), 0 0 18px rgba(245,158,11,0.55);
+    animation: justFlippedPulse 1.4s ease-in-out infinite;
+}
+@keyframes justFlippedPulse {
+    0%,100% { box-shadow: 0 0 0 2px rgba(245,158,11,0.30), 0 0 14px rgba(245,158,11,0.45); }
+    50%      { box-shadow: 0 0 0 3px rgba(245,158,11,0.60), 0 0 26px rgba(245,158,11,0.75); }
+}
+
 @media (max-width: 800px) {
     .concentration-board { grid-template-columns: repeat(4, minmax(70px, 1fr)); }
 }

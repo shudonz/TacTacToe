@@ -258,8 +258,10 @@ function renderState(state) {
     state.cards.forEach(card => {
         const btn = document.createElement("button");
         btn.className = "concentration-card";
-        if (card.isMatched) btn.classList.add("matched");
+        if (card.isMatched)  btn.classList.add("matched");
         if (card.isRevealed || card.isMatched) btn.classList.add("revealed");
+        // Gold border on cards the current player flipped this turn (visible to everyone)
+        if (card.isRevealed && !card.isMatched) btn.classList.add("just-flipped");
         btn.disabled = state.isOver || !myTurn || card.isMatched || card.isRevealed || state.turnLocked;
         btn.innerHTML = (card.isRevealed || card.isMatched)
             ? '<span class="concentration-card-back">' + (card.emoji || "") + '</span>'
