@@ -81,7 +81,15 @@ function _noise(start, dur, vol) {
 function playDiceRollSound() {
     _resumeAudio();
     const t = _ac.currentTime;
-    for (let i = 0; i < 7; i++) _noise(t + i * 0.06, 0.07, 0.18 + Math.random() * 0.12);
+    // Extended rattle: 14 noise bursts spread over ~1s
+    for (let i = 0; i < 14; i++) {
+        const spacing = i < 5 ? 0.05 : i < 10 ? 0.07 : 0.11;
+        const vol = i < 8 ? 0.22 + Math.random() * 0.14 : 0.12 + Math.random() * 0.08;
+        _noise(t + i * spacing, 0.07 + Math.random() * 0.04, vol);
+    }
+    // Impact thud at the end
+    _tone(120, 'sine', t + 1.1, 0.12, 0.35);
+    _tone(90,  'sine', t + 1.18, 0.1, 0.25);
 }
 function playHoldSound() {
     _resumeAudio();
@@ -357,6 +365,8 @@ function renderPlayerBar(room) {
 let scorecardBuilt = false;
 let _prevTurnIdx = -1;
 let _gameOverSoundPlayed = false;
+let _prevDice = [];
+let _diceAnimating = false;
 
 connection.on("YahtzeeUpdated", room => {
     currentRoom = room;
@@ -384,16 +394,45 @@ connection.on("YahtzeeUpdated", room => {
     room.dice.forEach((val, i) => {
         if (i >= diceEls.length) return;
         const el = diceEls[i];
-        const wasHeld = el.classList.contains("held");
         el.classList.toggle("held", room.held[i]);
-        // Re-render the SVG (updates fill/stroke colour when hold state changes)
-        el.innerHTML = dieSVG(val, room.held[i]);
-        if (val > 0 && !el.dataset.shown) {
-            el.classList.add("die-roll");
-            setTimeout(() => el.classList.remove("die-roll"), 400);
+
+        const prevVal = _prevDice[i] ?? 0;
+        const shouldAnimate = val > 0 && !room.held[i] && (val !== prevVal || !el.dataset.shown);
+
+        if (shouldAnimate) {
+            // Stagger each die slightly for a cascading feel
+            const delay = i * 70;
+            const cycleCount = 9 + Math.floor(Math.random() * 5);
+            const cycleMs = 80;
+            let tick = 0;
+
+            el.classList.remove("die-land", "die-rolling");
+            el.style.setProperty("--land-spin", (Math.random() < 0.5 ? 1 : -1) * (10 + Math.floor(Math.random() * 15)) + "deg");
+
+            setTimeout(() => {
+                el.classList.add("die-rolling");
+                const iv = setInterval(() => {
+                    tick++;
+                    if (tick < cycleCount) {
+                        el.innerHTML = dieSVG(Math.ceil(Math.random() * 6), false);
+                    } else {
+                        clearInterval(iv);
+                        el.classList.remove("die-rolling");
+                        el.innerHTML = dieSVG(val, room.held[i]);
+                        void el.offsetWidth; // force reflow
+                        el.classList.add("die-land");
+                        setTimeout(() => el.classList.remove("die-land"), 500);
+                    }
+                }, cycleMs);
+            }, delay);
+        } else {
+            // Held die or no change — just update SVG (colour may change on hold)
+            el.innerHTML = dieSVG(val, room.held[i]);
         }
+
         el.dataset.shown = val > 0 ? "1" : "";
     });
+    _prevDice = [...room.dice];
 
     // Rolls
     document.getElementById("rollsLeft").textContent = "(" + room.rollsLeft + ")";
