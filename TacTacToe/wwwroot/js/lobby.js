@@ -16,30 +16,33 @@ async function init() {
             btn.classList.add("active");
             selectedGame = btn.dataset.game;
             updateSections();
+            // On mobile, scroll the detail panel into view
+            const detail = document.querySelector(".lobby-detail");
+            if (detail && window.innerWidth < 768) detail.scrollIntoView({ behavior: "smooth", block: "start" });
         });
     });
 
     function updateSections() {
-        // Determine which section to show (only when a game is explicitly selected).
-        const ttt = selectedGame === "tictactoe";
-        const slots = selectedGame === "slots";
-        const concentration = selectedGame === "concentration";
-        const yahtzee = selectedGame === "yahtzee";
+        const panels = {
+            tictactoe:     "tttPanel",
+            yahtzee:       "yahtzeePanel",
+            slots:         "slotsPanel",
+            concentration: "concentrationPanel"
+        };
 
-        // Hide all sections unless their game is selected. This ensures that on
-        // initial page load (selectedGame == "") only the game picker is visible.
-        document.getElementById("tttSinglePlayer").style.display = ttt ? "" : "none";
-        document.getElementById("tttRoomsSection").style.display = ttt ? "" : "none";
-        document.getElementById("yahtzeeSection").style.display = yahtzee ? "" : "none";
-        document.getElementById("slotsSection").style.display = slots ? "" : "none";
-        document.getElementById("concentrationSection").style.display = concentration ? "" : "none";
+        // Show welcome state when no game is selected, otherwise hide it
+        document.getElementById("lobbyEmptyState").style.display = selectedGame ? "none" : "";
 
-        // Only request room lists for the selected game to avoid loading extra
-        // data when no game is chosen.
-        if (ttt) connection.invoke("GetTttRooms");
-        else if (slots) connection.invoke("GetSlotsRooms");
-        else if (concentration) connection.invoke("GetConcentrationRooms");
-        else if (yahtzee) connection.invoke("GetYahtzeeRooms");
+        // Show only the selected game's panel
+        Object.entries(panels).forEach(([game, id]) => {
+            document.getElementById(id).style.display = selectedGame === game ? "" : "none";
+        });
+
+        // Only request room lists for the selected game
+        if (selectedGame === "tictactoe")     connection.invoke("GetTttRooms");
+        else if (selectedGame === "slots")    connection.invoke("GetSlotsRooms");
+        else if (selectedGame === "concentration") connection.invoke("GetConcentrationRooms");
+        else if (selectedGame === "yahtzee")  connection.invoke("GetYahtzeeRooms");
     }
 
     // TTT room list

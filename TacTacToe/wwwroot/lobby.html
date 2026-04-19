@@ -19,107 +19,196 @@
                 <form method="post" action="/logout" style="display:inline"><button type="submit" class="btn-logout">Logout</button></form>
             </div>
         </nav>
-        <main class="lobby-container">
-            <h2 class="lobby-title">Choose a Game</h2>
-            <div class="game-picker">
-                <button class="game-option active" data-game="tictactoe">
-                    <span class="game-option-icon">&#x2715;&#x25CB;</span>
-                    <span class="game-option-label">Tic Tac Toe</span>
-                </button>
-                <button class="game-option" data-game="yahtzee">
-                    <span class="game-option-icon">&#127922;</span>
-                    <span class="game-option-label">Yahtzee</span>
-                </button>
-                <button class="game-option" data-game="slots">
-                    <span class="game-option-icon">&#127920;</span>
-                    <span class="game-option-label">Slots</span>
-                </button>
-                <button class="game-option" data-game="concentration">
-                    <span class="game-option-icon">&#129513;</span>
-                    <span class="game-option-label">Concentration</span>
-                </button>
-            </div>
-            <div id="tttSinglePlayer" class="sp-section" style="margin-top:2rem;">
-                <span class="sp-label">&#129302; vs Computer</span>
-                <div class="sp-btns">
-                    <button id="tttRegularBtn" class="btn btn-sp">Regular</button>
-                    <button id="tttHardBtn" class="btn btn-sp btn-sp-hard">&#128128; Hard</button>
-                </div>
-            </div>
-            <!-- TTT Rooms -->
-            <div id="tttRoomsSection">
-                <h2 class="lobby-title" style="margin-top:1.5rem;">Online Rooms</h2>
-                <p class="lobby-hint">Create a room and invite a friend, or join an open room below.</p>
-                <button id="createTttRoomBtn" class="btn btn-accept" style="margin-bottom:1rem;">+ Create Room</button>
-                <div id="tttRoomList" class="player-list"></div>
-                <p id="noTttRooms" class="lobby-hint" style="display:none;">No open rooms right now. Create one!</p>
-            </div>
 
-            <!-- Slots Section -->
-            <div id="slotsSection" style="display:none;">
-                <div class="sp-section" style="margin-top:2rem;">
-                    <span class="sp-label">&#127920; vs The Machine</span>
-                    <div class="sp-btns">
-                        <button id="slotsSpBtn" class="btn btn-sp">Play Solo</button>
+        <main class="lobby-layout">
+
+            <!-- ── LEFT: Game List ── -->
+            <aside class="lobby-sidebar">
+                <p class="sidebar-heading">Choose a Game</p>
+                <nav class="game-list" aria-label="Game selection">
+
+                    <button class="game-option game-list-item" data-game="tictactoe" aria-label="Tic Tac Toe">
+                        <span class="game-list-icon">&#x2715;&#x25CB;</span>
+                        <div class="game-list-info">
+                            <span class="game-list-name">Tic Tac Toe</span>
+                            <span class="game-list-sub">1–2 players &middot; Classic</span>
+                        </div>
+                        <span class="game-list-arrow">&#8250;</span>
+                    </button>
+
+                    <button class="game-option game-list-item" data-game="yahtzee" aria-label="Yahtzee">
+                        <span class="game-list-icon">&#127922;</span>
+                        <div class="game-list-info">
+                            <span class="game-list-name">Yahtzee</span>
+                            <span class="game-list-sub">1–4 players &middot; Dice</span>
+                        </div>
+                        <span class="game-list-arrow">&#8250;</span>
+                    </button>
+
+                    <button class="game-option game-list-item" data-game="slots" aria-label="Slots">
+                        <span class="game-list-icon">&#127920;</span>
+                        <div class="game-list-info">
+                            <span class="game-list-name">Slots</span>
+                            <span class="game-list-sub">1–4 players &middot; Luck</span>
+                        </div>
+                        <span class="game-list-arrow">&#8250;</span>
+                    </button>
+
+                    <button class="game-option game-list-item" data-game="concentration" aria-label="Concentration">
+                        <span class="game-list-icon">&#129513;</span>
+                        <div class="game-list-info">
+                            <span class="game-list-name">Concentration</span>
+                            <span class="game-list-sub">1–4 players &middot; Memory</span>
+                        </div>
+                        <span class="game-list-arrow">&#8250;</span>
+                    </button>
+
+                </nav>
+            </aside>
+
+            <!-- ── RIGHT: Detail Panel ── -->
+            <section class="lobby-detail" aria-live="polite">
+
+                <!-- Empty / welcome state -->
+                <div id="lobbyEmptyState" class="lobby-empty-state">
+                    <div class="lobby-empty-icon">&#127918;</div>
+                    <h2 class="lobby-empty-title">Welcome to the Lobby</h2>
+                    <p class="lobby-empty-hint">Select a game on the left to see single&#8209;player and multiplayer options.</p>
+                </div>
+
+                <!-- ── Tic Tac Toe Panel ── -->
+                <div id="tttPanel" class="game-detail-panel" style="display:none">
+                    <div class="game-detail-header">
+                        <span class="game-detail-icon">&#x2715;&#x25CB;</span>
+                        <div>
+                            <h2 class="game-detail-title">Tic Tac Toe</h2>
+                            <p class="game-detail-desc">Two players take turns marking &#x2715; and &#x25CB; on a 3&times;3 grid. Get three in a row to win!</p>
+                        </div>
+                    </div>
+
+                    <div class="detail-section">
+                        <h3 class="detail-section-title">&#129302; Single Player</h3>
+                        <p class="lobby-hint">Play against the computer — pick your difficulty.</p>
+                        <div id="tttSinglePlayer" class="sp-section">
+                            <span class="sp-label">vs Computer</span>
+                            <div class="sp-btns">
+                                <button id="tttRegularBtn" class="btn btn-sp">Regular</button>
+                                <button id="tttHardBtn" class="btn btn-sp btn-sp-hard">&#128128; Hard</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="tttRoomsSection" class="detail-section">
+                        <h3 class="detail-section-title">&#127760; Multiplayer</h3>
+                        <p class="lobby-hint">Create a room and share the link with a friend, or join an open room below.</p>
+                        <button id="createTttRoomBtn" class="btn btn-accept detail-create-btn">&#43; Create Room</button>
+                        <div id="tttRoomList" class="player-list"></div>
+                        <p id="noTttRooms" class="lobby-hint lobby-no-rooms" style="display:none;">No open rooms right now — create one to get started!</p>
                     </div>
                 </div>
-                <h2 class="lobby-title" style="margin-top:1.5rem;">Slots Rooms</h2>
-                <p class="lobby-hint">Create a room (up to 4 players) or join an open one.</p>
-                <button id="createSlotsRoomBtn" class="btn btn-accept" style="margin-bottom:1rem;">+ Create Room</button>
-                <div id="slotsRoomList" class="player-list"></div>
-                <p id="noSlotsRooms" class="lobby-hint" style="display:none;">No open rooms right now. Create one!</p>
-            </div>
 
-            <!-- Concentration Section -->
-            <div id="concentrationSection" style="display:none;">
-                <div class="sp-section" style="margin-top:2rem;">
-                    <span class="sp-label">&#129302; vs Computer</span>
-                    <div class="sp-btns">
-                        <button id="concentrationEasyBtn"    class="btn btn-sp" data-tooltip="Remembers: 10%&#10;Misses:    90%">Easy</button>
-                        <button id="concentrationRegularBtn" class="btn btn-sp" data-tooltip="Remembers: 70%&#10;Misses:    30%">Regular</button>
-                        <button id="concentrationHardBtn"    class="btn btn-sp" data-tooltip="Remembers: 90%&#10;Misses:    10%">&#128128; Hard</button>
+                <!-- ── Yahtzee Panel ── -->
+                <div id="yahtzeePanel" class="game-detail-panel" style="display:none">
+                    <div class="game-detail-header">
+                        <span class="game-detail-icon">&#127922;</span>
+                        <div>
+                            <h2 class="game-detail-title">Yahtzee</h2>
+                            <p class="game-detail-desc">Roll five dice up to three times per turn and score combinations on your scorecard. Highest total wins!</p>
+                        </div>
+                    </div>
+
+                    <div class="detail-section">
+                        <h3 class="detail-section-title">&#129302; Single Player</h3>
+                        <p class="lobby-hint">Challenge the computer — choose your difficulty.</p>
+                        <div id="yahtzeeSpSection" class="sp-section">
+                            <span class="sp-label">vs Computer</span>
+                            <div class="sp-btns">
+                                <button id="yahtzeeRegularBtn" class="btn btn-sp">Regular</button>
+                                <button id="yahtzeeHardBtn" class="btn btn-sp btn-sp-hard">&#128128; Hard</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="yahtzeeSection" class="detail-section">
+                        <h3 class="detail-section-title">&#127760; Multiplayer</h3>
+                        <p class="lobby-hint">Join an open room or create your own and invite friends.</p>
+                        <button id="createRoomBtn" class="btn btn-accept detail-create-btn">&#43; Create Room</button>
+                        <div id="roomList" class="player-list"></div>
+                        <p id="noRooms" class="lobby-hint lobby-no-rooms" style="display:none;">No open rooms right now — create one to get started!</p>
                     </div>
                 </div>
-                <h2 class="lobby-title" style="margin-top:1.5rem;">Concentration Madness Rooms</h2>
-                <p class="lobby-hint">Create a room (2-4 players) or join an open one.</p>
-                <button id="createConcentrationRoomBtn" class="btn btn-accept" style="margin-bottom:1rem;">+ Create Room</button>
-                <div id="concentrationRoomList" class="player-list"></div>
-                <p id="noConcentrationRooms" class="lobby-hint" style="display:none;">No open rooms right now. Create one!</p>
-            </div>
 
-            <!-- Yahtzee Room Section -->
-            <div id="yahtzeeSection" style="display:none;">
-                <h2 class="lobby-title" style="margin-top:2rem;">Yahtzee Rooms</h2>
-                <p class="lobby-hint">Join an open room or create your own and invite friends.</p>
-                <div class="sp-section" style="margin-bottom:1.25rem;">
-                    <span class="sp-label">&#129302; Single Player</span>
-                    <div class="sp-btns">
-                        <button id="yahtzeeRegularBtn" class="btn btn-sp">Regular</button>
-                        <button id="yahtzeeHardBtn" class="btn btn-sp btn-sp-hard">&#128128; Hard</button>
+                <!-- ── Slots Panel ── -->
+                <div id="slotsPanel" class="game-detail-panel" style="display:none">
+                    <div class="game-detail-header">
+                        <span class="game-detail-icon">&#127920;</span>
+                        <div>
+                            <h2 class="game-detail-title">Slots</h2>
+                            <p class="game-detail-desc">Spin the reels and match symbols to win big. Play solo or compete in a multiplayer room!</p>
+                        </div>
+                    </div>
+
+                    <div id="slotsSection" class="detail-section">
+                        <h3 class="detail-section-title">&#129302; Single Player</h3>
+                        <p class="lobby-hint">Play against the machine — just you vs the reels.</p>
+                        <div class="sp-section">
+                            <span class="sp-label">vs The Machine</span>
+                            <div class="sp-btns">
+                                <button id="slotsSpBtn" class="btn btn-sp">Play Solo</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="detail-section">
+                        <h3 class="detail-section-title">&#127760; Multiplayer</h3>
+                        <p class="lobby-hint">Create a room (up to 4 players) or join an open one.</p>
+                        <button id="createSlotsRoomBtn" class="btn btn-accept detail-create-btn">&#43; Create Room</button>
+                        <div id="slotsRoomList" class="player-list"></div>
+                        <p id="noSlotsRooms" class="lobby-hint lobby-no-rooms" style="display:none;">No open rooms right now — create one to get started!</p>
                     </div>
                 </div>
-                <button id="createRoomBtn" class="btn btn-accept" style="margin-bottom:1rem;">+ Create Room</button>
-                <div id="roomList" class="player-list"></div>
-                <p id="noRooms" class="lobby-hint" style="display:none;">No open rooms right now. Create one!</p>
-            </div>
+
+                <!-- ── Concentration Panel ── -->
+                <div id="concentrationPanel" class="game-detail-panel" style="display:none">
+                    <div class="game-detail-header">
+                        <span class="game-detail-icon">&#129513;</span>
+                        <div>
+                            <h2 class="game-detail-title">Concentration</h2>
+                            <p class="game-detail-desc">Flip cards to find matching pairs. Test your memory alone or race against friends!</p>
+                        </div>
+                    </div>
+
+                    <div id="concentrationSection" class="detail-section">
+                        <h3 class="detail-section-title">&#129302; Single Player</h3>
+                        <p class="lobby-hint">Play against the computer — choose how sharp the AI memory is.</p>
+                        <div class="sp-section">
+                            <span class="sp-label">vs Computer</span>
+                            <div class="sp-btns">
+                                <button id="concentrationEasyBtn"    class="btn btn-sp" data-tooltip="Remembers: 10%&#10;Misses: 90%">Easy</button>
+                                <button id="concentrationRegularBtn" class="btn btn-sp" data-tooltip="Remembers: 70%&#10;Misses: 30%">Regular</button>
+                                <button id="concentrationHardBtn"    class="btn btn-sp btn-sp-hard" data-tooltip="Remembers: 90%&#10;Misses: 10%">&#128128; Hard</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="detail-section">
+                        <h3 class="detail-section-title">&#127760; Multiplayer</h3>
+                        <p class="lobby-hint">Create a room (2–4 players) or join an open one.</p>
+                        <button id="createConcentrationRoomBtn" class="btn btn-accept detail-create-btn">&#43; Create Room</button>
+                        <div id="concentrationRoomList" class="player-list"></div>
+                        <p id="noConcentrationRooms" class="lobby-hint lobby-no-rooms" style="display:none;">No open rooms right now — create one to get started!</p>
+                    </div>
+                </div>
+
+            </section>
         </main>
 
-        <div id="createSlotsRoomModal" class="modal" style="display:none">
-            <div class="modal-content">
-                <h3>&#127920; Create Slots Room</h3>
-                <p>Give your room a name so friends can find it.</p>
-                <input id="newSlotsRoomName" class="guest-input" type="text" placeholder="e.g. Vegas Night" maxlength="30" style="margin-top:1.25rem;width:100%;">
-                <div class="modal-actions">
-                    <button id="createSlotsRoomConfirmBtn" class="btn btn-accept">Create Room</button>
-                    <button id="createSlotsRoomCancelBtn" class="btn btn-decline">Cancel</button>
-                </div>
-            </div>
-        </div>
+        <!-- Modals -->
         <div id="createTttRoomModal" class="modal" style="display:none">
             <div class="modal-content">
                 <h3>&#x2715;&#x25CB; Create Tic Tac Toe Room</h3>
                 <p>Give your room a name so friends can find it.</p>
-                <input id="newTttRoomName" class="guest-input" type="text" placeholder="e.g. Let's Play!" maxlength="30" style="margin-top:1.25rem;width:100%;">
+                <input id="newTttRoomName" class="guest-input" type="text" placeholder="e.g. Let&#8217;s Play!" maxlength="30" style="margin-top:1.25rem;width:100%;">
                 <div class="modal-actions">
                     <button id="createTttRoomConfirmBtn" class="btn btn-accept">Create Room</button>
                     <button id="createTttRoomCancelBtn" class="btn btn-decline">Cancel</button>
@@ -137,6 +226,17 @@
                 </div>
             </div>
         </div>
+        <div id="createSlotsRoomModal" class="modal" style="display:none">
+            <div class="modal-content">
+                <h3>&#127920; Create Slots Room</h3>
+                <p>Give your room a name so friends can find it.</p>
+                <input id="newSlotsRoomName" class="guest-input" type="text" placeholder="e.g. Vegas Night" maxlength="30" style="margin-top:1.25rem;width:100%;">
+                <div class="modal-actions">
+                    <button id="createSlotsRoomConfirmBtn" class="btn btn-accept">Create Room</button>
+                    <button id="createSlotsRoomCancelBtn" class="btn btn-decline">Cancel</button>
+                </div>
+            </div>
+        </div>
         <div id="createConcentrationRoomModal" class="modal" style="display:none">
             <div class="modal-content">
                 <h3>&#129513; Create Concentration Room</h3>
@@ -149,16 +249,16 @@
             </div>
         </div>
 
-            <!-- Chat Widget -->
-            <div id="chatWidget" class="chat-widget">
-                <button id="chatToggle" class="chat-toggle">&#128172; <span id="chatBadge" class="chat-badge" style="display:none">0</span></button>
-                <div id="chatPanel" class="chat-panel" style="display:none">
-                    <div class="chat-header"><span>Lobby Chat</span><button id="chatClose" class="chat-close">&#x2715;</button></div>
-                    <div id="chatMessages" class="chat-messages"></div>
-                    <div class="chat-input-row"><input id="chatInput" class="chat-input" placeholder="Type a message&#8230;" maxlength="500"><button id="chatSend" class="chat-send">&#10148;</button></div>
-                </div>
+        <!-- Chat Widget -->
+        <div id="chatWidget" class="chat-widget">
+            <button id="chatToggle" class="chat-toggle">&#128172; <span id="chatBadge" class="chat-badge" style="display:none">0</span></button>
+            <div id="chatPanel" class="chat-panel" style="display:none">
+                <div class="chat-header"><span>Lobby Chat</span><button id="chatClose" class="chat-close">&#x2715;</button></div>
+                <div id="chatMessages" class="chat-messages"></div>
+                <div class="chat-input-row"><input id="chatInput" class="chat-input" placeholder="Type a message&#8230;" maxlength="500"><button id="chatSend" class="chat-send">&#10148;</button></div>
             </div>
         </div>
+    </div>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/8.0.0/signalr.min.js"></script>
     <script src="/js/lobby.js"></script>
 </body>
