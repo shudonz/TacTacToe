@@ -9,6 +9,8 @@ namespace TacTacToe.Hubs;
 public class GameHub : Hub
 {
     private const int RoomNameMaxLength = 30;
+    private const int DefaultRejoinGracePeriodSeconds = 8;
+    private const int YahtzeeRejoinGracePeriodSeconds = 10;
     private const int ConcentrationMismatchDelayMs = 5000;
     private const int ConcentrationBotFirstMoveMinDelayMs = 500;
     private const int ConcentrationBotFirstMoveMaxDelayMs = 1000;
@@ -45,7 +47,7 @@ public class GameHub : Hub
         {
             _ = Task.Run(async () =>
             {
-                await Task.Delay(TimeSpan.FromSeconds(8));
+                await Task.Delay(TimeSpan.FromSeconds(DefaultRejoinGracePeriodSeconds));
                 bool changed = false;
                 foreach (var snap in slotsWaitSnapshot)
                 {
@@ -70,7 +72,7 @@ public class GameHub : Hub
         {
             _ = Task.Run(async () =>
             {
-                await Task.Delay(TimeSpan.FromSeconds(8));
+                await Task.Delay(TimeSpan.FromSeconds(DefaultRejoinGracePeriodSeconds));
                 foreach (var snap in slotsGameSnapshot)
                 {
                     var room = _lobby.GetSlotsRoom(snap.Id);
@@ -125,7 +127,7 @@ public class GameHub : Hub
         {
             _ = Task.Run(async () =>
             {
-                await Task.Delay(TimeSpan.FromSeconds(8));
+                await Task.Delay(TimeSpan.FromSeconds(DefaultRejoinGracePeriodSeconds));
                 bool changed = false;
                 foreach (var snap in concentrationWaitSnapshot)
                 {
@@ -155,7 +157,7 @@ public class GameHub : Hub
         {
             _ = Task.Run(async () =>
             {
-                await Task.Delay(TimeSpan.FromSeconds(8));
+                await Task.Delay(TimeSpan.FromSeconds(DefaultRejoinGracePeriodSeconds));
                 foreach (var snap in concentrationGameSnapshot)
                 {
                     var room = _lobby.GetConcentrationRoom(snap.Id);
@@ -195,7 +197,7 @@ public class GameHub : Hub
         {
             _ = Task.Run(async () =>
             {
-                await Task.Delay(TimeSpan.FromSeconds(8));
+                await Task.Delay(TimeSpan.FromSeconds(DefaultRejoinGracePeriodSeconds));
                 bool changed = false;
                 foreach (var snap in solitaireWaitSnapshot)
                 {
@@ -220,7 +222,7 @@ public class GameHub : Hub
         {
             _ = Task.Run(async () =>
             {
-                await Task.Delay(TimeSpan.FromSeconds(8));
+                await Task.Delay(TimeSpan.FromSeconds(DefaultRejoinGracePeriodSeconds));
                 foreach (var snap in solitaireGameSnapshot)
                 {
                     var room = _lobby.GetSolitaireRoom(snap.Id);
@@ -264,7 +266,7 @@ public class GameHub : Hub
         {
             _ = Task.Run(async () =>
             {
-                await Task.Delay(TimeSpan.FromSeconds(8));
+                await Task.Delay(TimeSpan.FromSeconds(DefaultRejoinGracePeriodSeconds));
                 bool changed = false;
                 foreach (var snap in tttSnapshot)
                 {
@@ -297,7 +299,7 @@ public class GameHub : Hub
         {
             _ = Task.Run(async () =>
             {
-                await Task.Delay(TimeSpan.FromSeconds(8));
+                await Task.Delay(TimeSpan.FromSeconds(DefaultRejoinGracePeriodSeconds));
                 foreach (var snap in gameSnapshot)
                 {
                     var game = _lobby.GetGame(snap.Id);
@@ -330,7 +332,7 @@ public class GameHub : Hub
         {
             _ = Task.Run(async () =>
             {
-                await Task.Delay(TimeSpan.FromSeconds(8));
+                await Task.Delay(TimeSpan.FromSeconds(DefaultRejoinGracePeriodSeconds));
                 bool changed = false;
                 foreach (var roomId in yahtzeeWaitSnapshot)
                 {
@@ -362,7 +364,7 @@ public class GameHub : Hub
         {
             _ = Task.Run(async () =>
             {
-                await Task.Delay(TimeSpan.FromSeconds(10));
+                await Task.Delay(TimeSpan.FromSeconds(YahtzeeRejoinGracePeriodSeconds));
                 foreach (var snapshot in roomsSnapshot)
                 {
                     var room = _lobby.GetRoom(snapshot.Id);
