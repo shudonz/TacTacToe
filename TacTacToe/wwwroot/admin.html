@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TacTacToe &#8211; Admin</title>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="/css/style.css" rel="stylesheet">
+</head>
+<body>
+    <div class="ambient"></div>
+    <div class="noise"></div>
+    <div class="page-content">
+
+        <nav class="navbar">
+            <div class="logo-sm">
+                <span class="logo-x">Tac</span><span class="logo-o">Tac</span><span class="logo-x">Toe</span>
+                <span class="admin-badge">Admin</span>
+            </div>
+            <div class="nav-user">
+                <span id="adminName"></span>
+                <a href="/lobby" class="btn-logout" style="text-decoration:none">&#8592; Lobby</a>
+                <form method="post" action="/logout" style="display:inline">
+                    <button type="submit" class="btn-logout">Logout</button>
+                </form>
+            </div>
+        </nav>
+
+        <main class="admin-main">
+
+            <!-- ── Tab bar ── -->
+            <div class="admin-tabs">
+                <button class="admin-tab active" data-tab="users">&#128101; Users</button>
+                <button class="admin-tab" data-tab="sessions">&#127922; All Scores</button>
+            </div>
+
+            <!-- ══════════════════════════════════════════════
+                 USERS TAB
+            ════════════════════════════════════════════════ -->
+            <section id="tab-users" class="admin-panel">
+                <div class="admin-panel-header">
+                    <h2 class="admin-section-title">Manage Users</h2>
+                    <input id="userSearch" class="admin-search" type="search" placeholder="&#128269; Search by name&#8230;" />
+                </div>
+                <div class="admin-table-wrap" id="usersTableWrap">
+                    <p class="admin-loading">Loading&#8230;</p>
+                </div>
+            </section>
+
+            <!-- ══════════════════════════════════════════════
+                 SESSIONS TAB
+            ════════════════════════════════════════════════ -->
+            <section id="tab-sessions" class="admin-panel" style="display:none">
+                <div class="admin-panel-header">
+                    <h2 class="admin-section-title">All Game Scores</h2>
+                    <div class="admin-filter-row">
+                        <input id="sessionSearch" class="admin-search" type="search" placeholder="&#128269; Filter by player&#8230;" />
+                        <select id="sessionGameFilter" class="admin-select">
+                            <option value="">All Games</option>
+                            <option>TicTacToe</option>
+                            <option>Yahtzee</option>
+                            <option>Slots</option>
+                            <option>Concentration</option>
+                            <option>Solitaire</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="admin-table-wrap" id="sessionsTableWrap">
+                    <p class="admin-loading">Loading&#8230;</p>
+                </div>
+            </section>
+
+        </main>
+    </div>
+
+    <!-- ── Confirm modal ── -->
+    <div id="confirmModal" class="admin-modal-backdrop" style="display:none">
+        <div class="admin-modal">
+            <p id="confirmMsg" class="admin-modal-msg"></p>
+            <div class="admin-modal-actions">
+                <button id="confirmYes" class="btn btn-danger">Confirm</button>
+                <button id="confirmNo"  class="btn btn-outline">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ── Reset-password modal ── -->
+    <div id="pwModal" class="admin-modal-backdrop" style="display:none">
+        <div class="admin-modal">
+            <h3 class="admin-modal-title">Reset Password</h3>
+            <p id="pwModalUser" class="admin-modal-sub"></p>
+            <input id="pwInput" type="password" class="guest-input" placeholder="New password (8+ characters)" maxlength="128" autocomplete="new-password" />
+            <div class="admin-modal-actions" style="margin-top:0.75rem">
+                <button id="pwSave" class="btn btn-accept">Save</button>
+                <button id="pwCancel" class="btn btn-outline">Cancel</button>
+            </div>
+            <p id="pwError" class="login-error" style="display:none;margin-top:0.5rem"></p>
+        </div>
+    </div>
+
+    <script src="/js/admin.js"></script>
+</body>
+</html>

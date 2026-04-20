@@ -387,6 +387,7 @@ function renderPlayerBar(room) {
 let scorecardBuilt = false;
 let _prevTurnIdx = -1;
 let _gameOverSoundPlayed = false;
+let _gameOverEventFired = false;
 let _prevDice = [];
 let _diceAnimating = false;
 let _prevRollsLeft = -1;
@@ -555,6 +556,7 @@ connection.on("YahtzeeUpdated", room => {
             .map((p, i) => '<div class="final-score-row">' + (i + 1) + '. ' + escapeHtml(p.name) + ' — <strong>' + p.score + '</strong></div>')
             .join('');
         document.getElementById("resultOverlay").style.display = "flex";
+        if (!_gameOverEventFired) { _gameOverEventFired = true; document.dispatchEvent(new Event('gameOver')); }
     }
 });
 

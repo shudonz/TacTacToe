@@ -281,6 +281,7 @@ public class GameState
     public string AiDifficulty { get; set; } = "regular";
     public bool RematchRequestedByX { get; set; }
     public bool RematchRequestedByO { get; set; }
+    public long StartedAtMs { get; set; }
 }
 
 public class TttRoom

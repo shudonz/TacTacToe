@@ -183,6 +183,7 @@ connection.on("GameUpdated", game => {
             document.getElementById("rematchArea").style.display = "block";
             document.getElementById("playAgainBtn").disabled = false;
             document.getElementById("rematchStatus").textContent = "";
+            document.dispatchEvent(new Event('gameOver'));
         }
     }
 });

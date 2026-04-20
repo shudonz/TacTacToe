@@ -47,6 +47,14 @@
                         <button id="playAgainBtn" class="btn btn-accept" style="margin-bottom:0.75rem;">&#8635; Play Again</button>
                     </div>
                     <button id="backToLobby" class="btn btn-outline">Back to Lobby</button>
+                    <div class="leaderboard-panel" style="margin-top:1rem;">
+                        <div class="leaderboard-panel-tabs">
+                            <button class="lb-tab active" onclick="showLbTab(this,'ttt-lb')">&#127942; Top Scores</button>
+                            <button class="lb-tab" onclick="showLbTab(this,'ttt-hist')">&#128196; My History</button>
+                        </div>
+                        <div class="lb-body" id="ttt-lb"></div>
+                        <div class="lb-body" id="ttt-hist" style="display:none"></div>
+                    </div>
                 </div>
             </div>
         </main>
@@ -62,6 +70,22 @@
         </div>
     </div>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/8.0.0/signalr.min.js"></script>
+    <script src="/js/leaderboard.js"></script>
     <script src="/js/game.js"></script>
+    <script>
+        function showLbTab(btn, id) {
+            btn.closest('.leaderboard-panel').querySelectorAll('.lb-tab').forEach(t => t.classList.remove('active'));
+            btn.classList.add('active');
+            btn.closest('.leaderboard-panel').querySelectorAll('.lb-body').forEach(b => b.style.display = 'none');
+            document.getElementById(id).style.display = '';
+        }
+        // Delay load slightly so the server's async DB write completes before we query
+        document.addEventListener('gameOver', () => {
+            setTimeout(() => {
+                loadLeaderboard('TicTacToe', document.getElementById('ttt-lb'));
+                loadPersonalHistory('TicTacToe', document.getElementById('ttt-hist'));
+            }, 1500);
+        });
+    </script>
 </body>
 </html>

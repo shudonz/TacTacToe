@@ -31,6 +31,7 @@ let _lastBalance = null;
 let _prevPhase = null;
 let _prevSpun = false;
 let _reelsAnimating = false;
+let _gameOverEventFired = false;
 
 function esc(s) { const d = document.createElement("div"); d.textContent = s; return d.innerHTML; }
 function totalBet() { return selectedBetPerLine * selectedPaylines; }
@@ -489,6 +490,7 @@ function showResults(room, sorted) {
     });
     document.getElementById("resultOverlay").style.display = "flex";
     if (isWinner) { soundBigWin(); launchConfetti(); launchCoinRain(true); } else soundBust();
+    if (!_gameOverEventFired) { _gameOverEventFired = true; document.dispatchEvent(new Event('gameOver')); }
 }
 
 function showToast(msg) {

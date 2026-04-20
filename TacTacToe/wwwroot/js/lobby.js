@@ -8,6 +8,7 @@ async function init() {
     const me = await res.json();
     document.getElementById("userName").textContent = me.name;
     document.getElementById("userAvatar").src = me.picture || "https://ui-avatars.com/api/?name=" + encodeURIComponent(me.name) + "&background=6c63ff&color=fff";
+    if (me.isAdmin) document.getElementById("adminLink").style.display = "inline-block";
 
     // Game picker
     document.querySelectorAll(".game-option").forEach(btn => {
@@ -31,6 +32,15 @@ async function init() {
             solitaire:     "solitairePanel"
         };
 
+        // Leaderboard containers per game  [apiGameType, lbId, histId]
+        const lbMap = {
+            tictactoe:     ["TicTacToe",     "ttt-lobby-lb", "ttt-lobby-hist"],
+            yahtzee:       ["Yahtzee",        "ytz-lobby-lb", "ytz-lobby-hist"],
+            slots:         ["Slots",          "slt-lobby-lb", "slt-lobby-hist"],
+            concentration: ["Concentration",  "con-lobby-lb", "con-lobby-hist"],
+            solitaire:     ["Solitaire",      "sol-lobby-lb", "sol-lobby-hist"]
+        };
+
         // Show welcome state when no game is selected, otherwise hide it
         document.getElementById("lobbyEmptyState").style.display = selectedGame ? "none" : "";
 
@@ -40,11 +50,18 @@ async function init() {
         });
 
         // Only request room lists for the selected game
-        if (selectedGame === "tictactoe")     connection.invoke("GetTttRooms");
-        else if (selectedGame === "slots")    connection.invoke("GetSlotsRooms");
+        if (selectedGame === "tictactoe")         connection.invoke("GetTttRooms");
+        else if (selectedGame === "slots")         connection.invoke("GetSlotsRooms");
         else if (selectedGame === "concentration") connection.invoke("GetConcentrationRooms");
         else if (selectedGame === "solitaire")     connection.invoke("GetSolitaireRooms");
-        else if (selectedGame === "yahtzee")  connection.invoke("GetYahtzeeRooms");
+        else if (selectedGame === "yahtzee")       connection.invoke("GetYahtzeeRooms");
+
+        // Load leaderboard + personal history for the selected game
+        if (selectedGame && lbMap[selectedGame]) {
+            const [apiType, lbId, histId] = lbMap[selectedGame];
+            loadLeaderboard(apiType, document.getElementById(lbId), 5);
+            loadPersonalHistory(apiType, document.getElementById(histId), 5);
+        }
     }
 
     // TTT room list

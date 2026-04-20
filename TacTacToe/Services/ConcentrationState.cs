@@ -18,6 +18,7 @@ public class ConcentrationRoom
     // Tracks every card index that has been flipped face-up at any point during the game.
     // The bot only uses this set to find known matches — cards never flipped remain hidden.
     public HashSet<int> SeenCardIndexes { get; set; } = [];
+    public long StartedAtMs { get; set; }
 }
 
 public class ConcentrationSettings

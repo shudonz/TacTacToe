@@ -39,6 +39,14 @@
                     <h2 id="resultText"></h2>
                     <div id="finalScores" class="final-scores"></div>
                     <button id="backToLobby" class="btn btn-accept">Back to Lobby</button>
+                    <div class="leaderboard-panel" style="margin-top:1rem;">
+                        <div class="leaderboard-panel-tabs">
+                            <button class="lb-tab active" onclick="showLbTab(this,'ytz-lb')">&#127942; Top Scores</button>
+                            <button class="lb-tab" onclick="showLbTab(this,'ytz-hist')">&#128196; My History</button>
+                        </div>
+                        <div class="lb-body" id="ytz-lb"></div>
+                        <div class="lb-body" id="ytz-hist" style="display:none"></div>
+                    </div>
                 </div>
             </div>
         </main>
@@ -54,6 +62,21 @@
         </div>
     </div>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/8.0.0/signalr.min.js"></script>
+    <script src="/js/leaderboard.js"></script>
     <script src="/js/yahtzee.js"></script>
+    <script>
+        function showLbTab(btn, id) {
+            btn.closest('.leaderboard-panel').querySelectorAll('.lb-tab').forEach(t => t.classList.remove('active'));
+            btn.classList.add('active');
+            btn.closest('.leaderboard-panel').querySelectorAll('.lb-body').forEach(b => b.style.display = 'none');
+            document.getElementById(id).style.display = '';
+        }
+        document.addEventListener('gameOver', () => {
+            setTimeout(() => {
+                loadLeaderboard('Yahtzee', document.getElementById('ytz-lb'));
+                loadPersonalHistory('Yahtzee', document.getElementById('ytz-hist'));
+            }, 1500);
+        });
+    </script>
 </body>
 </html>

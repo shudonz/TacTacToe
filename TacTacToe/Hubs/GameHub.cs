@@ -1,6 +1,8 @@
 ﻿using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.SignalR;
+using TacTacToe.Data;
+using TacTacToe.Models;
 using TacTacToe.Services;
 
 namespace TacTacToe.Hubs;
@@ -19,11 +21,15 @@ public class GameHub : Hub
 
     private readonly LobbyService _lobby;
     private readonly IHubContext<GameHub> _hubContext;
+    private readonly UserRepository _users;
+    private readonly GameSessionRepository _sessions;
 
-    public GameHub(LobbyService lobby, IHubContext<GameHub> hubContext)
+    public GameHub(LobbyService lobby, IHubContext<GameHub> hubContext, UserRepository users, GameSessionRepository sessions)
     {
         _lobby = lobby;
         _hubContext = hubContext;
+        _users = users;
+        _sessions = sessions;
     }
 
     public override async Task OnConnectedAsync()
@@ -504,7 +510,8 @@ public class GameHub : Hub
             OName = o.Name,
             Board = new string[9],
             CurrentTurn = "X",
-            IsOver = false
+            IsOver = false,
+            StartedAtMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()
         };
         _lobby.StoreGame(gameId, game);
         await Groups.AddToGroupAsync(x.ConnectionId, gameId);
@@ -626,6 +633,7 @@ public class GameHub : Hub
         if (Context.ConnectionId != room.HostConnectionId) return;
         if (room.Players.Count < 2) return;
         room.Started = true;
+        room.StartedAtMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
         foreach (var p in room.Players) p.Balance = room.Settings.StartingBalance;
         await Clients.Group(roomId).SendAsync("SlotsGameStarted", room);
         await BroadcastSlotsRooms();
@@ -739,6 +747,7 @@ public class GameHub : Hub
         room.Settings.RoomName = "vs The Machine";
         room.Settings.MaxPlayers = 2;
         room.Started = true;
+        room.StartedAtMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
         _lobby.StoreSlotsRoom(roomId, room);
         await Groups.AddToGroupAsync(Context.ConnectionId, roomId);
         await Clients.Caller.SendAsync("SlotsSinglePlayerStarted", roomId);
@@ -768,6 +777,7 @@ public class GameHub : Hub
             room.IsOver = true;
             room.WinnerName = room.Players.OrderByDescending(p => p.Balance).First().Name;
             await _hubContext.Clients.Group(roomId).SendAsync("SlotsUpdated", room);
+            _ = SaveSlotsSessionsAsync(room);
             return;
         }
 
@@ -924,6 +934,7 @@ public class GameHub : Hub
         room.TurnRevealedIndexes.Clear();
         room.IsOver = false;
         room.WinnerName = null;
+        room.StartedAtMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
         foreach (var p in room.Players) p.Score = 0;
 
         await Clients.Group(roomId).SendAsync("ConcentrationGameStarted", room);
@@ -990,6 +1001,7 @@ public class GameHub : Hub
         room.Deck = ConcentrationEngine.CreateDeck(room.Settings.PairCount);
         room.Matched = new bool[room.Deck.Count];
         room.CurrentPlayerIndex = 0;
+        room.StartedAtMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
         _lobby.StoreConcentrationRoom(roomId, room);
         await Groups.AddToGroupAsync(Context.ConnectionId, roomId);
         await Clients.Caller.SendAsync("ConcentrationSinglePlayerStarted", roomId);
@@ -1151,6 +1163,7 @@ public class GameHub : Hub
         var best = room.Players.Max(p => p.Score);
         var leaders = room.Players.Where(p => p.Score == best).ToList();
         room.WinnerName = leaders.Count == 1 ? leaders[0].Name : null;
+        _ = SaveConcentrationSessionsAsync(room);
     }
 
     private async Task TakeConcentrationBotTurnAsync(string roomId)
@@ -1263,7 +1276,8 @@ public class GameHub : Hub
             Board = new string[9],
             CurrentTurn = "X",
             IsSinglePlayer = true,
-            AiDifficulty = difficulty
+            AiDifficulty = difficulty,
+            StartedAtMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()
         };
         _lobby.StoreGame(gameId, game);
 
@@ -1325,6 +1339,9 @@ public class GameHub : Hub
         // Trigger AI move for single-player games
         if (!game.IsOver && game.IsSinglePlayer && game.CurrentTurn == "O")
             _ = TakeTttAiMoveAsync(gameId);
+
+        if (game.IsOver)
+            _ = SaveTttSessionsAsync(game);
     }
 
     public async Task LeaveGame(string gameId)
@@ -1531,6 +1548,7 @@ public class GameHub : Hub
         room.RollsLeft = room.Settings.RollsPerTurn;
         room.Dice = new int[room.Settings.NumberOfDice];
         room.Held = new bool[room.Settings.NumberOfDice];
+        room.StartedAtMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
 
         await Clients.Group(roomId).SendAsync("YahtzeeGameStarted", room);
         await BroadcastYahtzeeRooms();
@@ -1585,6 +1603,7 @@ public class GameHub : Hub
                 .OrderByDescending(p => YahtzeeScoring.TotalScore(p.Scores, room.Settings))
                 .First().Name;
             await _hubContext.Clients.Group(gameId).SendAsync("YahtzeeUpdated", room);
+            _ = SaveYahtzeeSessionsAsync(room);
         }
         else
         {
@@ -1633,6 +1652,7 @@ public class GameHub : Hub
         room.RollsLeft = room.Settings.RollsPerTurn;
         room.Dice = new int[room.Settings.NumberOfDice];
         room.Held = new bool[room.Settings.NumberOfDice];
+        room.StartedAtMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
 
         _lobby.StoreRoom(roomId, room);
         await Groups.AddToGroupAsync(Context.ConnectionId, roomId);
@@ -1758,6 +1778,9 @@ public class GameHub : Hub
             else                                    game.CurrentTurn = "X";
 
             await _hubContext.Clients.Group(gameId).SendAsync("GameUpdated", game);
+
+            if (game.IsOver)
+                _ = SaveTttSessionsAsync(game);
         }
         catch { }
     }
@@ -2193,6 +2216,7 @@ public class GameHub : Hub
             player.FinishRank = room.FinishCount;
             player.FinishedAtMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
             player.Score = SolitaireEngine.ScoreFor(player);
+            _ = SaveSolitairePlayerSessionAsync(room, player);
         }
 
         await Clients.Group(roomId).SendAsync("SolitaireUpdated", room);
@@ -2269,4 +2293,148 @@ public class GameHub : Hub
 
     private async Task BroadcastSolitaireRooms() =>
         await Clients.All.SendAsync("SolitaireRoomList", SolitaireRoomSummaries());
+
+    /* ================================================================
+       Session Persistence Helpers
+       ================================================================ */
+
+    private async Task SaveTttSessionsAsync(GameState game)
+    {
+        try
+        {
+            var now = DateTime.UtcNow.ToString("o");
+            int elapsed = (int)((DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() - game.StartedAtMs) / 1000);
+
+            // X player
+            if (!game.XConnectionId.StartsWith("BOT_"))
+            {
+                var uid = await _users.GetIdByUsernameAsync(game.XName);
+                if (uid.HasValue)
+                {
+                    var result = game.Winner == "X" ? "Win" : game.Winner == null ? "Draw" : "Loss";
+                    var score = result == "Win" ? 3 : result == "Draw" ? 1 : 0;
+                    await _sessions.SaveAsync(new GameSession
+                    {
+                        UserId = uid.Value, GameType = "TicTacToe",
+                        Score = score, Result = result,
+                        TimePlayed = elapsed, PlayedAt = now,
+                        Details = $"vs {game.OName}"
+                    });
+                }
+            }
+
+            // O player
+            if (!game.OConnectionId.StartsWith("BOT_"))
+            {
+                var uid = await _users.GetIdByUsernameAsync(game.OName);
+                if (uid.HasValue)
+                {
+                    var result = game.Winner == "O" ? "Win" : game.Winner == null ? "Draw" : "Loss";
+                    var score = result == "Win" ? 3 : result == "Draw" ? 1 : 0;
+                    await _sessions.SaveAsync(new GameSession
+                    {
+                        UserId = uid.Value, GameType = "TicTacToe",
+                        Score = score, Result = result,
+                        TimePlayed = elapsed, PlayedAt = now,
+                        Details = $"vs {game.XName}"
+                    });
+                }
+            }
+        }
+        catch { }
+    }
+
+    private async Task SaveYahtzeeSessionsAsync(YahtzeeRoom room)
+    {
+        try
+        {
+            var now = DateTime.UtcNow.ToString("o");
+            int elapsed = (int)((DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() - room.StartedAtMs) / 1000);
+
+            foreach (var p in room.Players.Where(p => !p.IsBot))
+            {
+                var uid = await _users.GetIdByUsernameAsync(p.Name);
+                if (!uid.HasValue) continue;
+                var totalScore = YahtzeeScoring.TotalScore(p.Scores, room.Settings);
+                var result = p.Name == room.WinnerName ? "Win"
+                           : room.IsSinglePlayer ? "Loss" : "Completed";
+                await _sessions.SaveAsync(new GameSession
+                {
+                    UserId = uid.Value, GameType = "Yahtzee",
+                    Score = totalScore, Result = result,
+                    TimePlayed = elapsed, PlayedAt = now
+                });
+            }
+        }
+        catch { }
+    }
+
+    private async Task SaveSlotsSessionsAsync(SlotsRoom room)
+    {
+        try
+        {
+            var now = DateTime.UtcNow.ToString("o");
+            int elapsed = (int)((DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() - room.StartedAtMs) / 1000);
+
+            foreach (var p in room.Players.Where(p => !p.IsBot))
+            {
+                var uid = await _users.GetIdByUsernameAsync(p.Name);
+                if (!uid.HasValue) continue;
+                var result = p.Name == room.WinnerName ? "Win"
+                           : room.IsSinglePlayer ? "Loss" : "Completed";
+                await _sessions.SaveAsync(new GameSession
+                {
+                    UserId = uid.Value, GameType = "Slots",
+                    Score = Math.Max(0, p.Balance), Result = result,
+                    TimePlayed = elapsed, PlayedAt = now,
+                    Details = $"Rounds:{room.RoundsPlayed}"
+                });
+            }
+        }
+        catch { }
+    }
+
+    private async Task SaveConcentrationSessionsAsync(ConcentrationRoom room)
+    {
+        try
+        {
+            var now = DateTime.UtcNow.ToString("o");
+            int elapsed = (int)((DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() - room.StartedAtMs) / 1000);
+
+            foreach (var p in room.Players.Where(p => !p.IsBot))
+            {
+                var uid = await _users.GetIdByUsernameAsync(p.Name);
+                if (!uid.HasValue) continue;
+                var result = room.WinnerName == null ? "Draw"
+                           : p.Name == room.WinnerName ? "Win" : "Loss";
+                await _sessions.SaveAsync(new GameSession
+                {
+                    UserId = uid.Value, GameType = "Concentration",
+                    Score = p.Score, Result = result,
+                    TimePlayed = elapsed, PlayedAt = now
+                });
+            }
+        }
+        catch { }
+    }
+
+    private async Task SaveSolitairePlayerSessionAsync(SolitaireRoom room, SolitairePlayer player)
+    {
+        try
+        {
+            var uid = await _users.GetIdByUsernameAsync(player.Name);
+            if (!uid.HasValue) return;
+            int elapsed = (int)((player.FinishedAtMs - player.StartedAtMs) / 1000);
+            var result = room.IsSinglePlayer ? "Completed"
+                       : player.FinishRank == 1 ? "Win" : "Loss";
+            await _sessions.SaveAsync(new GameSession
+            {
+                UserId = uid.Value, GameType = "Solitaire",
+                Score = player.Score, Result = result,
+                TimePlayed = elapsed, PlayedAt = DateTime.UtcNow.ToString("o"),
+                Details = $"Rank:{player.FinishRank},Hints:{player.HintsUsed}"
+            });
+        }
+        catch { }
+    }
 }

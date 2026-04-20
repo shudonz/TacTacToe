@@ -23,6 +23,7 @@ public class YahtzeeRoom
     public bool IsOver { get; set; }
     public string? WinnerName { get; set; }
     public DateTime? TurnDeadline { get; set; }
+    public long StartedAtMs { get; set; }
 
     // convenience
     public string CurrentPlayerConnectionId =>

@@ -38,6 +38,7 @@ let selected = null; // { source:'waste'|'tableau', pileIdx:N, faceUpIdx:N, card
 let timerInterval = null;
 let myStartMs = 0;
 let gameFinished = false;
+let _gameOverEventFired = false;
 
 // Drag state
 let drag = null;            // active drag info (see onPointerDown)
@@ -1008,6 +1009,7 @@ function showResults(room) {
 
     document.getElementById("resultOverlay").style.display = "flex";
     if (isWinner) { soundWin(); launchConfetti(); }
+    if (!_gameOverEventFired) { _gameOverEventFired = true; document.dispatchEvent(new Event('gameOver')); }
 }
 
 /* ============================================================

@@ -8,6 +8,7 @@ if (!roomId) {
 const CARD_BACK_EMOJI = "";
 let myName = sessionStorage.getItem("myName") || "";
 let gameState = null;
+let _gameOverEventFired = false;
 
 if (isSinglePlayer) document.getElementById("chatWidget").style.display = "none";
 
@@ -279,6 +280,7 @@ function renderState(state) {
             ? (state.winnerName === myName ? "You found the most matches!" : state.winnerName + " wins!")
             : "It's a tie!";
         document.getElementById("resultOverlay").style.display = "flex";
+        if (!_gameOverEventFired) { _gameOverEventFired = true; document.dispatchEvent(new Event('gameOver')); }
     }
 }
 

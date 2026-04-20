@@ -77,6 +77,14 @@
             <div id="resultStats" class="sol-result-stats"></div>
             <div id="finalScores" class="sol-final-scores"></div>
             <button id="backToLobby" class="btn btn-outline" style="margin-top:1.5rem;">Back to Lobby</button>
+            <div class="leaderboard-panel" style="margin-top:1rem;">
+                <div class="leaderboard-panel-tabs">
+                    <button class="lb-tab active" onclick="showLbTab(this,'sol-lb')">&#127942; Top Scores</button>
+                    <button class="lb-tab" onclick="showLbTab(this,'sol-hist')">&#128196; My History</button>
+                </div>
+                <div class="lb-body" id="sol-lb"></div>
+                <div class="lb-body" id="sol-hist" style="display:none"></div>
+            </div>
         </div>
     </div>
 
@@ -91,6 +99,21 @@
     </div>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/8.0.0/signalr.min.js"></script>
+    <script src="/js/leaderboard.js"></script>
     <script src="/js/solitaire.js"></script>
+    <script>
+        function showLbTab(btn, id) {
+            btn.closest('.leaderboard-panel').querySelectorAll('.lb-tab').forEach(t => t.classList.remove('active'));
+            btn.classList.add('active');
+            btn.closest('.leaderboard-panel').querySelectorAll('.lb-body').forEach(b => b.style.display = 'none');
+            document.getElementById(id).style.display = '';
+        }
+        document.addEventListener('gameOver', () => {
+            setTimeout(() => {
+                loadLeaderboard('Solitaire', document.getElementById('sol-lb'));
+                loadPersonalHistory('Solitaire', document.getElementById('sol-hist'));
+            }, 1500);
+        });
+    </script>
 </body>
 </html>

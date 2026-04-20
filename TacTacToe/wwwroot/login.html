@@ -15,17 +15,22 @@
             <div class="logo">
                 <span class="logo-x">Tac</span><span class="logo-o">Tac</span><span class="logo-x">Toe</span>
             </div>
-            <p class="login-subtitle">Enter your name to start playing</p>
+            <p class="login-subtitle">Sign in to start playing</p>
+            <div id="errorMsg" class="login-error" style="display:none">Invalid username or password.</div>
             <form action="/login" method="post" class="guest-form">
-                <input type="text" name="name" placeholder="Your name" maxlength="20" required class="guest-input" autocomplete="off" />
+                <input type="text" name="name" placeholder="Username" maxlength="20" required class="guest-input" autocomplete="username" />
+                <input type="password" name="password" placeholder="Password" maxlength="128" required class="guest-input" autocomplete="current-password" />
                 <input type="hidden" name="returnUrl" id="returnUrl" value="/lobby" />
-                <button type="submit" class="guest-btn">Let's Play</button>
+                <button type="submit" class="guest-btn">Sign In</button>
             </form>
+            <p class="login-switch">Don't have an account? <a href="/register" class="login-link">Register</a></p>
         </div>
     </div>
     <script>
-        const ret = new URLSearchParams(window.location.search).get("returnUrl");
+        const params = new URLSearchParams(window.location.search);
+        const ret = params.get("returnUrl");
         if (ret && ret.startsWith("/")) document.getElementById("returnUrl").value = ret;
+        if (params.get("error") === "invalid") document.getElementById("errorMsg").style.display = "block";
     </script>
 </body>
 </html>

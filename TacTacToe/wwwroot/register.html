@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TacTacToe &#8211; Register</title>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="/css/style.css" rel="stylesheet">
+</head>
+<body class="login-body">
+    <div class="ambient"></div>
+    <div class="noise"></div>
+    <div class="page-content login-body">
+        <div class="login-card">
+            <div class="logo">
+                <span class="logo-x">Tac</span><span class="logo-o">Tac</span><span class="logo-x">Toe</span>
+            </div>
+            <p class="login-subtitle">Create your account</p>
+            <div id="errorMsg" class="login-error" style="display:none"></div>
+            <form action="/register" method="post" class="guest-form" id="regForm">
+                <input type="text" name="name" id="nameInput" placeholder="Username (3–20 characters)" minlength="3" maxlength="20" required class="guest-input" autocomplete="username" />
+                <input type="password" name="password" id="pwInput" placeholder="Password (8+ characters)" minlength="8" maxlength="128" required class="guest-input" autocomplete="new-password" />
+                <input type="password" name="confirm" id="cfInput" placeholder="Confirm password" maxlength="128" required class="guest-input" autocomplete="new-password" />
+                <button type="submit" class="guest-btn">Create Account</button>
+            </form>
+            <p class="login-switch">Already have an account? <a href="/login" class="login-link">Sign In</a></p>
+        </div>
+    </div>
+    <script>
+        const errors = {
+            username: 'Username must be 3–20 characters.',
+            password: 'Password must be at least 8 characters.',
+            mismatch: 'Passwords do not match.',
+            taken:    'That username is already taken. Please choose another.'
+        };
+        const error = new URLSearchParams(window.location.search).get('error');
+        if (error && errors[error]) {
+            const el = document.getElementById('errorMsg');
+            el.textContent = errors[error];
+            el.style.display = 'block';
+        }
+
+        document.getElementById('regForm').addEventListener('submit', function (e) {
+            const pw = document.getElementById('pwInput').value;
+            const cf = document.getElementById('cfInput').value;
+            if (pw !== cf) {
+                e.preventDefault();
+                const el = document.getElementById('errorMsg');
+                el.textContent = errors.mismatch;
+                el.style.display = 'block';
+            }
+        });
+    </script>
+</body>
+</html>

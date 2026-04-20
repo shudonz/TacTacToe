@@ -17,6 +17,7 @@ public class SlotsRoom
     public SlotsSettings Settings { get; set; } = new();
     public int RoundsPlayed { get; set; }
     public SlotsPhase Phase { get; set; } = SlotsPhase.Betting;
+    public long StartedAtMs { get; set; }
 }
 
 public enum SlotsPhase { Betting, Results }

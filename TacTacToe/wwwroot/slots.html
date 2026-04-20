@@ -129,6 +129,14 @@
             <h2 id="resultText"></h2>
             <div id="finalScores" class="slots-final-scores"></div>
             <button id="backToLobby" class="btn btn-outline" style="margin-top:1.5rem;">Back to Lobby</button>
+            <div class="leaderboard-panel" style="margin-top:1rem;">
+                <div class="leaderboard-panel-tabs">
+                    <button class="lb-tab active" onclick="showLbTab(this,'slt-lb')">&#127942; Top Scores</button>
+                    <button class="lb-tab" onclick="showLbTab(this,'slt-hist')">&#128196; My History</button>
+                </div>
+                <div class="lb-body" id="slt-lb"></div>
+                <div class="lb-body" id="slt-hist" style="display:none"></div>
+            </div>
         </div>
     </div>
 
@@ -145,6 +153,21 @@
     </div>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/8.0.0/signalr.min.js"></script>
+    <script src="/js/leaderboard.js"></script>
     <script src="/js/slots.js"></script>
+    <script>
+        function showLbTab(btn, id) {
+            btn.closest('.leaderboard-panel').querySelectorAll('.lb-tab').forEach(t => t.classList.remove('active'));
+            btn.classList.add('active');
+            btn.closest('.leaderboard-panel').querySelectorAll('.lb-body').forEach(b => b.style.display = 'none');
+            document.getElementById(id).style.display = '';
+        }
+        document.addEventListener('gameOver', () => {
+            setTimeout(() => {
+                loadLeaderboard('Slots', document.getElementById('slt-lb'));
+                loadPersonalHistory('Slots', document.getElementById('slt-hist'));
+            }, 1500);
+        });
+    </script>
 </body>
 </html>

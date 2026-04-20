@@ -16,6 +16,7 @@
             <div class="nav-user">
                 <img id="userAvatar" class="avatar" src="" alt="">
                 <span id="userName"></span>
+                <a id="adminLink" href="/admin" class="btn-logout" style="display:none;text-decoration:none">&#9881; Admin</a>
                 <form method="post" action="/logout" style="display:inline"><button type="submit" class="btn-logout">Logout</button></form>
             </div>
         </nav>
@@ -89,9 +90,20 @@
                 <div id="tttPanel" class="game-detail-panel" style="display:none">
                     <div class="game-detail-header">
                         <span class="game-detail-icon">&#x2715;&#x25CB;</span>
-                        <div>
+                        <div class="game-detail-header-body">
                             <h2 class="game-detail-title">Tic Tac Toe</h2>
                             <p class="game-detail-desc">Two players take turns marking &#x2715; and &#x25CB; on a 3&times;3 grid. Get three in a row to win!</p>
+                            <div class="lobby-lb-inline">
+                                <div class="lobby-lb-inline-tabs">
+                                    <span class="lobby-lb-title">&#127942; High Scores</span>
+                                    <button class="lb-tab active" onclick="lobbyLbTab(this,'ttt-lobby-lb','ttt-lobby-hist')">Top 5</button>
+                                    <button class="lb-tab" onclick="lobbyLbTab(this,'ttt-lobby-hist','ttt-lobby-lb')">My Scores</button>
+                                </div>
+                                <div class="lobby-lb-scroll">
+                                    <div class="lb-body" id="ttt-lobby-lb"></div>
+                                    <div class="lb-body" id="ttt-lobby-hist" style="display:none"></div>
+                                </div>
+                            </div>
                         </div>
                     </div>
 
@@ -120,9 +132,20 @@
                 <div id="yahtzeePanel" class="game-detail-panel" style="display:none">
                     <div class="game-detail-header">
                         <span class="game-detail-icon">&#127922;</span>
-                        <div>
+                        <div class="game-detail-header-body">
                             <h2 class="game-detail-title">Yahtzee</h2>
                             <p class="game-detail-desc">Roll five dice up to three times per turn and score combinations on your scorecard. Highest total wins!</p>
+                            <div class="lobby-lb-inline">
+                                <div class="lobby-lb-inline-tabs">
+                                    <span class="lobby-lb-title">&#127942; High Scores</span>
+                                    <button class="lb-tab active" onclick="lobbyLbTab(this,'ytz-lobby-lb','ytz-lobby-hist')">Top 5</button>
+                                    <button class="lb-tab" onclick="lobbyLbTab(this,'ytz-lobby-hist','ytz-lobby-lb')">My Scores</button>
+                                </div>
+                                <div class="lobby-lb-scroll">
+                                    <div class="lb-body" id="ytz-lobby-lb"></div>
+                                    <div class="lb-body" id="ytz-lobby-hist" style="display:none"></div>
+                                </div>
+                            </div>
                         </div>
                     </div>
 
@@ -151,9 +174,20 @@
                 <div id="slotsPanel" class="game-detail-panel" style="display:none">
                     <div class="game-detail-header">
                         <span class="game-detail-icon">&#127920;</span>
-                        <div>
+                        <div class="game-detail-header-body">
                             <h2 class="game-detail-title">Slots</h2>
                             <p class="game-detail-desc">Spin the reels and match symbols to win big. Play solo or compete in a multiplayer room!</p>
+                            <div class="lobby-lb-inline">
+                                <div class="lobby-lb-inline-tabs">
+                                    <span class="lobby-lb-title">&#127942; High Scores</span>
+                                    <button class="lb-tab active" onclick="lobbyLbTab(this,'slt-lobby-lb','slt-lobby-hist')">Top 5</button>
+                                    <button class="lb-tab" onclick="lobbyLbTab(this,'slt-lobby-hist','slt-lobby-lb')">My Scores</button>
+                                </div>
+                                <div class="lobby-lb-scroll">
+                                    <div class="lb-body" id="slt-lobby-lb"></div>
+                                    <div class="lb-body" id="slt-lobby-hist" style="display:none"></div>
+                                </div>
+                            </div>
                         </div>
                     </div>
 
@@ -181,9 +215,20 @@
                 <div id="concentrationPanel" class="game-detail-panel" style="display:none">
                     <div class="game-detail-header">
                         <span class="game-detail-icon">&#129513;</span>
-                        <div>
+                        <div class="game-detail-header-body">
                             <h2 class="game-detail-title">Concentration</h2>
                             <p class="game-detail-desc">Flip cards to find matching pairs. Test your memory alone or race against friends!</p>
+                            <div class="lobby-lb-inline">
+                                <div class="lobby-lb-inline-tabs">
+                                    <span class="lobby-lb-title">&#127942; High Scores</span>
+                                    <button class="lb-tab active" onclick="lobbyLbTab(this,'con-lobby-lb','con-lobby-hist')">Top 5</button>
+                                    <button class="lb-tab" onclick="lobbyLbTab(this,'con-lobby-hist','con-lobby-lb')">My Scores</button>
+                                </div>
+                                <div class="lobby-lb-scroll">
+                                    <div class="lb-body" id="con-lobby-lb"></div>
+                                    <div class="lb-body" id="con-lobby-hist" style="display:none"></div>
+                                </div>
+                            </div>
                         </div>
                     </div>
 
@@ -213,9 +258,20 @@
                 <div id="solitairePanel" class="game-detail-panel" style="display:none">
                     <div class="game-detail-header">
                         <span class="game-detail-icon">&#127137;</span>
-                        <div>
+                        <div class="game-detail-header-body">
                             <h2 class="game-detail-title">Solitaire</h2>
                             <p class="game-detail-desc">Classic Klondike Solitaire. Play solo or race up to 4 friends on identical decks &mdash; points for speed and finishing on the first run!</p>
+                            <div class="lobby-lb-inline">
+                                <div class="lobby-lb-inline-tabs">
+                                    <span class="lobby-lb-title">&#127942; High Scores</span>
+                                    <button class="lb-tab active" onclick="lobbyLbTab(this,'sol-lobby-lb','sol-lobby-hist')">Top 5</button>
+                                    <button class="lb-tab" onclick="lobbyLbTab(this,'sol-lobby-hist','sol-lobby-lb')">My Scores</button>
+                                </div>
+                                <div class="lobby-lb-scroll">
+                                    <div class="lb-body" id="sol-lobby-lb"></div>
+                                    <div class="lb-body" id="sol-lobby-hist" style="display:none"></div>
+                                </div>
+                            </div>
                         </div>
                     </div>
 
@@ -310,6 +366,16 @@
         </div>
     </div>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/8.0.0/signalr.min.js"></script>
+    <script src="/js/leaderboard.js"></script>
+    <script>
+        function lobbyLbTab(btn, showId, hideId) {
+            const section = btn.closest('.lobby-lb-section');
+            section.querySelectorAll('.lb-tab').forEach(t => t.classList.remove('active'));
+            btn.classList.add('active');
+            document.getElementById(showId).style.display = '';
+            document.getElementById(hideId).style.display = 'none';
+        }
+    </script>
     <script src="/js/lobby.js"></script>
 </body>
 </html>

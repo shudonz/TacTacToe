@@ -3070,3 +3070,349 @@ body {
 }
 /* Prevent text selection during drag */
 
+
+
+/* ================================================================
+   Shared Leaderboard Panel (.lb-*)
+   ================================================================ */
+.leaderboard-panel {
+    background: rgba(18,145,158,0.06);
+    border: 1px solid rgba(196,231,233,0.12);
+    border-radius: 12px;
+    padding: 1rem 1.25rem;
+    margin-top: 1.25rem;
+}
+.leaderboard-panel-tabs {
+    display: flex;
+    gap: 0.5rem;
+    margin-bottom: 0.75rem;
+}
+.lb-tab {
+    background: none;
+    border: 1px solid rgba(196,231,233,0.18);
+    border-radius: 6px;
+    color: var(--text-dim);
+    font-family: inherit;
+    font-size: 0.78rem;
+    font-weight: 600;
+    padding: 0.3rem 0.75rem;
+    cursor: pointer;
+    transition: background 0.15s, color 0.15s;
+}
+.lb-tab.active, .lb-tab:hover {
+    background: rgba(18,145,158,0.18);
+    border-color: var(--accent);
+    color: var(--text);
+}
+.lb-body { overflow-x: auto; }
+.lb-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.82rem;
+}
+.lb-table th {
+    text-align: left;
+    color: var(--text-dim);
+    font-weight: 700;
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    padding: 0.3rem 0.5rem;
+    border-bottom: 1px solid rgba(196,231,233,0.12);
+}
+.lb-table td { padding: 0.35rem 0.5rem; color: var(--text-dim); }
+.lb-table tbody tr:hover td { background: rgba(196,231,233,0.04); }
+.lb-me td { background: rgba(18,145,158,0.10) !important; color: var(--text) !important; font-weight: 600; }
+.lb-rank { font-size: 1rem; width: 2.2rem; }
+.lb-name { font-weight: 600; color: var(--text); }
+.lb-score { color: var(--accent); font-weight: 700; }
+.lb-you { font-size: 0.7rem; font-weight: 400; color: var(--accent); }
+.lb-win  { color: #4ade80; font-weight: 700; }
+.lb-loss { color: #f87171; }
+.lb-draw { color: #fbbf24; }
+.lb-loading, .lb-empty { color: var(--text-dim); font-size: 0.85rem; padding: 0.5rem 0; }
+
+/* ================================================================
+   Login / Register extras
+   ================================================================ */
+.login-error {
+    background: rgba(122,64,72,0.18);
+    border: 1px solid rgba(122,64,72,0.4);
+    border-radius: 8px;
+    color: #fca5a5;
+    font-size: 0.85rem;
+    padding: 0.55rem 0.85rem;
+    margin-bottom: 0.75rem;
+    text-align: center;
+}
+.login-switch {
+    margin-top: 1rem;
+    font-size: 0.83rem;
+    color: var(--text-dim);
+    text-align: center;
+}
+.login-link {
+    color: var(--accent);
+    text-decoration: none;
+    font-weight: 600;
+}
+.login-link:hover { text-decoration: underline; }
+
+
+/* ================================================================
+   Admin Dashboard
+   ================================================================ */
+.admin-badge {
+    display: inline-block;
+    background: linear-gradient(135deg, #12919E, #1aacba);
+    color: #fff;
+    font-size: 0.65rem;
+    font-weight: 800;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    padding: 0.15rem 0.5rem;
+    border-radius: 4px;
+    margin-left: 0.5rem;
+    vertical-align: middle;
+}
+
+.admin-main {
+    max-width: 1100px;
+    margin: 2rem auto;
+    padding: 0 1rem 4rem;
+}
+
+/* Tabs */
+.admin-tabs {
+    display: flex;
+    gap: 0.5rem;
+    margin-bottom: 1.25rem;
+    border-bottom: 1px solid rgba(196,231,233,0.12);
+    padding-bottom: 0.5rem;
+}
+.admin-tab {
+    background: none;
+    border: 1px solid rgba(196,231,233,0.18);
+    border-radius: 8px 8px 0 0;
+    color: var(--text-dim);
+    font-family: inherit;
+    font-size: 0.85rem;
+    font-weight: 600;
+    padding: 0.45rem 1rem;
+    cursor: pointer;
+    transition: background 0.15s, color 0.15s;
+}
+.admin-tab.active,
+.admin-tab:hover {
+    background: rgba(18,145,158,0.14);
+    border-color: var(--accent);
+    color: var(--text);
+}
+
+/* Panel */
+.admin-panel {
+    background: rgba(18,145,158,0.04);
+    border: 1px solid rgba(196,231,233,0.10);
+    border-radius: 12px;
+    padding: 1.25rem;
+}
+.admin-panel-header {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    flex-wrap: wrap;
+    margin-bottom: 1rem;
+}
+.admin-section-title {
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--text);
+    margin: 0;
+    flex: 1;
+}
+.admin-filter-row {
+    display: flex;
+    gap: 0.6rem;
+    align-items: center;
+}
+.admin-search {
+    background: rgba(196,231,233,0.05);
+    border: 1px solid rgba(196,231,233,0.18);
+    border-radius: 8px;
+    color: var(--text);
+    font-family: inherit;
+    font-size: 0.82rem;
+    padding: 0.4rem 0.75rem;
+    outline: none;
+    transition: border-color 0.15s;
+    width: 220px;
+}
+.admin-search:focus { border-color: var(--accent); }
+.admin-select {
+    background: rgba(196,231,233,0.05);
+    border: 1px solid rgba(196,231,233,0.18);
+    border-radius: 8px;
+    color: var(--text);
+    font-family: inherit;
+    font-size: 0.82rem;
+    padding: 0.4rem 0.65rem;
+    outline: none;
+    cursor: pointer;
+}
+
+/* Table */
+.admin-table-wrap { overflow-x: auto; }
+.admin-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.83rem;
+}
+.admin-table th {
+    text-align: left;
+    color: var(--text-dim);
+    font-weight: 700;
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    padding: 0.35rem 0.6rem;
+    border-bottom: 1px solid rgba(196,231,233,0.12);
+    white-space: nowrap;
+}
+.admin-table td {
+    padding: 0.42rem 0.6rem;
+    color: var(--text-dim);
+    border-bottom: 1px solid rgba(196,231,233,0.06);
+    vertical-align: middle;
+}
+.admin-table tbody tr:hover td { background: rgba(196,231,233,0.04); }
+.admin-col-name  { font-weight: 600; color: var(--text); }
+.admin-col-date  { font-size: 0.78rem; white-space: nowrap; }
+.admin-col-actions { display: flex; flex-wrap: wrap; gap: 0.35rem; }
+
+/* Admin tag */
+.admin-tag {
+    display: inline-block;
+    background: rgba(18,145,158,0.18);
+    border: 1px solid rgba(18,145,158,0.4);
+    color: var(--accent);
+    font-size: 0.65rem;
+    font-weight: 700;
+    letter-spacing: 0.07em;
+    text-transform: uppercase;
+    padding: 0.1rem 0.4rem;
+    border-radius: 4px;
+    margin-left: 0.35rem;
+    vertical-align: middle;
+}
+
+/* Action buttons */
+.admin-btn {
+    background: rgba(196,231,233,0.06);
+    border: 1px solid rgba(196,231,233,0.15);
+    border-radius: 6px;
+    color: var(--text-dim);
+    font-family: inherit;
+    font-size: 0.74rem;
+    font-weight: 600;
+    padding: 0.25rem 0.55rem;
+    cursor: pointer;
+    transition: background 0.15s, color 0.15s, border-color 0.15s;
+    white-space: nowrap;
+}
+.admin-btn:hover                { background: rgba(196,231,233,0.12); color: var(--text); border-color: rgba(196,231,233,0.3); }
+.admin-btn-promote:hover        { background: rgba(18,145,158,0.18); color: var(--accent); border-color: var(--accent); }
+.admin-btn-demote:hover         { background: rgba(251,191,36,0.12); color: #fbbf24; border-color: #fbbf24; }
+.admin-btn-del:hover,
+.admin-btn-del-session:hover    { background: rgba(122,64,72,0.18); color: #fca5a5; border-color: rgba(122,64,72,0.5); }
+.admin-btn-clr:hover            { background: rgba(251,191,36,0.10); color: #fbbf24; border-color: #fbbf24; }
+
+/* Danger btn */
+.btn-danger {
+    background: linear-gradient(135deg, #7A4048, #9e5560);
+    border: none;
+    border-radius: 8px;
+    color: #fff;
+    font-family: inherit;
+    font-size: 0.85rem;
+    font-weight: 700;
+    padding: 0.5rem 1.1rem;
+    cursor: pointer;
+}
+.btn-danger:hover { filter: brightness(1.1); }
+
+/* Loading / empty */
+.admin-loading,
+.admin-empty {
+    color: var(--text-dim);
+    font-size: 0.85rem;
+    padding: 1rem 0;
+    text-align: center;
+}
+
+/* ── Modal ── */
+.admin-modal-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.55);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 8000;
+    backdrop-filter: blur(4px);
+}
+.admin-modal {
+    background: var(--surface);
+    border: 1px solid rgba(196,231,233,0.15);
+    border-radius: 14px;
+    padding: 1.75rem 2rem;
+    max-width: 420px;
+    width: 90vw;
+    box-shadow: 0 24px 48px rgba(0,0,0,0.5);
+}
+.admin-modal-title {
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--text);
+    margin: 0 0 0.25rem;
+}
+.admin-modal-sub {
+    font-size: 0.82rem;
+    color: var(--text-dim);
+    margin: 0 0 0.75rem;
+}
+.admin-modal-msg {
+    color: var(--text);
+    font-size: 0.9rem;
+    margin-bottom: 1.25rem;
+    line-height: 1.5;
+}
+.admin-modal-actions {
+    display: flex;
+    gap: 0.6rem;
+    justify-content: flex-end;
+}
+
+
+/* ================================================================
+   Lobby High-Score Section
+   ================================================================ */
+.lobby-lb-section {
+    border-top: 1px solid rgba(196,231,233,0.10);
+    margin-top: 0.25rem;
+}
+.lobby-lb-tabs {
+    display: flex;
+    gap: 0.4rem;
+    margin-bottom: 0.6rem;
+}
+.lobby-lb-section .lb-tab {
+    font-size: 0.76rem;
+    padding: 0.25rem 0.65rem;
+}
+.lobby-lb-section .lb-table th {
+    font-size: 0.68rem;
+}
+.lobby-lb-section .lb-table td {
+    font-size: 0.79rem;
+    padding: 0.28rem 0.4rem;
+}
