@@ -77,6 +77,11 @@ public class SolitairePile
    ================================================================ */
 public static class SolitaireEngine
 {
+    private const int SolverMaxNodes = 22000;
+    private const int SolverMaxDepth = 220;
+    // Typical serialized state is a few hundred chars; 512 avoids most reallocations.
+    private const int SerializedStateCapacity = 512;
+
     public static int Rank(int card) => card % 13;
     public static int Suit(int card) => card / 13;
     public static bool IsRed(int card) { var s = card / 13; return s is 1 or 2; }
@@ -93,7 +98,7 @@ public static class SolitaireEngine
         }
 
         // Deterministic fallback with time budget to avoid long startup delays.
-        for (int seed = 0; seed <= 50000 && sw.ElapsedMilliseconds < maxSearchMilliseconds; seed++)
+        for (int seed = 0; seed <= 10000 && sw.ElapsedMilliseconds < maxSearchMilliseconds; seed++)
             if (IsLikelyWinnable(Deal(seed))) return seed;
 
         // Emergency fallback
@@ -500,11 +505,9 @@ public static class SolitaireEngine
         var seen = new HashSet<string>();
         stack.Push((start, 0));
 
-        const int MaxNodes = 22000;
-        const int MaxDepth = 220;
         int nodes = 0;
 
-        while (stack.Count > 0 && nodes < MaxNodes)
+        while (stack.Count > 0 && nodes < SolverMaxNodes)
         {
             var (state, depth) = stack.Pop();
             if (state.IsComplete) return true;
@@ -512,7 +515,7 @@ public static class SolitaireEngine
             var key = SerializeState(state);
             if (!seen.Add(key)) continue;
             nodes++;
-            if (depth >= MaxDepth) continue;
+            if (depth >= SolverMaxDepth) continue;
 
             var next = EnumerateLikelyProgressMoves(state);
             for (int i = next.Count - 1; i >= 0; i--)
@@ -571,7 +574,7 @@ public static class SolitaireEngine
 
     private static string SerializeState(SolitaireGameState g)
     {
-        var sb = new System.Text.StringBuilder(512);
+        var sb = new System.Text.StringBuilder(SerializedStateCapacity);
         sb.AppendJoin(',', g.Foundation).Append('|');
         sb.AppendJoin(',', g.Stock).Append('|');
         sb.AppendJoin(',', g.Waste).Append('|');

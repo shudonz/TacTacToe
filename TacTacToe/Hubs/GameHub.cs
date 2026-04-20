@@ -2090,14 +2090,7 @@ public class GameHub : Hub
         long now = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
         foreach (var p in room.Players)
         {
-            p.Game = SolitaireEngine.Deal(seed);
-            p.StartedAtMs = now;
-            p.FinishedAtMs = 0;
-            p.HintsUsed = 0;
-            p.GaveUp = false;
-            p.HasFinished = false;
-            p.FinishRank = 0;
-            p.Score = 0;
+            ResetSolitairePlayerForNewGame(p, seed, now);
         }
         await Clients.Group(roomId).SendAsync("SolitaireGameStarted", room);
         await BroadcastSolitaireRooms();
@@ -2297,6 +2290,18 @@ public class GameHub : Hub
         bool any = false;
         while (SolitaireEngine.AutoCompleteStep(g)) any = true;
         return any;
+    }
+
+    private static void ResetSolitairePlayerForNewGame(SolitairePlayer player, int seed, long startedAtMs)
+    {
+        player.Game = SolitaireEngine.Deal(seed);
+        player.StartedAtMs = startedAtMs;
+        player.FinishedAtMs = 0;
+        player.HintsUsed = 0;
+        player.GaveUp = false;
+        player.HasFinished = false;
+        player.FinishRank = 0;
+        player.Score = 0;
     }
 
     private void CheckSolitaireOver(SolitaireRoom room)
