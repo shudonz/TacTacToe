@@ -54,6 +54,27 @@ catch (Exception ex)
         "Ensure the IIS app-pool identity has Modify rights to that folder.", dbPath);
 }
 
+// Ensure browsers always re-validate HTML pages and JS/CSS assets so users
+// never see stale content after a deployment without needing a hard refresh.
+app.Use(async (ctx, next) =>
+{
+    ctx.Response.OnStarting(() =>
+    {
+        if (!ctx.Response.Headers.ContainsKey("Cache-Control"))
+        {
+            var contentType = ctx.Response.ContentType ?? "";
+            if (contentType.StartsWith("text/html"))
+                // Never cache HTML — always fetch fresh from server
+                ctx.Response.Headers["Cache-Control"] = "no-cache, no-store, must-revalidate";
+            else if (contentType.StartsWith("text/css") || contentType.StartsWith("application/javascript") || contentType.StartsWith("text/javascript"))
+                // Revalidate JS/CSS every request; serve from cache if ETag matches (no re-download)
+                ctx.Response.Headers["Cache-Control"] = "no-cache, must-revalidate";
+        }
+        return Task.CompletedTask;
+    });
+    await next();
+});
+
 app.UseStaticFiles();
 app.UseAuthentication();
 app.UseAuthorization();

@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>TacTacToe &#8211; Lobby</title>
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link href="/css/style.css" rel="stylesheet">
@@ -116,7 +116,10 @@
                     <div class="game-detail-header">
                         <span class="game-detail-icon">&#x2715;&#x25CB;</span>
                         <div class="game-detail-header-body">
-                            <h2 class="game-detail-title">Tic Tac Toe</h2>
+                            <div class="game-title-row">
+                                <h2 class="game-detail-title">Tic Tac Toe</h2>
+                                <button class="btn-play" onclick="showPlaySections('ttt')">&#9654; Play</button>
+                            </div>
                             <p class="game-detail-desc">Two players take turns marking &#x2715; and &#x25CB; on a 3&times;3 grid. Get three in a row to win!</p>
                             <div class="lobby-lb-inline">
                                 <div class="lobby-lb-inline-tabs">
@@ -132,6 +135,7 @@
                         </div>
                     </div>
 
+                    <div id="tttPlaySections" class="game-play-sections" style="display:none">
                     <div class="detail-section">
                         <h3 class="detail-section-title">&#129302; Single Player</h3>
                         <p class="lobby-hint">Play against the computer — pick your difficulty.</p>
@@ -151,6 +155,7 @@
                         <div id="tttRoomList" class="player-list"></div>
                         <p id="noTttRooms" class="lobby-hint lobby-no-rooms" style="display:none;">No open rooms right now — create one to get started!</p>
                     </div>
+                    </div>
                 </div>
 
                 <!-- ── Yahtzee Panel ── -->
@@ -158,7 +163,10 @@
                     <div class="game-detail-header">
                         <span class="game-detail-icon">&#127922;</span>
                         <div class="game-detail-header-body">
-                            <h2 class="game-detail-title">Yahtzee</h2>
+                            <div class="game-title-row">
+                                <h2 class="game-detail-title">Yahtzee</h2>
+                                <button class="btn-play" onclick="showPlaySections('yahtzee')">&#9654; Play</button>
+                            </div>
                             <p class="game-detail-desc">Roll five dice up to three times per turn and score combinations on your scorecard. Highest total wins!</p>
                             <div class="lobby-lb-inline">
                                 <div class="lobby-lb-inline-tabs">
@@ -174,6 +182,7 @@
                         </div>
                     </div>
 
+                    <div id="yahtzeePlaySections" class="game-play-sections" style="display:none">
                     <div class="detail-section">
                         <h3 class="detail-section-title">&#129302; Single Player</h3>
                         <p class="lobby-hint">Challenge the computer — choose your difficulty.</p>
@@ -193,6 +202,7 @@
                         <div id="roomList" class="player-list"></div>
                         <p id="noRooms" class="lobby-hint lobby-no-rooms" style="display:none;">No open rooms right now — create one to get started!</p>
                     </div>
+                    </div>
                 </div>
 
                 <!-- ── Slots Panel ── -->
@@ -200,7 +210,10 @@
                     <div class="game-detail-header">
                         <span class="game-detail-icon">&#127920;</span>
                         <div class="game-detail-header-body">
-                            <h2 class="game-detail-title">Slots</h2>
+                            <div class="game-title-row">
+                                <h2 class="game-detail-title">Slots</h2>
+                                <button class="btn-play" onclick="showPlaySections('slots')">&#9654; Play</button>
+                            </div>
                             <p class="game-detail-desc">Spin the reels and match symbols to win big. Play solo or compete in a multiplayer room!</p>
                             <div class="lobby-lb-inline">
                                 <div class="lobby-lb-inline-tabs">
@@ -216,6 +229,7 @@
                         </div>
                     </div>
 
+                    <div id="slotsPlaySections" class="game-play-sections" style="display:none">
                     <div id="slotsSection" class="detail-section">
                         <h3 class="detail-section-title">&#129302; Single Player</h3>
                         <p class="lobby-hint">Play against the machine — just you vs the reels.</p>
@@ -234,6 +248,7 @@
                         <div id="slotsRoomList" class="player-list"></div>
                         <p id="noSlotsRooms" class="lobby-hint lobby-no-rooms" style="display:none;">No open rooms right now — create one to get started!</p>
                     </div>
+                    </div>
                 </div>
 
                 <!-- ── Concentration Panel ── -->
@@ -241,7 +256,10 @@
                     <div class="game-detail-header">
                         <span class="game-detail-icon">&#129513;</span>
                         <div class="game-detail-header-body">
-                            <h2 class="game-detail-title">Concentration</h2>
+                            <div class="game-title-row">
+                                <h2 class="game-detail-title">Concentration</h2>
+                                <button class="btn-play" onclick="showPlaySections('concentration')">&#9654; Play</button>
+                            </div>
                             <p class="game-detail-desc">Flip cards to find matching pairs. Test your memory alone or race against friends!</p>
                             <div class="lobby-lb-inline">
                                 <div class="lobby-lb-inline-tabs">
@@ -257,6 +275,7 @@
                         </div>
                     </div>
 
+                    <div id="concentrationPlaySections" class="game-play-sections" style="display:none">
                     <div id="concentrationSection" class="detail-section">
                         <h3 class="detail-section-title">&#129302; Single Player</h3>
                         <p class="lobby-hint">Play against the computer — choose how sharp the AI memory is.</p>
@@ -277,6 +296,7 @@
                         <div id="concentrationRoomList" class="player-list"></div>
                         <p id="noConcentrationRooms" class="lobby-hint lobby-no-rooms" style="display:none;">No open rooms right now — create one to get started!</p>
                     </div>
+                    </div>
                 </div>
 
                 <!-- ── Solitaire Panel ── -->
@@ -284,7 +304,10 @@
                     <div class="game-detail-header">
                         <span class="game-detail-icon">&#127137;</span>
                         <div class="game-detail-header-body">
-                            <h2 class="game-detail-title">Solitaire</h2>
+                            <div class="game-title-row">
+                                <h2 class="game-detail-title">Solitaire</h2>
+                                <button class="btn-play" onclick="showPlaySections('solitaire')">&#9654; Play</button>
+                            </div>
                             <p class="game-detail-desc">Classic Klondike Solitaire. Play solo or race up to 4 friends on identical decks &mdash; points for speed and finishing on the first run!</p>
                             <div class="lobby-lb-inline">
                                 <div class="lobby-lb-inline-tabs">
@@ -300,6 +323,7 @@
                         </div>
                     </div>
 
+                    <div id="solitairePlaySections" class="game-play-sections" style="display:none">
                     <div id="solitaireSingleSection" class="detail-section">
                         <h3 class="detail-section-title">&#129302; Single Player</h3>
                         <p class="lobby-hint">Play alone against the clock.</p>
@@ -317,6 +341,7 @@
                         <button id="createSolitaireRoomBtn" class="btn btn-accept detail-create-btn">&#43; Create Room</button>
                         <div id="solitaireRoomList" class="player-list"></div>
                         <p id="noSolitaireRooms" class="lobby-hint lobby-no-rooms" style="display:none;">No open rooms right now — create one to get started!</p>
+                    </div>
                     </div>
                 </div>
 

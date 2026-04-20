@@ -1,6 +1,17 @@
 const connection = new signalR.HubConnectionBuilder().withUrl("/gamehub").withAutomaticReconnect().build();
 let selectedGame = "";
 
+function showPlaySections(key) {
+    const el = document.getElementById(key + "PlaySections");
+    if (!el) return;
+    // Reset animation so it replays cleanly
+    el.classList.remove("is-visible");
+    el.style.display = "";
+    void el.offsetHeight; // force reflow
+    el.classList.add("is-visible");
+    el.scrollIntoView({ behavior: "smooth", block: "nearest" });
+}
+
 /* ── Dashboard ───────────────────────────────────────────────── */
 const DASH_GAMES = [
     { key: "tictactoe",     api: "TicTacToe",     icon: "✕○",  label: "Tic Tac Toe"   },
@@ -178,9 +189,6 @@ async function init() {
             btn.classList.add("active");
             selectedGame = btn.dataset.game;
             updateSections();
-            // On mobile, scroll the detail panel into view
-            const detail = document.querySelector(".lobby-detail");
-            if (detail && window.innerWidth < 768) detail.scrollIntoView({ behavior: "smooth", block: "start" });
         });
     });
 
@@ -205,9 +213,13 @@ async function init() {
         // Show welcome state when no game is selected, otherwise hide it
         document.getElementById("lobbyEmptyState").style.display = selectedGame ? "none" : "";
 
-        // Show only the selected game's panel
+        // Show only the selected game's panel; hide all play sections on game switch
         Object.entries(panels).forEach(([game, id]) => {
             document.getElementById(id).style.display = selectedGame === game ? "" : "none";
+        });
+        ["ttt", "yahtzee", "slots", "concentration", "solitaire"].forEach(key => {
+            const el = document.getElementById(key + "PlaySections");
+            if (el) { el.style.display = "none"; el.classList.remove("is-visible"); }
         });
 
         // Only request room lists for the selected game
