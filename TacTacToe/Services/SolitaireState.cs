@@ -81,19 +81,22 @@ public static class SolitaireEngine
     public static int Suit(int card) => card / 13;
     public static bool IsRed(int card) { var s = card / 13; return s is 1 or 2; }
 
-    public static int GetWinnableSeed(int randomAttempts = 80)
+    public static int GetWinnableSeed(int randomAttempts = 48, int maxSearchMilliseconds = 1500)
     {
+        var sw = System.Diagnostics.Stopwatch.StartNew();
+
         for (int i = 0; i < randomAttempts; i++)
         {
             var seed = Random.Shared.Next();
             if (IsLikelyWinnable(Deal(seed))) return seed;
+            if (sw.ElapsedMilliseconds >= maxSearchMilliseconds) break;
         }
 
-        // Deterministic fallback: keep searching until we find a solver-verified seed.
-        for (int seed = 0; seed <= 200000; seed++)
+        // Deterministic fallback with time budget to avoid long startup delays.
+        for (int seed = 0; seed <= 50000 && sw.ElapsedMilliseconds < maxSearchMilliseconds; seed++)
             if (IsLikelyWinnable(Deal(seed))) return seed;
 
-        // Emergency fallback (should be extremely rare)
+        // Emergency fallback
         return Random.Shared.Next();
     }
 
@@ -497,8 +500,8 @@ public static class SolitaireEngine
         var seen = new HashSet<string>();
         stack.Push((start, 0));
 
-        const int MaxNodes = 60000;
-        const int MaxDepth = 300;
+        const int MaxNodes = 22000;
+        const int MaxDepth = 220;
         int nodes = 0;
 
         while (stack.Count > 0 && nodes < MaxNodes)
