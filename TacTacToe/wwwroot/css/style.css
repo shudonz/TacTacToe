@@ -2851,11 +2851,20 @@ body {
 }
 .sol-empty-slot:hover { border-color: rgba(196,231,233,0.45); background: rgba(196,231,233,0.04); }
 
+/* ── Action row (hint + auto-complete) ──────────────────────── */
+.sol-action-row {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+    margin-top: 0.4rem;
+}
+
 /* ── Auto-complete bar ──────────────────────────────────────── */
 .sol-autocomplete-bar {
     display: flex;
     justify-content: center;
-    margin-top: 0.25rem;
 }
 .sol-autocomplete-btn {
     background: linear-gradient(135deg, #12919E, #1aacba);
@@ -2871,6 +2880,80 @@ body {
 }
 .sol-autocomplete-btn:hover { transform: translateY(-2px); box-shadow: 0 4px 18px rgba(18,145,158,0.55); }
 .sol-autocomplete-btn:active { transform: scale(0.97); }
+
+/* ── Hint button ────────────────────────────────────────────── */
+.sol-hint-btn {
+    background: linear-gradient(135deg, #92630a, #c48a14);
+    color: #fff;
+    font-weight: 700;
+    font-size: 0.88rem;
+    padding: 0.55rem 1.4rem;
+    border-radius: 8px;
+    border: none;
+    cursor: pointer;
+    box-shadow: 0 2px 12px rgba(196,138,20,0.40);
+    transition: transform 0.1s, box-shadow 0.15s, opacity 0.15s;
+    white-space: nowrap;
+}
+.sol-hint-btn:hover  { transform: translateY(-2px); box-shadow: 0 4px 18px rgba(196,138,20,0.55); }
+.sol-hint-btn:active { transform: scale(0.97); }
+.sol-hint-btn:disabled { opacity: 0.45; cursor: default; transform: none; }
+
+/* ── Hint banner ────────────────────────────────────────────── */
+.sol-hint-banner {
+    margin-top: 0.55rem;
+    padding: 0.6rem 1.1rem;
+    border-radius: 10px;
+    background: rgba(196,138,20,0.13);
+    border: 1px solid rgba(251,191,36,0.35);
+    color: #fde68a;
+    font-size: 0.88rem;
+    font-weight: 600;
+    text-align: center;
+    max-width: 700px;
+    width: 100%;
+    animation: solHintBannerIn 0.22s ease;
+}
+.sol-hint-banner.sol-hint-none {
+    background: rgba(148,151,154,0.10);
+    border-color: rgba(148,151,154,0.25);
+    color: var(--text-dim);
+}
+@keyframes solHintBannerIn {
+    from { opacity: 0; transform: translateY(-6px); }
+    to   { opacity: 1; transform: translateY(0);    }
+}
+
+/* ── Hint highlights on cards / slots ──────────────────────── */
+
+/* Amber pulse — the card(s) that will move */
+@keyframes solHintSourcePulse {
+    0%, 100% { box-shadow: 0 0 0 3px #fbbf24, 0 0 10px rgba(251,191,36,0.45); }
+    50%       { box-shadow: 0 0 0 3px #fde68a, 0 0 22px rgba(253,230,138,0.80); }
+}
+.sol-hint-source {
+    animation: solHintSourcePulse 1.0s ease-in-out infinite !important;
+    box-shadow:  0 0 0 3px #fbbf24, 0 0 10px rgba(251,191,36,0.45) !important;
+    border-radius: var(--sol-card-r);
+    position: relative;
+    z-index: 15;
+}
+
+/* Green pulse — the destination slot or card */
+@keyframes solHintDestPulse {
+    0%, 100% { box-shadow: 0 0 0 3px #4ade80, 0 0  8px rgba(74,222,128,0.40); }
+    50%       { box-shadow: 0 0 0 3px #86efac, 0 0 18px rgba(134,239,172,0.75); }
+}
+.sol-hint-dest {
+    animation: solHintDestPulse 1.0s ease-in-out infinite !important;
+    box-shadow:  0 0 0 3px #4ade80, 0 0  8px rgba(74,222,128,0.40) !important;
+    border-radius: var(--sol-card-r);
+}
+/* Empty slot destination needs background tint since it has no card face */
+.sol-empty-slot.sol-hint-dest {
+    background: rgba(74,222,128,0.10) !important;
+    border-color: #4ade80 !important;
+}
 
 /* ── Leaderboard ────────────────────────────────────────────── */
 .sol-leaderboard {

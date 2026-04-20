@@ -1949,6 +1949,7 @@ public class GameHub : Hub
         {
             p.Game = SolitaireEngine.Deal(seed);
             p.StartedAtMs = now;
+            p.HintsUsed = 0;
         }
         await Clients.Group(roomId).SendAsync("SolitaireGameStarted", room);
         await BroadcastSolitaireRooms();
@@ -1974,7 +1975,8 @@ public class GameHub : Hub
                 Name = name,
                 Connected = true,
                 Game = SolitaireEngine.Deal(seed),
-                StartedAtMs = now
+                StartedAtMs = now,
+                HintsUsed = 0
             }]
         };
         room.Settings.RoomName = "Solitaire";
@@ -2061,6 +2063,29 @@ public class GameHub : Hub
         await Clients.Group(roomId).SendAsync("SolitaireUpdated", room);
 
         if (!room.IsSinglePlayer) CheckSolitaireOver(room);
+    }
+
+    // Client requests a hint for the current game state. Server computes an
+    // authoritative hint, applies a hint-use penalty if a hint is available,
+    // updates the player's score and broadcasts the updated room state.
+    public async Task RequestSolitaireHint(string roomId)
+    {
+        var room = _lobby.GetSolitaireRoom(roomId);
+        if (room == null || !room.Started || room.IsOver) return;
+        var player = room.Players.FirstOrDefault(p => p.ConnectionId == Context.ConnectionId && !p.IsBot);
+        if (player == null || player.HasFinished) return;
+
+        var hint = SolitaireEngine.ComputeHint(player.Game);
+        if (hint != null && hint.HintAvailable)
+        {
+            // Increment hint counter and update score immediately
+            player.HintsUsed++;
+            player.Score = SolitaireEngine.ScoreFor(player);
+        }
+
+        // Send the hint only to the requester, and broadcast the updated room
+        await Clients.Caller.SendAsync("SolitaireHint", hint);
+        await Clients.Group(roomId).SendAsync("SolitaireUpdated", room);
     }
 
     private static bool HandleTableauToFoundation(SolitaireGameState g, int cardId)

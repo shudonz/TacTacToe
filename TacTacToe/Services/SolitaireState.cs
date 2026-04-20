@@ -37,6 +37,8 @@ public class SolitairePlayer
     public int FinishRank { get; set; }
     public long StartedAtMs { get; set; }
     public long FinishedAtMs { get; set; }
+    // Number of hints the player has used in this game. Each hint deducts a penalty from final score.
+    public int HintsUsed { get; set; }
 }
 
 public class SolitaireGameState
@@ -239,6 +241,168 @@ public static class SolitaireEngine
         int secs = (int)((p.FinishedAtMs - p.StartedAtMs) / 1000L);
         score += Math.Max(0, 1000 - secs * 2); // time bonus
         if (g.StockCycles <= 1) score += 300; // first-go bonus
+        // Apply hint penalty: each hint used deducts points from final score
+        const int HintPenalty = 50;
+        score -= p.HintsUsed * HintPenalty;
+        if (score < 0) score = 0;
         return score;
+    }
+
+    // Hint DTOs (serialized to client)
+    public class HintSourceDto
+    {
+        public string Type { get; set; } = ""; // "tableau","waste","stock","facedown"
+        public int PileIdx { get; set; } = -1;
+        public int FaceUpIdx { get; set; } = -1;
+        public int CardId { get; set; } = -1;
+    }
+    public class HintDestDto
+    {
+        public string Type { get; set; } = ""; // "tableau","foundation"
+        public int PileIdx { get; set; } = -1;
+    }
+    public class HintDto
+    {
+        public bool HintAvailable { get; set; }
+        public string HintType { get; set; } = null!;
+        public string Description { get; set; } = null!;
+        public HintSourceDto? Source { get; set; }
+        public HintDestDto? Dest { get; set; }
+    }
+
+    // Compute a deterministic hint following the specified priority order
+    public static HintDto ComputeHint(SolitaireGameState g)
+    {
+        // Helpers
+        string CardLabel(int card) => Rank(card) switch
+        {
+            0 => "A",
+            10 => "J",
+            11 => "Q",
+            12 => "K",
+            var r => (r + 1).ToString()
+        } + (Suit(card) switch { 0 => "♠", 1 => "♥", 2 => "♦", 3 => "♣", _ => "" });
+
+        string DestTopLabel(SolitairePile pile)
+        {
+            if (pile.FaceUp.Count == 0) return "the empty column";
+            return CardLabel(pile.FaceUp[^1]);
+        }
+
+        // Step 1 — Tableau → Foundation
+        for (int p = 0; p < 7; p++)
+        {
+            var pile = g.Tableau[p];
+            if (pile.FaceUp.Count == 0) continue;
+            var card = pile.FaceUp[^1];
+            if (CanGoToFoundation(card, g.Foundation))
+            {
+                var suit = Suit(card);
+                return new HintDto
+                {
+                    HintAvailable = true,
+                    HintType = "TableauToFoundation",
+                    Description = $"Move {CardLabel(card)} from column {p + 1} to the {(suit == 0 ? "Spades" : suit == 1 ? "Hearts" : suit == 2 ? "Diamonds" : "Clubs")} foundation.",
+                    Source = new HintSourceDto { Type = "tableau", PileIdx = p, FaceUpIdx = pile.FaceUp.Count - 1, CardId = card },
+                    Dest = new HintDestDto { Type = "foundation", PileIdx = suit }
+                };
+            }
+        }
+
+        // Step 2 — Waste → Foundation
+        if (g.Waste.Count > 0)
+        {
+            var card = g.Waste[^1];
+            if (CanGoToFoundation(card, g.Foundation))
+            {
+                var suit = Suit(card);
+                return new HintDto
+                {
+                    HintAvailable = true,
+                    HintType = "WasteToFoundation",
+                    Description = $"Move {CardLabel(card)} from the waste to the {(suit == 0 ? "Spades" : suit == 1 ? "Hearts" : suit == 2 ? "Diamonds" : "Clubs")} foundation.",
+                    Source = new HintSourceDto { Type = "waste", CardId = card },
+                    Dest = new HintDestDto { Type = "foundation", PileIdx = suit }
+                };
+            }
+        }
+
+        // Step 3 — Tableau → Tableau
+        for (int from = 0; from < 7; from++)
+        {
+            var fromPile = g.Tableau[from];
+            for (int fup = 0; fup < fromPile.FaceUp.Count; fup++)
+            {
+                var card = fromPile.FaceUp[fup];
+                for (int to = 0; to < 7; to++)
+                {
+                    if (from == to) continue;
+                    if (CanGoToTableau(card, g.Tableau[to]))
+                    {
+                        return new HintDto
+                        {
+                            HintAvailable = true,
+                            HintType = "TableauToTableau",
+                            Description = $"Move {CardLabel(card)} from column {from + 1} onto {DestTopLabel(g.Tableau[to])} in column {to + 1}.",
+                            Source = new HintSourceDto { Type = "tableau", PileIdx = from, FaceUpIdx = fup, CardId = card },
+                            Dest = new HintDestDto { Type = "tableau", PileIdx = to }
+                        };
+                    }
+                }
+            }
+        }
+
+        // Step 4 — Waste → Tableau
+        if (g.Waste.Count > 0)
+        {
+            var card = g.Waste[^1];
+            for (int to = 0; to < 7; to++)
+            {
+                if (CanGoToTableau(card, g.Tableau[to]))
+                {
+                    return new HintDto
+                    {
+                        HintAvailable = true,
+                        HintType = "WasteToTableau",
+                        Description = $"Move {CardLabel(card)} from the waste onto {DestTopLabel(g.Tableau[to])} in column {to + 1}.",
+                        Source = new HintSourceDto { Type = "waste", CardId = card },
+                        Dest = new HintDestDto { Type = "tableau", PileIdx = to }
+                    };
+                }
+            }
+        }
+
+        // Step 5 — Stock → Waste
+        if (g.Stock.Count > 0)
+        {
+            return new HintDto
+            {
+                HintAvailable = true,
+                HintType = "StockToWaste",
+                Description = $"Draw from the stock pile ({g.Stock.Count} card{(g.Stock.Count > 1 ? "s" : "")} remaining).",
+                Source = new HintSourceDto { Type = "stock" },
+                Dest = null
+            };
+        }
+
+        // Step 6 — Auto-flip
+        for (int p = 0; p < 7; p++)
+        {
+            var pile = g.Tableau[p];
+            if (pile.FaceUp.Count == 0 && pile.FaceDown.Count > 0)
+            {
+                return new HintDto
+                {
+                    HintAvailable = true,
+                    HintType = "AutoFlip",
+                    Description = $"Flip the top face-down card in column {p + 1}.",
+                    Source = new HintSourceDto { Type = "facedown", PileIdx = p },
+                    Dest = null
+                };
+            }
+        }
+
+        // Step 7 — No moves
+        return new HintDto { HintAvailable = false, Description = "No legal moves remain." };
     }
 }

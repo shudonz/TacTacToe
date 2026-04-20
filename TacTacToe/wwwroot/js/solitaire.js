@@ -6,8 +6,9 @@ const roomId = sessionStorage.getItem("solitaireRoomId");
 const isSinglePlayer = sessionStorage.getItem("isSinglePlayer") === "1";
 
 // Card helpers
-const RANKS  = ['A','2','3','4','5','6','7','8','9','10','J','Q','K'];
-const SUITS  = ['\u2660','\u2665','\u2666','\u2663']; // ♠♥♦♣
+const RANKS      = ['A','2','3','4','5','6','7','8','9','10','J','Q','K'];
+const SUITS      = ['\u2660','\u2665','\u2666','\u2663']; // ♠♥♦♣
+const SUIT_NAMES = ['Spades \u2660','Hearts \u2665','Diamonds \u2666','Clubs \u2663'];
 const SUIT_CLASS = ['spades','hearts','diamonds','clubs'];
 function cRank(c)  { return c % 13; }
 function cSuit(c)  { return Math.floor(c / 13); }
@@ -37,6 +38,10 @@ let gameFinished = false;
 // Drag state
 let drag = null;            // active drag info (see onPointerDown)
 let _suppressNextClick = false; // set after a successful drag to block the subsequent click event
+
+// Hint state
+let currentHint  = null;   // the last computed hint object
+let hintTimeout  = null;   // auto-dismiss timer
 
 function esc(s) { const d = document.createElement("div"); d.textContent = s; return d.innerHTML; }
 
@@ -257,6 +262,9 @@ function renderBoard(game) {
     // ── Auto-complete bar ─────────────────────────────────────
     const canAC = game.tableau.every(p => p.faceDown.length === 0) && game.stock.length === 0;
     document.getElementById("autoCompleteBar").style.display = canAC && !gameFinished ? "flex" : "none";
+
+    // Re-apply hint highlights (DOM was just rebuilt)
+    applyHintHighlights();
 }
 
 function renderLeaderboard(room) {
@@ -334,9 +342,217 @@ function validateAndSend(moveType, cardId, toPile) {
     if (!myGame || gameFinished) return;
     _resumeAudio();
     soundCardPlace();
+    clearHint(); // dismiss active hint whenever the player makes a move
     selected = null;
     connection.invoke("MakeSolitaireMove", roomId, moveType, cardId, toPile)
         .catch(err => { console.error("Move failed:", err); renderBoard(myGame); });
+}
+
+/* ============================================================
+   Hint System  (pure client-side, deterministic — spec §4)
+   ============================================================ */
+
+function cardLabel(cardId) {
+    return cRankStr(cardId) + cSuitStr(cardId);
+}
+
+function destTopLabel(pile) {
+    if (!pile.faceUp.length) return "the empty column";
+    return cardLabel(pile.faceUp[pile.faceUp.length - 1]);
+}
+
+// Compute a hint from the current game state.
+// Follows the spec priority order exactly:
+//   1 Tableau→Foundation  2 Waste→Foundation  3 Tableau→Tableau
+//   4 Waste→Tableau       5 Stock→Waste        6 Auto-flip  7 None
+function computeHint(game) {
+
+    // ── Step 1: Tableau → Foundation ─────────────────────────
+    for (let p = 0; p < 7; p++) {
+        const pile = game.tableau[p];
+        if (!pile.faceUp.length) continue;
+        const card = pile.faceUp[pile.faceUp.length - 1];
+        if (canGoToFoundation(card, game.foundation)) {
+            const suit = cSuit(card);
+            return {
+                hintAvailable: true,
+                hintType: "TableauToFoundation",
+                description: `Move ${cardLabel(card)} from column ${p + 1} to the ${SUIT_NAMES[suit]} foundation.`,
+                source: { type: "tableau", pileIdx: p, faceUpIdx: pile.faceUp.length - 1, cardId: card },
+                dest:   { type: "foundation", pileIdx: suit },
+            };
+        }
+    }
+
+    // ── Step 2: Waste → Foundation ───────────────────────────
+    if (game.waste.length) {
+        const card = game.waste[game.waste.length - 1];
+        if (canGoToFoundation(card, game.foundation)) {
+            const suit = cSuit(card);
+            return {
+                hintAvailable: true,
+                hintType: "WasteToFoundation",
+                description: `Move ${cardLabel(card)} from the waste to the ${SUIT_NAMES[suit]} foundation.`,
+                source: { type: "waste", cardId: card },
+                dest:   { type: "foundation", pileIdx: suit },
+            };
+        }
+    }
+
+    // ── Step 3: Tableau → Tableau ─────────────────────────────
+    for (let from = 0; from < 7; from++) {
+        const fromPile = game.tableau[from];
+        for (let fup = 0; fup < fromPile.faceUp.length; fup++) {
+            const card = fromPile.faceUp[fup];
+            for (let to = 0; to < 7; to++) {
+                if (from === to) continue;
+                if (canGoToTableau(card, game.tableau[to])) {
+                    return {
+                        hintAvailable: true,
+                        hintType: "TableauToTableau",
+                        description: `Move ${cardLabel(card)} from column ${from + 1} onto ${destTopLabel(game.tableau[to])} in column ${to + 1}.`,
+                        source: { type: "tableau", pileIdx: from, faceUpIdx: fup, cardId: card },
+                        dest:   { type: "tableau", pileIdx: to },
+                    };
+                }
+            }
+        }
+    }
+
+    // ── Step 4: Waste → Tableau ───────────────────────────────
+    if (game.waste.length) {
+        const card = game.waste[game.waste.length - 1];
+        for (let to = 0; to < 7; to++) {
+            if (canGoToTableau(card, game.tableau[to])) {
+                return {
+                    hintAvailable: true,
+                    hintType: "WasteToTableau",
+                    description: `Move ${cardLabel(card)} from the waste onto ${destTopLabel(game.tableau[to])} in column ${to + 1}.`,
+                    source: { type: "waste", cardId: card },
+                    dest:   { type: "tableau", pileIdx: to },
+                };
+            }
+        }
+    }
+
+    // ── Step 5: Stock → Waste ─────────────────────────────────
+    if (game.stock.length) {
+        return {
+            hintAvailable: true,
+            hintType: "StockToWaste",
+            description: `Draw from the stock pile (${game.stock.length} card${game.stock.length > 1 ? "s" : ""} remaining).`,
+            source: { type: "stock" },
+            dest:   null,
+        };
+    }
+
+    // ── Step 6: Auto-flip ─────────────────────────────────────
+    for (let p = 0; p < 7; p++) {
+        const pile = game.tableau[p];
+        if (!pile.faceUp.length && pile.faceDown.length) {
+            return {
+                hintAvailable: true,
+                hintType: "AutoFlip",
+                description: `Flip the top face-down card in column ${p + 1}.`,
+                source: { type: "facedown", pileIdx: p },
+                dest:   null,
+            };
+        }
+    }
+
+    // ── Step 7: No moves ──────────────────────────────────────
+    return { hintAvailable: false, description: "No legal moves remain." };
+}
+
+// Apply amber (source) and green (dest) highlights after a renderBoard call.
+// Safe to call any time — always starts by stripping old highlights.
+function applyHintHighlights() {
+    document.querySelectorAll(".sol-hint-source, .sol-hint-dest")
+        .forEach(el => el.classList.remove("sol-hint-source", "sol-hint-dest"));
+    if (!currentHint?.hintAvailable || !myGame) return;
+
+    const hint = currentHint;
+
+    // ── Source ────────────────────────────────────────────────
+    if (hint.source) {
+        switch (hint.source.type) {
+            case "waste": {
+                document.querySelector("#wasteCard .sol-card")?.classList.add("sol-hint-source");
+                break;
+            }
+            case "stock": {
+                // Highlight the visible back card or the recycle icon
+                document.querySelector("#stockCard .sol-card, #stockCard .sol-stock-empty")
+                    ?.classList.add("sol-hint-source");
+                break;
+            }
+            case "tableau": {
+                const pile  = myGame.tableau[hint.source.pileIdx];
+                const wrap  = document.getElementById("pile-" + hint.source.pileIdx);
+                if (!wrap) break;
+                const nodes = wrap.querySelectorAll(".sol-pile-card");
+                const fdCount = pile.faceDown.length;
+                // Highlight every card from the picked-up index to the top
+                for (let i = hint.source.faceUpIdx; i < pile.faceUp.length; i++) {
+                    nodes[fdCount + i]?.querySelector(".sol-card")
+                        ?.classList.add("sol-hint-source");
+                }
+                break;
+            }
+            case "facedown": {
+                const wrap  = document.getElementById("pile-" + hint.source.pileIdx);
+                const nodes = wrap?.querySelectorAll(".sol-pile-card");
+                if (nodes?.length) nodes[nodes.length - 1].classList.add("sol-hint-source");
+                break;
+            }
+        }
+    }
+
+    // ── Destination ───────────────────────────────────────────
+    if (hint.dest) {
+        switch (hint.dest.type) {
+            case "foundation": {
+                document.getElementById("foundation-" + hint.dest.pileIdx)
+                    ?.classList.add("sol-hint-dest");
+                break;
+            }
+            case "tableau": {
+                const pile = myGame.tableau[hint.dest.pileIdx];
+                const wrap = document.getElementById("pile-" + hint.dest.pileIdx);
+                if (!wrap) break;
+                if (pile.faceUp.length) {
+                    // Highlight the specific top card the stack lands on
+                    const nodes   = wrap.querySelectorAll(".sol-pile-card");
+                    const topNode = nodes[pile.faceDown.length + pile.faceUp.length - 1];
+                    topNode?.querySelector(".sol-card")?.classList.add("sol-hint-dest");
+                } else {
+                    // Empty column: highlight the placeholder slot
+                    (wrap.querySelector(".sol-empty-slot") ?? wrap).classList.add("sol-hint-dest");
+                }
+                break;
+            }
+        }
+    }
+}
+
+function clearHint() {
+    if (hintTimeout) { clearTimeout(hintTimeout); hintTimeout = null; }
+    currentHint = null;
+    document.querySelectorAll(".sol-hint-source, .sol-hint-dest")
+        .forEach(el => el.classList.remove("sol-hint-source", "sol-hint-dest"));
+    const banner = document.getElementById("hintBanner");
+    if (banner) banner.style.display = "none";
+}
+
+function showHint() {
+    if (!myGame || gameFinished) return;
+    _resumeAudio();
+    soundClick();
+
+    // Ask the server for an authoritative hint. Server will respond with
+    // a "SolitaireHint" message and broadcast the updated room (score etc.).
+    clearHint();
+    connection.invoke("RequestSolitaireHint", roomId).catch(err => console.error("Hint request failed:", err));
 }
 
 /* ============================================================
@@ -838,6 +1054,9 @@ async function init() {
         connection.invoke("MakeSolitaireMove", roomId, "auto-complete", -1, -1);
     });
 
+    // Hint
+    document.getElementById("hintBtn").addEventListener("click", showHint);
+
     // Back button
     document.getElementById("backBtn").addEventListener("click", () => {
         _resumeAudio();
@@ -851,6 +1070,22 @@ async function init() {
         // Update timer start if needed
         const me = room.players.find(p => p.name === myName);
         if (me && me.startedAtMs && !timerInterval) startTimer(me.startedAtMs);
+    });
+    // Server-provided hint — apply visuals and show banner
+    connection.on("SolitaireHint", hint => {
+        if (!hint) return;
+        currentHint = hint;
+        const banner = document.getElementById("hintBanner");
+        if (banner) {
+            banner.textContent = hint.description;
+            banner.className = "sol-hint-banner" + (hint.hintAvailable ? "" : " sol-hint-none");
+            banner.style.display = "";
+        }
+        if (hint.hintAvailable) {
+            applyHintHighlights();
+            if (hintTimeout) clearTimeout(hintTimeout);
+            hintTimeout = setTimeout(clearHint, 4000);
+        }
     });
     connection.on("PlayerLeft", name => showToast("&#9888; " + esc(name) + " left the game"));
 
