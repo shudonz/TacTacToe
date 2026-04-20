@@ -86,6 +86,10 @@ app.MapPost("/login", async (HttpContext ctx) =>
     if (user == null)
         return Results.Redirect("/login" + badMsg);
 
+    // Banned users cannot log in
+    if (user.IsBanned)
+        return Results.Redirect("/login?error=banned");
+
     await userRepo.UpdateLastLoginAsync(user.Id);
 
     var claims = new List<Claim>
@@ -260,7 +264,8 @@ app.MapGet("/api/admin/users", async (HttpContext ctx) =>
     var users = await userRepo.GetAllUsersAsync();
     return Results.Ok(users.Select(u => new
     {
-        u.Id, u.Username, u.CreatedAt, u.LastLoginAt, u.IsAdmin
+        u.Id, u.Username, u.CreatedAt, u.LastLoginAt, u.IsAdmin,
+        u.IsBanned, u.BannedAt, u.BanReason
     }));
 });
 
@@ -284,6 +289,18 @@ app.MapDelete("/api/admin/users/{id:int}", async (HttpContext ctx, int id) =>
     if (int.TryParse(ctx.User.FindFirst(ClaimTypes.NameIdentifier)?.Value, out var self) && self == id)
         return Results.BadRequest(new { error = "Cannot delete your own account." });
     await userRepo.DeleteUserAsync(id);
+    return Results.Ok();
+});
+
+// PATCH ban/unban user
+app.MapPatch("/api/admin/users/{id:int}/ban", async (HttpContext ctx, int id) =>
+{
+    if (!IsAdmin(ctx)) return Results.Forbid();
+    if (int.TryParse(ctx.User.FindFirst(ClaimTypes.NameIdentifier)?.Value, out var selfBan) && selfBan == id)
+        return Results.BadRequest(new { error = "Cannot ban yourself." });
+    var banBody = await ctx.Request.ReadFromJsonAsync<BanUserDto>();
+    if (banBody == null) return Results.BadRequest();
+    await userRepo.BanUserAsync(id, banBody.IsBanned, banBody.Reason);
     return Results.Ok();
 });
 
@@ -330,6 +347,14 @@ app.MapDelete("/api/admin/users/{id:int}/sessions/{gameType}", async (HttpContex
     return Results.Ok();
 });
 
+// GET platform stats
+app.MapGet("/api/admin/stats", async (HttpContext ctx) =>
+{
+    if (!IsAdmin(ctx)) return Results.Forbid();
+    var stats = await sessionRepo.GetPlatformStatsAsync();
+    return Results.Ok(stats);
+});
+
 app.MapGet("/api/me/history", async (HttpContext ctx, string? game, int limit = 50) =>
 {
     if (ctx.User.Identity?.IsAuthenticated != true)
@@ -368,3 +393,4 @@ app.Run();
 
 record AdminFlagDto(bool IsAdmin);
 record ResetPasswordDto(string Password);
+record BanUserDto(bool IsBanned, string? Reason);

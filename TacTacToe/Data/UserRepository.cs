@@ -82,7 +82,9 @@ public class UserRepository
     {
         using var c = Open();
         return await c.QueryAsync<User>(
-            "SELECT Id, Username, CreatedAt, LastLoginAt, IsAdmin FROM Users ORDER BY Username COLLATE NOCASE");
+            @"SELECT Id, Username, CreatedAt, LastLoginAt, IsAdmin,
+                     IsBanned, BannedAt, BanReason
+              FROM Users ORDER BY Username COLLATE NOCASE");
     }
 
     public async Task<bool> SetAdminAsync(int userId, bool isAdmin)
@@ -91,6 +93,21 @@ public class UserRepository
         var rows = await c.ExecuteAsync(
             "UPDATE Users SET IsAdmin = @a WHERE Id = @id",
             new { a = isAdmin ? 1 : 0, id = userId });
+        return rows > 0;
+    }
+
+    public async Task<bool> BanUserAsync(int userId, bool isBanned, string? reason)
+    {
+        using var c = Open();
+        var rows = await c.ExecuteAsync(
+            @"UPDATE Users SET IsBanned = @b, BannedAt = @t, BanReason = @r WHERE Id = @id",
+            new
+            {
+                b  = isBanned ? 1 : 0,
+                t  = isBanned ? DateTime.UtcNow.ToString("o") : (string?)null,
+                r  = isBanned ? reason : null,
+                id = userId
+            });
         return rows > 0;
     }
 

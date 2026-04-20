@@ -8,4 +8,7 @@ public class User
     public string CreatedAt { get; set; } = "";
     public string? LastLoginAt { get; set; }
     public bool IsAdmin { get; set; }
+    public bool IsBanned { get; set; }
+    public string? BannedAt { get; set; }
+    public string? BanReason { get; set; }
 }

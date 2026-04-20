@@ -117,4 +117,58 @@ public class GameSessionRepository
             "DELETE FROM GameSessions WHERE UserId = @uid AND GameType = @gt",
             new { uid = userId, gt = gameType });
     }
+
+    public async Task<object> GetPlatformStatsAsync()
+    {
+        using var c = Open();
+
+        var summary = await c.QueryFirstAsync(
+            @"SELECT
+                (SELECT COUNT(*) FROM Users)                                                           AS totalUsers,
+                (SELECT COUNT(*) FROM Users WHERE IsBanned = 1)                                        AS bannedUsers,
+                (SELECT COUNT(*) FROM Users WHERE CreatedAt >= datetime('now', '-7 days'))              AS newUsersLast7Days,
+                (SELECT COUNT(DISTINCT UserId) FROM GameSessions
+                    WHERE PlayedAt >= datetime('now', '-7 days'))                                       AS activeUsersLast7Days,
+                COALESCE((SELECT COUNT(*) FROM GameSessions), 0)                                       AS totalSessions,
+                COALESCE((SELECT SUM(TimePlayed) FROM GameSessions), 0)                                AS totalTimeSecs,
+                COALESCE((SELECT ROUND(AVG(TimePlayed),1) FROM GameSessions WHERE TimePlayed > 0), 0)  AS avgSessionSecs");
+
+        var gameBreakdown = (await c.QueryAsync(
+            @"SELECT
+                GameType                                                  AS gameType,
+                COUNT(*)                                                  AS count,
+                SUM(CASE WHEN Result = 'Win'  THEN 1 ELSE 0 END)         AS wins,
+                SUM(CASE WHEN Result = 'Loss' THEN 1 ELSE 0 END)         AS losses,
+                SUM(CASE WHEN Result = 'Draw' THEN 1 ELSE 0 END)         AS draws,
+                ROUND(AVG(Score), 1)                                      AS avgScore,
+                SUM(TimePlayed)                                           AS totalTimeSecs,
+                ROUND(AVG(NULLIF(TimePlayed, 0)), 0)                      AS avgTimeSecs
+              FROM GameSessions
+              GROUP BY GameType
+              ORDER BY count DESC")).ToList();
+
+        var topPlayers = (await c.QueryAsync(
+            @"SELECT
+                u.Username                                                                   AS username,
+                COUNT(gs.Id)                                                                 AS gamesPlayed,
+                SUM(CASE WHEN gs.Result = 'Win' THEN 1 ELSE 0 END)                          AS wins,
+                ROUND(100.0 * SUM(CASE WHEN gs.Result='Win' THEN 1 ELSE 0 END)
+                            / COUNT(gs.Id), 1)                                               AS winRate,
+                SUM(gs.Score)                                                                AS totalScore,
+                SUM(gs.TimePlayed)                                                           AS totalTimeSecs
+              FROM GameSessions gs
+              JOIN Users u ON u.Id = gs.UserId
+              GROUP BY gs.UserId
+              ORDER BY gamesPlayed DESC
+              LIMIT 10")).ToList();
+
+        var dailyActivity = (await c.QueryAsync(
+            @"SELECT date(PlayedAt) AS date, COUNT(*) AS count
+              FROM GameSessions
+              WHERE PlayedAt >= datetime('now', '-14 days')
+              GROUP BY date(PlayedAt)
+              ORDER BY date(PlayedAt)")).ToList();
+
+        return new { summary, gameBreakdown, topPlayers, dailyActivity };
+    }
 }

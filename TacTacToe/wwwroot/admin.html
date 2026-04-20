@@ -30,17 +30,39 @@
 
             <!-- ── Tab bar ── -->
             <div class="admin-tabs">
-                <button class="admin-tab active" data-tab="users">&#128101; Users</button>
+                <button class="admin-tab active" data-tab="stats">&#128202; Overview</button>
+                <button class="admin-tab" data-tab="users">&#128101; Users</button>
                 <button class="admin-tab" data-tab="sessions">&#127922; All Scores</button>
             </div>
 
             <!-- ══════════════════════════════════════════════
+                 OVERVIEW / STATS TAB
+            ════════════════════════════════════════════════ -->
+            <section id="tab-stats" class="admin-panel">
+                <div class="admin-panel-header">
+                    <h2 class="admin-section-title">Platform Overview</h2>
+                    <button id="statsRefresh" class="admin-btn">&#8635; Refresh</button>
+                </div>
+                <div id="statsContent">
+                    <p class="admin-loading">Loading&#8230;</p>
+                </div>
+            </section>
+
+            <!-- ══════════════════════════════════════════════
                  USERS TAB
             ════════════════════════════════════════════════ -->
-            <section id="tab-users" class="admin-panel">
+            <section id="tab-users" class="admin-panel" style="display:none">
                 <div class="admin-panel-header">
                     <h2 class="admin-section-title">Manage Users</h2>
-                    <input id="userSearch" class="admin-search" type="search" placeholder="&#128269; Search by name&#8230;" />
+                    <div class="admin-filter-row">
+                        <input id="userSearch" class="admin-search" type="search" placeholder="&#128269; Search by name&#8230;" />
+                        <select id="userStatusFilter" class="admin-select">
+                            <option value="">All Users</option>
+                            <option value="banned">Banned</option>
+                            <option value="admin">Admins</option>
+                            <option value="active">Active (7d)</option>
+                        </select>
+                    </div>
                 </div>
                 <div class="admin-table-wrap" id="usersTableWrap">
                     <p class="admin-loading">Loading&#8230;</p>
@@ -95,6 +117,23 @@
                 <button id="pwCancel" class="btn btn-outline">Cancel</button>
             </div>
             <p id="pwError" class="login-error" style="display:none;margin-top:0.5rem"></p>
+        </div>
+    </div>
+
+    <!-- ── Ban modal ── -->
+    <div id="banModal" class="admin-modal-backdrop" style="display:none">
+        <div class="admin-modal">
+            <h3 class="admin-modal-title">&#128683; Ban User</h3>
+            <p id="banModalUser" class="admin-modal-sub"></p>
+            <p style="font-size:0.8rem;color:var(--text-dim);margin:0 0 0.6rem">
+                Banned users cannot log in. This takes effect on their next login attempt.
+            </p>
+            <input id="banReasonInput" type="text" class="guest-input"
+                   placeholder="Reason (optional)" maxlength="200" autocomplete="off" />
+            <div class="admin-modal-actions" style="margin-top:0.75rem">
+                <button id="banConfirm" class="btn btn-danger">Ban User</button>
+                <button id="banCancel"  class="btn btn-outline">Cancel</button>
+            </div>
         </div>
     </div>
 
