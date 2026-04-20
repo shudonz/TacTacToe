@@ -2084,15 +2084,13 @@ public class GameHub : Hub
         if (room == null || room.Started) return;
         if (Context.ConnectionId != room.HostConnectionId) return;
         if (room.Players.Count < 2) return;
-        int seed = Random.Shared.Next();
+        int seed = SolitaireEngine.GetWinnableSeed();
         room.DeckSeed = seed;
         room.Started = true;
         long now = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
         foreach (var p in room.Players)
         {
-            p.Game = SolitaireEngine.Deal(seed);
-            p.StartedAtMs = now;
-            p.HintsUsed = 0;
+            ResetSolitairePlayerForNewGame(p, seed, now);
         }
         await Clients.Group(roomId).SendAsync("SolitaireGameStarted", room);
         await BroadcastSolitaireRooms();
@@ -2102,7 +2100,7 @@ public class GameHub : Hub
     {
         var name = Context.User?.FindFirst(ClaimTypes.Name)?.Value ?? "Unknown";
         var roomId = Guid.NewGuid().ToString("N");
-        int seed = Random.Shared.Next();
+        int seed = SolitaireEngine.GetWinnableSeed();
         long now = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
         var room = new SolitaireRoom
         {
@@ -2119,7 +2117,8 @@ public class GameHub : Hub
                 Connected = true,
                 Game = SolitaireEngine.Deal(seed),
                 StartedAtMs = now,
-                HintsUsed = 0
+                HintsUsed = 0,
+                GaveUp = false
             }]
         };
         room.Settings.RoomName = "Solitaire";
@@ -2247,6 +2246,30 @@ public class GameHub : Hub
         await Clients.Group(roomId).SendAsync("SolitaireUpdated", room);
     }
 
+    public async Task GiveUpSolitaire(string roomId)
+    {
+        var room = _lobby.GetSolitaireRoom(roomId);
+        if (room == null || !room.Started || room.IsOver) return;
+        var player = room.Players.FirstOrDefault(p => p.ConnectionId == Context.ConnectionId && !p.IsBot);
+        if (player == null || player.HasFinished) return;
+
+        player.HasFinished = true;
+        player.GaveUp = true;
+        room.FinishCount++;
+        player.FinishRank = room.FinishCount;
+        player.FinishedAtMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+        player.Score = SolitaireEngine.ScoreFor(player);
+        _ = SaveSolitairePlayerSessionAsync(room, player);
+
+        if (room.IsSinglePlayer)
+            room.IsOver = true;
+
+        await Clients.Group(roomId).SendAsync("SolitaireUpdated", room);
+
+        if (!room.IsSinglePlayer)
+            CheckSolitaireOver(room);
+    }
+
     private static bool HandleTableauToFoundation(SolitaireGameState g, int cardId)
     {
         var (pile, _) = SolitaireEngine.FindInTableau(g, cardId);
@@ -2267,6 +2290,18 @@ public class GameHub : Hub
         bool any = false;
         while (SolitaireEngine.AutoCompleteStep(g)) any = true;
         return any;
+    }
+
+    private static void ResetSolitairePlayerForNewGame(SolitairePlayer player, int seed, long startedAtMs)
+    {
+        player.Game = SolitaireEngine.Deal(seed);
+        player.StartedAtMs = startedAtMs;
+        player.FinishedAtMs = 0;
+        player.HintsUsed = 0;
+        player.GaveUp = false;
+        player.HasFinished = false;
+        player.FinishRank = 0;
+        player.Score = 0;
     }
 
     private void CheckSolitaireOver(SolitaireRoom room)
@@ -2425,14 +2460,15 @@ public class GameHub : Hub
             var uid = await _users.GetIdByUsernameAsync(player.Name);
             if (!uid.HasValue) return;
             int elapsed = (int)((player.FinishedAtMs - player.StartedAtMs) / 1000);
-            var result = room.IsSinglePlayer ? "Completed"
+            var result = player.GaveUp ? "GiveUp"
+                       : room.IsSinglePlayer ? "Completed"
                        : player.FinishRank == 1 ? "Win" : "Loss";
             await _sessions.SaveAsync(new GameSession
             {
                 UserId = uid.Value, GameType = "Solitaire",
                 Score = player.Score, Result = result,
                 TimePlayed = elapsed, PlayedAt = DateTime.UtcNow.ToString("o"),
-                Details = $"Rank:{player.FinishRank},Hints:{player.HintsUsed}"
+                Details = $"Rank:{player.FinishRank},Hints:{player.HintsUsed},GaveUp:{(player.GaveUp ? 1 : 0)}"
             });
         }
         catch { }

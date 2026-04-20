@@ -39,6 +39,7 @@ public class SolitairePlayer
     public long FinishedAtMs { get; set; }
     // Number of hints the player has used in this game. Each hint deducts a penalty from final score.
     public int HintsUsed { get; set; }
+    public bool GaveUp { get; set; }
 }
 
 public class SolitaireGameState
@@ -76,9 +77,33 @@ public class SolitairePile
    ================================================================ */
 public static class SolitaireEngine
 {
+    private const int SolverMaxNodes = 22000;
+    private const int SolverMaxDepth = 220;
+    // Typical serialized state is a few hundred chars; 512 avoids most reallocations.
+    private const int SerializedStateCapacity = 512;
+
     public static int Rank(int card) => card % 13;
     public static int Suit(int card) => card / 13;
     public static bool IsRed(int card) { var s = card / 13; return s is 1 or 2; }
+
+    public static int GetWinnableSeed(int randomAttempts = 48, int maxSearchMilliseconds = 1500)
+    {
+        var sw = System.Diagnostics.Stopwatch.StartNew();
+
+        for (int i = 0; i < randomAttempts; i++)
+        {
+            var seed = Random.Shared.Next();
+            if (IsLikelyWinnable(Deal(seed))) return seed;
+            if (sw.ElapsedMilliseconds >= maxSearchMilliseconds) break;
+        }
+
+        // Deterministic fallback with time budget to avoid long startup delays.
+        for (int seed = 0; seed <= 10000 && sw.ElapsedMilliseconds < maxSearchMilliseconds; seed++)
+            if (IsLikelyWinnable(Deal(seed))) return seed;
+
+        // Emergency fallback
+        return Random.Shared.Next();
+    }
 
     public static SolitaireGameState Deal(int seed)
     {
@@ -236,7 +261,7 @@ public static class SolitaireEngine
     {
         var g = p.Game;
         int score = g.CardsOnFoundation * 10;
-        if (!p.HasFinished) return score;
+        if (!p.HasFinished || p.GaveUp) return score;
         score += 500; // completion bonus
         int secs = (int)((p.FinishedAtMs - p.StartedAtMs) / 1000L);
         score += Math.Max(0, 1000 - secs * 2); // time bonus
@@ -339,6 +364,9 @@ public static class SolitaireEngine
                     if (from == to) continue;
                     if (CanGoToTableau(card, g.Tableau[to]))
                     {
+                        if (!IsStrategicTableauMove(g, from, fup, to))
+                            continue;
+
                         return new HintDto
                         {
                             HintAvailable = true,
@@ -385,6 +413,19 @@ public static class SolitaireEngine
             };
         }
 
+        // Step 5b — Recycle Waste → Stock
+        if (g.Waste.Count > 0)
+        {
+            return new HintDto
+            {
+                HintAvailable = true,
+                HintType = "RecycleWaste",
+                Description = $"Recycle the waste back into stock ({g.Waste.Count} card{(g.Waste.Count > 1 ? "s" : "")}).",
+                Source = new HintSourceDto { Type = "stock" },
+                Dest = null
+            };
+        }
+
         // Step 6 — Auto-flip
         for (int p = 0; p < 7; p++)
         {
@@ -404,5 +445,145 @@ public static class SolitaireEngine
 
         // Step 7 — No moves
         return new HintDto { HintAvailable = false, Description = "No legal moves remain." };
+    }
+
+    private static bool IsStrategicTableauMove(SolitaireGameState g, int from, int faceUpIdx, int to)
+    {
+        if (from < 0 || from >= 7 || to < 0 || to >= 7 || from == to) return false;
+        var fromPile = g.Tableau[from];
+        var toPile = g.Tableau[to];
+        if (faceUpIdx < 0 || faceUpIdx >= fromPile.FaceUp.Count) return false;
+
+        var movingCard = fromPile.FaceUp[faceUpIdx];
+        if (!CanGoToTableau(movingCard, toPile)) return false;
+
+        // Strong signal of progress: reveals a hidden card.
+        if (faceUpIdx == 0 && fromPile.FaceDown.Count > 0) return true;
+
+        // Useful king move to an empty column if it helps expose hidden cards eventually.
+        bool toEmpty = toPile.FaceUp.Count == 0 && toPile.FaceDown.Count == 0;
+        if (toEmpty && Rank(movingCard) == 12 && fromPile.FaceDown.Count > 0) return true;
+
+        // Keep move only if it increases immediate foundation opportunities.
+        int before = CountImmediateFoundationMoves(g);
+        var sim = CloneGameState(g);
+        if (!TableauToTableau(sim, from, faceUpIdx, to)) return false;
+        int after = CountImmediateFoundationMoves(sim);
+        return after > before;
+    }
+
+    private static int CountImmediateFoundationMoves(SolitaireGameState g)
+    {
+        int count = 0;
+        if (g.Waste.Count > 0 && CanGoToFoundation(g.Waste[^1], g.Foundation)) count++;
+        for (int i = 0; i < 7; i++)
+        {
+            var pile = g.Tableau[i];
+            if (pile.FaceUp.Count > 0 && CanGoToFoundation(pile.FaceUp[^1], g.Foundation)) count++;
+        }
+        return count;
+    }
+
+    private static SolitaireGameState CloneGameState(SolitaireGameState g) => new()
+    {
+        Foundation = [.. g.Foundation],
+        Stock = [.. g.Stock],
+        Waste = [.. g.Waste],
+        StockCycles = g.StockCycles,
+        MoveCount = g.MoveCount,
+        Tableau = g.Tableau.Select(p => new SolitairePile
+        {
+            FaceDown = [.. p.FaceDown],
+            FaceUp = [.. p.FaceUp]
+        }).ToList()
+    };
+
+    private static bool IsLikelyWinnable(SolitaireGameState original)
+    {
+        var start = CloneGameState(original);
+        var stack = new Stack<(SolitaireGameState State, int Depth)>();
+        var seen = new HashSet<string>();
+        stack.Push((start, 0));
+
+        int nodes = 0;
+
+        while (stack.Count > 0 && nodes < SolverMaxNodes)
+        {
+            var (state, depth) = stack.Pop();
+            if (state.IsComplete) return true;
+
+            var key = SerializeState(state);
+            if (!seen.Add(key)) continue;
+            nodes++;
+            if (depth >= SolverMaxDepth) continue;
+
+            var next = EnumerateLikelyProgressMoves(state);
+            for (int i = next.Count - 1; i >= 0; i--)
+                stack.Push((next[i], depth + 1));
+        }
+
+        return false;
+    }
+
+    private static List<SolitaireGameState> EnumerateLikelyProgressMoves(SolitaireGameState g)
+    {
+        var next = new List<SolitaireGameState>(24);
+
+        void TryAdd(Func<SolitaireGameState, bool> apply)
+        {
+            var clone = CloneGameState(g);
+            if (apply(clone))
+                next.Add(clone);
+        }
+
+        // Priority 1: move to foundations whenever possible.
+        TryAdd(WasteToFoundation);
+        for (int from = 0; from < 7; from++)
+        {
+            int pileIdx = from;
+            TryAdd(s => TableauToFoundation(s, pileIdx));
+        }
+
+        // Priority 2: strategic tableau rearrangements.
+        for (int from = 0; from < 7; from++)
+        {
+            var fromPile = g.Tableau[from];
+            for (int fup = 0; fup < fromPile.FaceUp.Count; fup++)
+            {
+                for (int to = 0; to < 7; to++)
+                {
+                    if (!IsStrategicTableauMove(g, from, fup, to)) continue;
+                    int ff = from, fi = fup, tt = to;
+                    TryAdd(s => TableauToTableau(s, ff, fi, tt));
+                }
+            }
+        }
+
+        // Priority 3: waste to tableau.
+        for (int to = 0; to < 7; to++)
+        {
+            int tt = to;
+            TryAdd(s => WasteToTableau(s, tt));
+        }
+
+        // Priority 4: draw/recycle stock.
+        TryAdd(FlipStock);
+
+        return next;
+    }
+
+    private static string SerializeState(SolitaireGameState g)
+    {
+        var sb = new System.Text.StringBuilder(SerializedStateCapacity);
+        sb.AppendJoin(',', g.Foundation).Append('|');
+        sb.AppendJoin(',', g.Stock).Append('|');
+        sb.AppendJoin(',', g.Waste).Append('|');
+        for (int p = 0; p < g.Tableau.Count; p++)
+        {
+            if (p > 0) sb.Append('|');
+            sb.AppendJoin(',', g.Tableau[p].FaceDown).Append('/');
+            sb.AppendJoin(',', g.Tableau[p].FaceUp);
+        }
+        return sb.ToString();
     }
 }
