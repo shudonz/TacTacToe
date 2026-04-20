@@ -12,4 +12,9 @@
     <PackageReference Include="Microsoft.Data.Sqlite" Version="10.0.6" />
   </ItemGroup>
 
+  <ItemGroup>
+    <!-- Pre-create the logs folder so stdout logging works on IIS -->
+    <Content Include="logs\.gitkeep" CopyToPublishDirectory="Always" />
+  </ItemGroup>
+
 </Project>

@@ -9,9 +9,8 @@ var builder = WebApplication.CreateBuilder(args);
 
 // SQLite database path — stored outside wwwroot so it is never served as a static file
 var dbPath = Path.Combine(builder.Environment.ContentRootPath, "App_Data", "tactactoe.db");
-DatabaseInitializer.Initialize(dbPath);
 
-var userRepo = new UserRepository(dbPath);
+var userRepo    = new UserRepository(dbPath);
 var sessionRepo = new GameSessionRepository(dbPath);
 
 builder.Services.AddSingleton(userRepo);
@@ -32,7 +31,28 @@ builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationSc
 
 builder.Services.AddAuthorization();
 
+// Write startup errors to Windows Event Log — visible in Event Viewer on IIS
+try { builder.Logging.AddEventLog(); } catch { /* Event Log source may not be registered on this server */ }
+
 var app = builder.Build();
+
+// Initialise DB after app is built so the logger is available to capture failures
+var startupLogger = app.Services.GetRequiredService<ILogger<Program>>();
+try
+{
+    // Ensure App_Data exists — IIS publish does not create it automatically
+    Directory.CreateDirectory(Path.GetDirectoryName(dbPath)!);
+    DatabaseInitializer.Initialize(dbPath);
+    startupLogger.LogInformation("Database initialised at {Path}", dbPath);
+}
+catch (Exception ex)
+{
+    // Log the failure but do NOT re-throw — the process must bind its port so
+    // ANCM can forward requests and return a proper 500 rather than a 502.5.
+    startupLogger.LogCritical(ex,
+        "Failed to initialise database at {Path}. " +
+        "Ensure the IIS app-pool identity has Modify rights to that folder.", dbPath);
+}
 
 app.UseStaticFiles();
 app.UseAuthentication();
