@@ -34,5 +34,7 @@ document.addEventListener('keydown', function (e) {
             imgEl.style.display = 'inline-block';
             emojiEl.style.display = 'none';
         }
+        const unEl = document.getElementById('navbarUsername');
+        if (unEl) unEl.textContent = me.name;
     } catch (e) { /* not logged in */ }
 })();

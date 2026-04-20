@@ -27,6 +27,7 @@
                     <span id="navbarAvatarEmoji" class="nav-profile-emoji" style="display:none"></span>
                     <img id="navbarAvatarImg" class="nav-profile-img" src="" alt="Profile" style="display:none">
                     <span id="navbarAvatarPlaceholder" class="nav-profile-placeholder">&#128100;</span>
+                    <span id="navbarUsername" class="nav-profile-username"></span>
                 </a>
             </div>
         </nav>
@@ -94,6 +95,19 @@
                 </div>
                 <div class="lb-body" id="sol-lb"></div>
                 <div class="lb-body" id="sol-hist" style="display:none"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Give Up Confirm Dialog -->
+    <div id="giveUpModal" class="modal" style="display:none">
+        <div class="modal-content">
+            <div style="font-size:2.4rem;margin-bottom:0.6rem;">🏳️</div>
+            <h3 style="margin:0 0 0.5rem;font-family:var(--font-display);font-size:1.3rem;">Give Up?</h3>
+            <p style="margin:0 0 1.75rem;color:var(--text-muted);font-size:0.92rem;">This will end your game and be recorded in your stats.</p>
+            <div style="display:flex;gap:0.75rem;justify-content:center;">
+                <button id="giveUpCancel" class="btn btn-outline">Cancel</button>
+                <button id="giveUpConfirm" class="btn" style="background:var(--accent-hard);color:#fff;">Give Up</button>
             </div>
         </div>
     </div>

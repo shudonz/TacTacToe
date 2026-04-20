@@ -2216,6 +2216,7 @@ public class GameHub : Hub
             player.FinishedAtMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
             player.Score = SolitaireEngine.ScoreFor(player);
             _ = SaveSolitairePlayerSessionAsync(room, player);
+            if (room.IsSinglePlayer) room.IsOver = true;
         }
 
         await Clients.Group(roomId).SendAsync("SolitaireUpdated", room);
@@ -2461,8 +2462,7 @@ public class GameHub : Hub
             if (!uid.HasValue) return;
             int elapsed = (int)((player.FinishedAtMs - player.StartedAtMs) / 1000);
             var result = player.GaveUp ? "GiveUp"
-                       : room.IsSinglePlayer ? "Completed"
-                       : player.FinishRank == 1 ? "Win" : "Loss";
+                       : (room.IsSinglePlayer || player.FinishRank == 1) ? "Win" : "Loss";
             await _sessions.SaveAsync(new GameSession
             {
                 UserId = uid.Value, GameType = "Solitaire",

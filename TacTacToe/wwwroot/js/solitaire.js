@@ -1023,10 +1023,14 @@ function giveUpGame() {
     if (!myGame || gameFinished || gaveUp) return;
     _resumeAudio();
     soundClick();
-    const ok = window.confirm("Give up this game? This will be recorded in your stats.");
-    if (!ok) return;
-    clearHint();
-    connection.invoke("GiveUpSolitaire", roomId).catch(err => console.error("Give up failed:", err));
+    const modal = document.getElementById("giveUpModal");
+    modal.style.display = "flex";
+    document.getElementById("giveUpCancel").onclick  = () => { modal.style.display = "none"; };
+    document.getElementById("giveUpConfirm").onclick = () => {
+        modal.style.display = "none";
+        clearHint();
+        connection.invoke("GiveUpSolitaire", roomId).catch(err => console.error("Give up failed:", err));
+    };
 }
 
 /* ============================================================
