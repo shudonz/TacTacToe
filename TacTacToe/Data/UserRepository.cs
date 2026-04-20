@@ -129,4 +129,65 @@ public class UserRepository
             new { h = hash, id = userId });
         return rows > 0;
     }
+
+    public async Task<bool> ChangePasswordAsync(int userId, string oldPlainPassword, string newPlainPassword)
+    {
+        using var c = Open();
+        var user = await c.QueryFirstOrDefaultAsync<User>(
+            "SELECT * FROM Users WHERE Id = @id", new { id = userId });
+        if (user == null) return false;
+        if (!BCrypt.Net.BCrypt.Verify(oldPlainPassword, user.PasswordHash)) return false;
+        var hash = BCrypt.Net.BCrypt.HashPassword(newPlainPassword, workFactor: 12);
+        await c.ExecuteAsync("UPDATE Users SET PasswordHash = @h WHERE Id = @id",
+            new { h = hash, id = userId });
+        return true;
+    }
+
+    public async Task<bool> UpdateAvatarAsync(int userId, string avatar)
+    {
+        using var c = Open();
+        var rows = await c.ExecuteAsync(
+            "UPDATE Users SET Avatar = @a WHERE Id = @id",
+            new { a = avatar, id = userId });
+        return rows > 0;
+    }
+
+    public async Task<bool> UpdateSecurityAnswerAsync(int userId, string answer)
+    {
+        var hashed = BCrypt.Net.BCrypt.HashPassword(answer.Trim().ToLowerInvariant(), workFactor: 10);
+        using var c = Open();
+        var rows = await c.ExecuteAsync(
+            "UPDATE Users SET SecurityAnswer = @a WHERE Id = @id",
+            new { a = hashed, id = userId });
+        return rows > 0;
+    }
+
+    /// <summary>Resets a user's password if their security answer matches.</summary>
+    public async Task<bool> ResetPasswordBySecurityAnswerAsync(string username, string answer, string newPlainPassword)
+    {
+        using var c = Open();
+        var user = await c.QueryFirstOrDefaultAsync<User>(
+            "SELECT * FROM Users WHERE Username = @u COLLATE NOCASE", new { u = username });
+        if (user == null || string.IsNullOrEmpty(user.SecurityAnswer)) return false;
+        if (!BCrypt.Net.BCrypt.Verify(answer.Trim().ToLowerInvariant(), user.SecurityAnswer)) return false;
+        var hash = BCrypt.Net.BCrypt.HashPassword(newPlainPassword, workFactor: 12);
+        await c.ExecuteAsync("UPDATE Users SET PasswordHash = @h WHERE Id = @id",
+            new { h = hash, id = user.Id });
+        return true;
+    }
+
+    public async Task<bool> HasSecurityAnswerAsync(string username)
+    {
+        using var c = Open();
+        var answer = await c.ExecuteScalarAsync<string?>(
+            "SELECT SecurityAnswer FROM Users WHERE Username = @u COLLATE NOCASE", new { u = username });
+        return !string.IsNullOrEmpty(answer);
+    }
+
+    public async Task<string?> GetAvatarAsync(int userId)
+    {
+        using var c = Open();
+        return await c.ExecuteScalarAsync<string?>(
+            "SELECT Avatar FROM Users WHERE Id = @id", new { id = userId });
+    }
 }

@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TacTacToe &#8211; Profile</title>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="/css/style.css" rel="stylesheet">
+</head>
+<body>
+    <div class="ambient"></div>
+    <div class="noise"></div>
+    <div class="page-content">
+
+        <nav class="navbar">
+            <div class="logo-sm"><span class="logo-x">Tac</span><span class="logo-o">Tac</span><span class="logo-x">Toe</span></div>
+            <div class="nav-user">
+                <span id="navAvatarEmoji" class="nav-avatar-emoji" style="display:none"></span>
+                <img id="navAvatarImg" class="avatar" src="" alt="" style="display:none">
+                <span id="navUsername"></span>
+                <a href="/lobby" class="btn-logout" style="text-decoration:none">&#8592; Lobby</a>
+                <form method="post" action="/logout" style="display:inline"><button type="submit" class="btn-logout">Logout</button></form>
+            </div>
+        </nav>
+
+        <main class="profile-layout">
+
+            <!-- ── Avatar Section ── -->
+            <section class="profile-card">
+                <h2 class="profile-section-title">&#127806; Choose Your Avatar</h2>
+                <p class="profile-hint">Pick an emoji to represent you in the lobby and games.</p>
+                <div class="avatar-current">
+                    <span id="currentAvatarDisplay" class="avatar-current-emoji">&#127774;</span>
+                </div>
+                <div class="avatar-grid" id="avatarGrid"></div>
+                <button class="profile-btn" id="saveAvatarBtn" onclick="saveAvatar()">Save Avatar</button>
+                <div id="avatarMsg" class="profile-msg" style="display:none"></div>
+            </section>
+
+            <!-- ── Change Password Section ── -->
+            <section class="profile-card">
+                <h2 class="profile-section-title">&#128274; Change Password</h2>
+                <div id="pwError" class="login-error" style="display:none"></div>
+                <div id="pwSuccess" class="login-success" style="display:none">Password changed successfully!</div>
+                <div class="guest-form profile-form">
+                    <input type="password" id="oldPw" placeholder="Current password" maxlength="128" class="guest-input" autocomplete="current-password" />
+                    <input type="password" id="newPw" placeholder="New password (8+ characters)" minlength="8" maxlength="128" class="guest-input" autocomplete="new-password" />
+                    <input type="password" id="confirmPw" placeholder="Confirm new password" maxlength="128" class="guest-input" autocomplete="new-password" />
+                    <button type="button" class="profile-btn" onclick="changePassword()">Update Password</button>
+                </div>
+            </section>
+
+            <!-- ── Recovery Answer Section ── -->
+            <section class="profile-card">
+                <h2 class="profile-section-title">&#128273; Recovery Answer</h2>
+                <p class="profile-hint">Set a secret answer used to recover your account if you forget your password. Keep it simple and memorable — only you know the question!</p>
+                <div id="answerError" class="login-error" style="display:none"></div>
+                <div id="answerSuccess" class="login-success" style="display:none">Recovery answer saved!</div>
+                <div class="guest-form profile-form">
+                    <input type="text" id="secAnswer" placeholder="Your secret answer" maxlength="100" class="guest-input" />
+                    <button type="button" class="profile-btn" onclick="saveSecurityAnswer()">Save Answer</button>
+                </div>
+                <p id="answerSetBadge" class="profile-badge-set" style="display:none">&#10003; Recovery answer is set</p>
+                <p id="answerNotSetBadge" class="profile-badge-notset" style="display:none">&#9888; No recovery answer set — you cannot use Forgot Password</p>
+            </section>
+
+        </main>
+    </div>
+
+    <script>
+        const AVATARS = [
+            "🦊","🐺","🦁","🐯","🐻","🐼","🐸","🦋","🐙","🦈",
+            "🐲","🦄","🦅","🦉","🦜","🦊","🐳","🦖","🦕","🤖",
+            "👾","🎮","🎲","🏆","⚡","🔥","🌊","🌙","⭐","💎",
+            "🍀","🎭","🧊","🎪","🚀","🌈","🎯","🎸","🎺","🎻"
+        ];
+
+        let selectedAvatar = null;
+        let currentAvatar  = null;
+
+        async function init() {
+            const res = await fetch("/api/me");
+            if (res.status === 401) { location.href = "/login"; return; }
+            const me = await res.json();
+
+            document.getElementById("navUsername").textContent = me.name;
+            if (me.avatar) {
+                document.getElementById("navAvatarEmoji").textContent = me.avatar;
+                document.getElementById("navAvatarEmoji").style.display = "inline-flex";
+                document.getElementById("currentAvatarDisplay").textContent = me.avatar;
+                currentAvatar = me.avatar;
+                selectedAvatar = me.avatar;
+            } else {
+                document.getElementById("navAvatarImg").src = "https://ui-avatars.com/api/?name=" + encodeURIComponent(me.name) + "&background=12919E&color=fff";
+                document.getElementById("navAvatarImg").style.display = "inline-block";
+                document.getElementById("currentAvatarDisplay").textContent = "❓";
+            }
+
+            // Build avatar grid
+            const grid = document.getElementById("avatarGrid");
+            AVATARS.forEach(emoji => {
+                const btn = document.createElement("button");
+                btn.className = "avatar-option" + (emoji === currentAvatar ? " selected" : "");
+                btn.textContent = emoji;
+                btn.title = emoji;
+                btn.addEventListener("click", () => {
+                    document.querySelectorAll(".avatar-option").forEach(b => b.classList.remove("selected"));
+                    btn.classList.add("selected");
+                    selectedAvatar = emoji;
+                    document.getElementById("currentAvatarDisplay").textContent = emoji;
+                });
+                grid.appendChild(btn);
+            });
+
+            // Check if security answer is set
+            checkAnswerStatus(me.name);
+        }
+
+        async function checkAnswerStatus(username) {
+            const res = await fetch("/api/forgot-password/check?username=" + encodeURIComponent(username));
+            const data = await res.json();
+            document.getElementById("answerSetBadge").style.display    = data.hasAnswer ? "block" : "none";
+            document.getElementById("answerNotSetBadge").style.display = data.hasAnswer ? "none"  : "block";
+        }
+
+        async function saveAvatar() {
+            if (!selectedAvatar) return;
+            const btn = document.getElementById("saveAvatarBtn");
+            btn.disabled = true;
+            const res = await fetch("/api/me/avatar", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ avatar: selectedAvatar })
+            });
+            btn.disabled = false;
+            const msgEl = document.getElementById("avatarMsg");
+            if (res.ok) {
+                currentAvatar = selectedAvatar;
+                document.getElementById("navAvatarEmoji").textContent = selectedAvatar;
+                document.getElementById("navAvatarEmoji").style.display = "inline-flex";
+                document.getElementById("navAvatarImg").style.display = "none";
+                showMsg(msgEl, "Avatar saved! ✓", false);
+            } else {
+                showMsg(msgEl, "Failed to save avatar.", true);
+            }
+        }
+
+        async function changePassword() {
+            const oldPw = document.getElementById("oldPw").value;
+            const newPw = document.getElementById("newPw").value;
+            const conf  = document.getElementById("confirmPw").value;
+            const errEl = document.getElementById("pwError");
+            const sucEl = document.getElementById("pwSuccess");
+            errEl.style.display = "none";
+            sucEl.style.display = "none";
+            if (!oldPw || !newPw || !conf) { showError(errEl, "All fields are required."); return; }
+            if (newPw !== conf)             { showError(errEl, "New passwords do not match."); return; }
+            if (newPw.length < 8)           { showError(errEl, "New password must be at least 8 characters."); return; }
+            const res = await fetch("/api/me/password", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ oldPassword: oldPw, newPassword: newPw })
+            });
+            if (res.ok) {
+                sucEl.style.display = "block";
+                document.getElementById("oldPw").value = "";
+                document.getElementById("newPw").value = "";
+                document.getElementById("confirmPw").value = "";
+            } else {
+                const err = await res.json().catch(() => ({}));
+                showError(errEl, err.error || "Failed to change password.");
+            }
+        }
+
+        async function saveSecurityAnswer() {
+            const answer = document.getElementById("secAnswer").value.trim();
+            const errEl  = document.getElementById("answerError");
+            const sucEl  = document.getElementById("answerSuccess");
+            errEl.style.display = "none";
+            sucEl.style.display = "none";
+            if (answer.length < 2) { showError(errEl, "Answer must be at least 2 characters."); return; }
+            const res = await fetch("/api/me/security-answer", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ answer })
+            });
+            if (res.ok) {
+                sucEl.style.display = "block";
+                document.getElementById("secAnswer").value = "";
+                document.getElementById("answerSetBadge").style.display    = "block";
+                document.getElementById("answerNotSetBadge").style.display = "none";
+            } else {
+                const err = await res.json().catch(() => ({}));
+                showError(errEl, err.error || "Failed to save answer.");
+            }
+        }
+
+        function showError(el, msg) { el.textContent = msg; el.style.display = "block"; }
+        function showMsg(el, msg, isError) {
+            el.textContent = msg;
+            el.className = "profile-msg " + (isError ? "profile-msg-error" : "profile-msg-ok");
+            el.style.display = "block";
+            setTimeout(() => { el.style.display = "none"; }, 3000);
+        }
+
+        init();
+    </script>
+</body>
+</html>

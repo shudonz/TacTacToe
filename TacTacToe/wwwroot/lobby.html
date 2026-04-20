@@ -14,8 +14,11 @@
         <nav class="navbar">
             <div class="logo-sm"><span class="logo-x">Tac</span><span class="logo-o">Tac</span><span class="logo-x">Toe</span></div>
             <div class="nav-user">
-                <img id="userAvatar" class="avatar" src="" alt="">
-                <span id="userName"></span>
+                <a href="/profile" class="nav-avatar-link" title="My Profile">
+                    <span id="userAvatarEmoji" class="nav-avatar-emoji" style="display:none"></span>
+                    <img id="userAvatar" class="avatar" src="" alt="" style="display:none">
+                </a>
+                <a href="/profile" id="userName" class="nav-username-link"></a>
                 <a id="adminLink" href="/admin" class="btn-logout" style="display:none;text-decoration:none">&#9881; Admin</a>
                 <form method="post" action="/logout" style="display:inline"><button type="submit" class="btn-logout">Logout</button></form>
             </div>

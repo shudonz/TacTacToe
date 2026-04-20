@@ -7,7 +7,15 @@ async function init() {
     const res = await fetch("/api/me");
     const me = await res.json();
     document.getElementById("userName").textContent = me.name;
-    document.getElementById("userAvatar").src = me.picture || "https://ui-avatars.com/api/?name=" + encodeURIComponent(me.name) + "&background=6c63ff&color=fff";
+    if (me.avatar) {
+        document.getElementById("userAvatarEmoji").textContent = me.avatar;
+        document.getElementById("userAvatarEmoji").style.display = "inline-flex";
+        document.getElementById("userAvatar").style.display = "none";
+    } else {
+        document.getElementById("userAvatar").src = "https://ui-avatars.com/api/?name=" + encodeURIComponent(me.name) + "&background=12919E&color=fff";
+        document.getElementById("userAvatar").style.display = "inline-block";
+        document.getElementById("userAvatarEmoji").style.display = "none";
+    }
     if (me.isAdmin) document.getElementById("adminLink").style.display = "inline-block";
 
     // Game picker

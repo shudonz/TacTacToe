@@ -52,10 +52,12 @@ public static class DatabaseInitializer
         create.ExecuteNonQuery();
 
         // Migrations for databases that pre-date these columns
-        MigrateAddColumn(conn, "Users", "IsAdmin",   "INTEGER NOT NULL DEFAULT 0");
-        MigrateAddColumn(conn, "Users", "IsBanned",  "INTEGER NOT NULL DEFAULT 0");
-        MigrateAddColumn(conn, "Users", "BannedAt",  "TEXT");
-        MigrateAddColumn(conn, "Users", "BanReason", "TEXT");
+        MigrateAddColumn(conn, "Users", "IsAdmin",        "INTEGER NOT NULL DEFAULT 0");
+        MigrateAddColumn(conn, "Users", "IsBanned",       "INTEGER NOT NULL DEFAULT 0");
+        MigrateAddColumn(conn, "Users", "BannedAt",       "TEXT");
+        MigrateAddColumn(conn, "Users", "BanReason",      "TEXT");
+        MigrateAddColumn(conn, "Users", "Avatar",         "TEXT");
+        MigrateAddColumn(conn, "Users", "SecurityAnswer", "TEXT");
 
         // Auto-promote any user whose username is exactly "admin" (case-insensitive)
         using var promote = conn.CreateCommand();

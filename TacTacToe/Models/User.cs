@@ -11,4 +11,6 @@ public class User
     public bool IsBanned { get; set; }
     public string? BannedAt { get; set; }
     public string? BanReason { get; set; }
+    public string? Avatar { get; set; }
+    public string? SecurityAnswer { get; set; }
 }

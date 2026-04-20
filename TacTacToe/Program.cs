@@ -236,14 +236,17 @@ app.MapGet("/solitaire-room", (HttpContext ctx) =>
     return Results.File("solitaire-room.html", "text/html");
 });
 
-app.MapGet("/api/me", (HttpContext ctx) =>
+app.MapGet("/api/me", async (HttpContext ctx) =>
 {
     if (ctx.User.Identity?.IsAuthenticated != true)
         return Results.Unauthorized();
     var name    = ctx.User.FindFirst(ClaimTypes.Name)?.Value ?? "Unknown";
     var userId  = ctx.User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "";
     var isAdmin = ctx.User.FindFirst("IsAdmin")?.Value == "true";
-    return Results.Ok(new { name, userId, isAdmin });
+    string? avatar = null;
+    if (int.TryParse(userId, out var uid))
+        avatar = await userRepo.GetAvatarAsync(uid);
+    return Results.Ok(new { name, userId, isAdmin, avatar });
 });
 
 // ── Admin helpers ─────────────────────────────────────────────────────────────
@@ -381,6 +384,79 @@ app.MapGet("/api/leaderboard/{gameType}", async (string gameType, int top = 10) 
     return Results.Ok(entries);
 });
 
+app.MapGet("/profile", (HttpContext ctx) =>
+{
+    if (ctx.User.Identity?.IsAuthenticated != true)
+        return Results.Redirect("/login");
+    return Results.File("profile.html", "text/html");
+});
+
+// POST change own password (requires current password)
+app.MapPost("/api/me/password", async (HttpContext ctx) =>
+{
+    if (ctx.User.Identity?.IsAuthenticated != true)
+        return Results.Unauthorized();
+    if (!int.TryParse(ctx.User.FindFirst(ClaimTypes.NameIdentifier)?.Value, out var uid))
+        return Results.Unauthorized();
+    var body = await ctx.Request.ReadFromJsonAsync<ChangePasswordDto>();
+    if (body == null || string.IsNullOrEmpty(body.OldPassword) || string.IsNullOrEmpty(body.NewPassword))
+        return Results.BadRequest(new { error = "Missing fields." });
+    if (body.NewPassword.Length < 8 || body.NewPassword.Length > 128)
+        return Results.BadRequest(new { error = "New password must be 8–128 characters." });
+    var ok = await userRepo.ChangePasswordAsync(uid, body.OldPassword, body.NewPassword);
+    return ok ? Results.Ok() : Results.BadRequest(new { error = "Current password is incorrect." });
+});
+
+// POST update own avatar
+app.MapPost("/api/me/avatar", async (HttpContext ctx) =>
+{
+    if (ctx.User.Identity?.IsAuthenticated != true)
+        return Results.Unauthorized();
+    if (!int.TryParse(ctx.User.FindFirst(ClaimTypes.NameIdentifier)?.Value, out var uid))
+        return Results.Unauthorized();
+    var body = await ctx.Request.ReadFromJsonAsync<UpdateAvatarDto>();
+    if (body == null || string.IsNullOrEmpty(body.Avatar))
+        return Results.BadRequest(new { error = "Missing avatar." });
+    await userRepo.UpdateAvatarAsync(uid, body.Avatar);
+    return Results.Ok();
+});
+
+// POST set/update security answer for forgot-password
+app.MapPost("/api/me/security-answer", async (HttpContext ctx) =>
+{
+    if (ctx.User.Identity?.IsAuthenticated != true)
+        return Results.Unauthorized();
+    if (!int.TryParse(ctx.User.FindFirst(ClaimTypes.NameIdentifier)?.Value, out var uid))
+        return Results.Unauthorized();
+    var body = await ctx.Request.ReadFromJsonAsync<SecurityAnswerDto>();
+    if (body == null || string.IsNullOrEmpty(body.Answer) || body.Answer.Trim().Length < 2)
+        return Results.BadRequest(new { error = "Answer must be at least 2 characters." });
+    await userRepo.UpdateSecurityAnswerAsync(uid, body.Answer);
+    return Results.Ok();
+});
+
+// GET check whether a username has a security answer set
+app.MapGet("/api/forgot-password/check", async (string username) =>
+{
+    if (string.IsNullOrWhiteSpace(username)) return Results.BadRequest();
+    var has = await userRepo.HasSecurityAnswerAsync(username);
+    return Results.Ok(new { hasAnswer = has });
+});
+
+// POST reset password via security answer
+app.MapPost("/api/forgot-password", async (HttpContext ctx) =>
+{
+    var body = await ctx.Request.ReadFromJsonAsync<ForgotPasswordDto>();
+    if (body == null || string.IsNullOrEmpty(body.Username) || string.IsNullOrEmpty(body.Answer) || string.IsNullOrEmpty(body.NewPassword))
+        return Results.BadRequest(new { error = "All fields are required." });
+    if (body.NewPassword.Length < 8 || body.NewPassword.Length > 128)
+        return Results.BadRequest(new { error = "New password must be 8–128 characters." });
+    var ok = await userRepo.ResetPasswordBySecurityAnswerAsync(body.Username, body.Answer, body.NewPassword);
+    return ok ? Results.Ok() : Results.BadRequest(new { error = "Username or security answer is incorrect." });
+});
+
+app.MapGet("/forgot-password", () => Results.File("forgot-password.html", "text/html"));
+
 app.MapPost("/logout", async (HttpContext ctx) =>
 {
     await ctx.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
@@ -394,3 +470,7 @@ app.Run();
 record AdminFlagDto(bool IsAdmin);
 record ResetPasswordDto(string Password);
 record BanUserDto(bool IsBanned, string? Reason);
+record ChangePasswordDto(string OldPassword, string NewPassword);
+record UpdateAvatarDto(string Avatar);
+record SecurityAnswerDto(string Answer);
+record ForgotPasswordDto(string Username, string Answer, string NewPassword);

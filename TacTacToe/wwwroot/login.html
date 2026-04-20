@@ -24,6 +24,7 @@
                 <button type="submit" class="guest-btn">Sign In</button>
             </form>
             <p class="login-switch">Don't have an account? <a href="/register" class="login-link">Register</a></p>
+            <p class="login-switch"><a href="/forgot-password" class="login-link">Forgot password?</a></p>
         </div>
     </div>
     <script>
@@ -31,6 +32,11 @@
         const ret = params.get("returnUrl");
         if (ret && ret.startsWith("/")) document.getElementById("returnUrl").value = ret;
         if (params.get("error") === "invalid") document.getElementById("errorMsg").style.display = "block";
+        if (params.get("error") === "banned") {
+            const el = document.getElementById("errorMsg");
+            el.textContent = "Your account has been banned. Please contact an administrator.";
+            el.style.display = "block";
+        }
     </script>
 </body>
 </html>

@@ -3290,6 +3290,184 @@ body {
 .admin-col-actions { display: flex; flex-wrap: wrap; gap: 0.35rem; }
 
 /* Admin tag */
+
+/* ── Profile Page ─────────────────────────────────────────────────────────── */
+.profile-layout {
+    max-width: 680px;
+    margin: 2rem auto;
+    padding: 0 1rem 4rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+
+.profile-card {
+    background: var(--surface-solid);
+    border: 1px solid var(--glass-border);
+    border-radius: var(--radius);
+    padding: 1.75rem 2rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.profile-section-title {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: var(--text);
+    margin: 0;
+}
+
+.profile-hint {
+    font-size: 0.87rem;
+    color: var(--text-dim);
+    line-height: 1.5;
+    margin: 0;
+}
+
+.profile-form {
+    gap: 0.75rem;
+}
+
+.profile-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.6rem 1.4rem;
+    border-radius: var(--radius-sm);
+    border: none;
+    background: linear-gradient(135deg, var(--teal) 0%, #1AACBA 100%);
+    color: #fff;
+    font-size: 0.9rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: opacity var(--transition), transform var(--transition);
+    align-self: flex-start;
+}
+.profile-btn:hover:not(:disabled) { opacity: 0.88; transform: translateY(-1px); }
+.profile-btn:disabled { opacity: 0.45; cursor: not-allowed; }
+
+.profile-msg {
+    font-size: 0.85rem;
+    font-weight: 600;
+    padding: 0.4rem 0.75rem;
+    border-radius: var(--radius-xs);
+}
+.profile-msg-ok    { color: #5de096; background: rgba(93,224,150,0.1); }
+.profile-msg-error { color: var(--accent-hard); background: rgba(122,64,72,0.15); }
+
+.profile-badge-set {
+    font-size: 0.83rem;
+    font-weight: 600;
+    color: #5de096;
+    margin: 0;
+}
+.profile-badge-notset {
+    font-size: 0.83rem;
+    font-weight: 600;
+    color: #e8a838;
+    margin: 0;
+}
+
+/* Avatar picker */
+.avatar-current {
+    display: flex;
+    justify-content: center;
+    padding: 0.5rem 0;
+}
+.avatar-current-emoji {
+    font-size: 4rem;
+    line-height: 1;
+    display: inline-block;
+    filter: drop-shadow(0 0 16px rgba(18,145,158,0.5));
+}
+
+.avatar-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+.avatar-option {
+    width: 3rem;
+    height: 3rem;
+    font-size: 1.6rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(196,231,233,0.05);
+    border: 2px solid transparent;
+    border-radius: var(--radius-xs);
+    cursor: pointer;
+    transition: background var(--transition), border-color var(--transition), transform var(--transition);
+    line-height: 1;
+}
+.avatar-option:hover {
+    background: rgba(18,145,158,0.15);
+    transform: scale(1.1);
+}
+.avatar-option.selected {
+    border-color: var(--accent);
+    background: rgba(18,145,158,0.22);
+    box-shadow: 0 0 0 3px rgba(18,145,158,0.2);
+}
+
+/* Navbar avatar emoji */
+.nav-avatar-emoji {
+    width: 2rem;
+    height: 2rem;
+    font-size: 1.35rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    background: rgba(18,145,158,0.18);
+    border: 2px solid rgba(18,145,158,0.4);
+    flex-shrink: 0;
+}
+.nav-avatar-link {
+    display: inline-flex;
+    align-items: center;
+    text-decoration: none;
+}
+.nav-avatar-link:hover .nav-avatar-emoji,
+.nav-avatar-link:hover .avatar {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(18,145,158,0.2);
+}
+.nav-username-link {
+    color: var(--text);
+    text-decoration: none;
+    font-weight: 600;
+    font-size: 0.9rem;
+}
+.nav-username-link:hover { color: var(--accent2); }
+
+/* Forgot password hint text */
+.forgot-hint {
+    font-size: 0.87rem;
+    color: var(--text-dim);
+    margin-bottom: 0.25rem;
+    line-height: 1.5;
+}
+
+/* Success banner (shared with login-error style) */
+.login-success {
+    background: rgba(93,224,150,0.1);
+    border: 1px solid rgba(93,224,150,0.3);
+    color: #5de096;
+    border-radius: var(--radius-xs);
+    padding: 0.6rem 0.9rem;
+    font-size: 0.88rem;
+    font-weight: 600;
+    text-align: center;
+}
+.login-success a { color: #5de096; }
+
+@media (max-width: 600px) {
+    .profile-card { padding: 1.25rem 1rem; }
+    .avatar-option { width: 2.6rem; height: 2.6rem; font-size: 1.35rem; }
+}
 .admin-tag {
     display: inline-block;
     background: rgba(18,145,158,0.18);
