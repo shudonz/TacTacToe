@@ -1,5 +1,9 @@
 const connection = new signalR.HubConnectionBuilder().withUrl("/gamehub").withAutomaticReconnect().build();
 const roomId = sessionStorage.getItem("tttRoomId");
+if (!roomId) {
+    window.location.replace("/lobby");
+    throw new Error("Missing Tic Tac Toe room id");
+}
 let myName = "";
 let isHost = false;
 

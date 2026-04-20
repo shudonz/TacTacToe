@@ -38,6 +38,9 @@ public class LobbyService
     public IEnumerable<LobbyPlayer> GetLobbyPlayers() =>
         _players.Values.Where(p => !p.InGame);
 
+    private bool IsOnlineConnection(string connectionId) =>
+        !string.IsNullOrWhiteSpace(connectionId) && _players.ContainsKey(connectionId);
+
     public GameState CreateGame(string id, string xConnectionId, string oConnectionId)
     {
         var x = _players.GetValueOrDefault(xConnectionId);
@@ -96,7 +99,8 @@ public class LobbyService
     public void StoreTttRoom(string id, TttRoom room) => _tttRooms[id] = room;
 
     public IEnumerable<TttRoom> GetOpenTttRooms() =>
-        _tttRooms.Values.Where(r => !r.Started && !r.IsOver);
+        _tttRooms.Values.Where(r => !r.Started && !r.IsOver &&
+            IsOnlineConnection(r.HostConnectionId));
 
     public IEnumerable<TttRoom> GetTttRoomsForConnection(string connectionId) =>
         _tttRooms.Values.Where(r => !r.Started && r.Players.Any(p => p.ConnectionId == connectionId));
@@ -128,7 +132,9 @@ public class LobbyService
     public void StoreRoom(string id, YahtzeeRoom room) => _yahtzeeRooms[id] = room;
 
     public IEnumerable<YahtzeeRoom> GetPublicRooms() =>
-        _yahtzeeRooms.Values.Where(r => !r.Settings.IsPrivate && !r.Started && !r.IsOver);
+        _yahtzeeRooms.Values.Where(r => !r.Settings.IsPrivate && !r.Started && !r.IsOver &&
+            IsOnlineConnection(r.HostConnectionId) &&
+            r.Players.Any(p => IsOnlineConnection(p.ConnectionId)));
 
     public IEnumerable<YahtzeeRoom> GetActiveRoomsForConnection(string connectionId) =>
         _yahtzeeRooms.Values.Where(r => r.Started && !r.IsOver &&
@@ -156,7 +162,9 @@ public class LobbyService
     public void StoreSlotsRoom(string id, SlotsRoom room) => _slotsRooms[id] = room;
 
     public IEnumerable<SlotsRoom> GetOpenSlotsRooms() =>
-        _slotsRooms.Values.Where(r => !r.Started && !r.IsOver);
+        _slotsRooms.Values.Where(r => !r.Started && !r.IsOver &&
+            IsOnlineConnection(r.HostConnectionId) &&
+            r.Players.Any(p => p.IsBot || IsOnlineConnection(p.ConnectionId)));
 
     public IEnumerable<SlotsRoom> GetSlotsRoomsForConnection(string connectionId) =>
         _slotsRooms.Values.Where(r => !r.Started && r.Players.Any(p => p.ConnectionId == connectionId));
@@ -192,7 +200,9 @@ public class LobbyService
     public void StoreConcentrationRoom(string id, ConcentrationRoom room) => _concentrationRooms[id] = room;
 
     public IEnumerable<ConcentrationRoom> GetOpenConcentrationRooms() =>
-        _concentrationRooms.Values.Where(r => !r.Started && !r.IsOver);
+        _concentrationRooms.Values.Where(r => !r.Started && !r.IsOver &&
+            IsOnlineConnection(r.HostConnectionId) &&
+            r.Players.Any(p => p.IsBot || IsOnlineConnection(p.ConnectionId)));
 
     public IEnumerable<ConcentrationRoom> GetConcentrationRoomsForConnection(string connectionId) =>
         _concentrationRooms.Values.Where(r => !r.Started && r.Players.Any(p => p.ConnectionId == connectionId));
@@ -225,7 +235,9 @@ public class LobbyService
     public void StoreSolitaireRoom(string id, SolitaireRoom room) => _solitaireRooms[id] = room;
 
     public IEnumerable<SolitaireRoom> GetOpenSolitaireRooms() =>
-        _solitaireRooms.Values.Where(r => !r.Started && !r.IsOver);
+        _solitaireRooms.Values.Where(r => !r.Started && !r.IsOver &&
+            IsOnlineConnection(r.HostConnectionId) &&
+            r.Players.Any(p => p.IsBot || IsOnlineConnection(p.ConnectionId)));
 
     public IEnumerable<SolitaireRoom> GetSolitaireRoomsForConnection(string connectionId) =>
         _solitaireRooms.Values.Where(r => !r.Started && r.Players.Any(p => p.ConnectionId == connectionId));
