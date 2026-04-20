@@ -92,8 +92,10 @@ function _renderPlayerList(room) {
 
 document.getElementById("startBtn").addEventListener("click", () => connection.invoke("StartSolitaireGame", roomId));
 function kickPlayer(name) { connection.invoke("KickSolitairePlayer", roomId, name); }
-document.getElementById("backBtn").addEventListener("click", () =>
-    connection.invoke("LeaveSolitaireRoom", roomId).then(() => { window.location.href = "/lobby"; }));
+document.addEventListener('DOMContentLoaded', () => {
+    document.getElementById("backBtn").addEventListener("click", () =>
+        connection.invoke("LeaveSolitaireRoom", roomId).then(() => { window.location.href = "/lobby"; }));
+});
 
 function showCopyToast(msg) {
     let t = document.getElementById("copyToast");

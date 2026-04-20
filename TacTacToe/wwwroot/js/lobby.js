@@ -1,7 +1,155 @@
 const connection = new signalR.HubConnectionBuilder().withUrl("/gamehub").withAutomaticReconnect().build();
-// No game selected on initial load — user must pick one. This hides all game
-// sections so the page shows only the game picker buttons.
 let selectedGame = "";
+
+/* ── Dashboard ───────────────────────────────────────────────── */
+const DASH_GAMES = [
+    { key: "tictactoe",     api: "TicTacToe",     icon: "✕○",  label: "Tic Tac Toe"   },
+    { key: "yahtzee",       api: "Yahtzee",        icon: "🎲",  label: "Yahtzee"        },
+    { key: "slots",         api: "Slots",          icon: "🎰",  label: "Slots"          },
+    { key: "concentration", api: "Concentration",  icon: "🧩",  label: "Concentration"  },
+    { key: "solitaire",     api: "Solitaire",      icon: "🂡",  label: "Solitaire"      },
+];
+
+async function loadDashboard(me) {
+    // Fetch all histories in parallel
+    const histories = await Promise.all(
+        DASH_GAMES.map(g =>
+            fetch("/api/me/history?game=" + encodeURIComponent(g.api) + "&limit=200")
+                .then(r => r.ok ? r.json() : []).catch(() => [])
+        )
+    );
+
+    /* ── Overall summary pills ────────────────────────────────── */
+    let totalGames = 0, totalWins = 0, totalLosses = 0, totalSecs = 0;
+    DASH_GAMES.forEach((g, i) => {
+        const h = histories[i];
+        totalGames  += h.length;
+        totalWins   += h.filter(e => e.result === "Win").length;
+        totalLosses += h.filter(e => e.result === "Loss").length;
+        totalSecs   += h.reduce((s, e) => s + (e.timePlayed || 0), 0);
+    });
+    const winRate = (totalWins + totalLosses) > 0
+        ? Math.round(totalWins / (totalWins + totalLosses) * 100) : null;
+    const timeStr = totalSecs >= 3600
+        ? Math.floor(totalSecs / 3600) + "h " + Math.floor((totalSecs % 3600) / 60) + "m"
+        : totalSecs >= 60
+            ? Math.floor(totalSecs / 60) + "m"
+            : totalSecs > 0 ? totalSecs + "s" : null;
+
+    const pills = [
+        { label: "Games Played", value: totalGames,                  icon: "🎮" },
+        { label: "Total Wins",   value: totalWins,                   icon: "🏆" },
+        { label: "Win Rate",     value: winRate  != null ? winRate + "%" : "—", icon: "📈" },
+        { label: "Time Played",  value: timeStr  || "—",             icon: "⏱️" },
+    ];
+    document.getElementById("dashSummary").innerHTML = pills.map(p =>
+        `<div class="dash-pill">` +
+        `<span class="dash-pill-icon">${p.icon}</span>` +
+        `<span class="dash-pill-value">${p.value}</span>` +
+        `<span class="dash-pill-label">${p.label}</span>` +
+        `</div>`
+    ).join("");
+
+    /* ── Per-game rows ────────────────────────────────────────── */
+    const rowsEl = document.getElementById("dashGameRows");
+    rowsEl.innerHTML = "";
+    DASH_GAMES.forEach((g, i) => {
+        const h      = histories[i];
+        const played = h.length;
+        const wins   = h.filter(e => e.result === "Win").length;
+        const losses = h.filter(e => e.result === "Loss").length;
+        const draws  = h.filter(e => e.result === "Draw").length;
+        const hasWL  = wins > 0 || losses > 0;
+        const wr     = hasWL ? Math.round(wins / (wins + losses) * 100) : null;
+        const best   = played > 0 ? Math.max(...h.map(e => e.score || 0)) : 0;
+        const last   = played > 0
+            ? new Date(Math.max(...h.map(e => new Date(e.playedAt))))
+                  .toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })
+            : null;
+
+        const row = document.createElement("div");
+        row.className = "dash-game-row" + (played === 0 ? " dash-game-row-unplayed" : "");
+
+        if (played === 0) {
+            row.innerHTML =
+                `<span class="dash-game-row-icon">${g.icon}</span>` +
+                `<div class="dash-game-row-body">` +
+                    `<span class="dash-game-row-name">${g.label}</span>` +
+                    `<span class="dash-game-row-unseen">No games played yet</span>` +
+                `</div>`;
+        } else {
+            const wlHtml = hasWL
+                ? `<span class="dash-wr-win">${wins}W</span>` +
+                  (losses > 0 ? ` <span class="dash-wr-sep">/</span> <span class="dash-wr-loss">${losses}L</span>` : "") +
+                  (draws  > 0 ? ` <span class="dash-wr-sep">/</span> <span class="dash-wr-draw">${draws}D</span>` : "")
+                : `${played} played`;
+
+            const barHtml = wr !== null
+                ? `<div class="dash-winbar"><div class="dash-winbar-fill" style="width:${wr}%"></div></div>` : "";
+
+            row.innerHTML =
+                `<span class="dash-game-row-icon">${g.icon}</span>` +
+                `<div class="dash-game-row-body">` +
+                    `<div class="dash-game-row-top">` +
+                        `<span class="dash-game-row-name">${g.label}</span>` +
+                        `<span class="dash-game-row-meta">${wlHtml}` +
+                        (wr !== null ? ` <span class="dash-wr-pct">&nbsp;· ${wr}%</span>` : "") +
+                        `</span>` +
+                    `</div>` +
+                    barHtml +
+                    `<div class="dash-game-row-bottom">` +
+                        `<span class="dash-game-row-sub">${played} game${played !== 1 ? "s" : ""}` +
+                        (best > 0 ? ` &middot; Best&nbsp;<strong>${best.toLocaleString()}</strong>` : "") +
+                        `</span>` +
+                        (last ? `<span class="dash-game-row-last">Last played ${last}</span>` : "") +
+                    `</div>` +
+                `</div>`;
+        }
+        rowsEl.appendChild(row);
+    });
+
+    /* ── Recent activity feed ─────────────────────────────────── */
+    const all = [];
+    DASH_GAMES.forEach((g, i) =>
+        histories[i].forEach(e => all.push({ ...e, _label: g.label, _icon: g.icon }))
+    );
+    all.sort((a, b) => new Date(b.playedAt) - new Date(a.playedAt));
+
+    const recentEl = document.getElementById("dashRecentList");
+    if (all.length === 0) {
+        recentEl.innerHTML =
+            `<div class="dash-no-games">` +
+            `<span class="dash-no-games-icon">🎮</span>` +
+            `No games played yet — select a game on the left to jump in!` +
+            `</div>`;
+        return;
+    }
+
+    recentEl.innerHTML = all.slice(0, 15).map(e => {
+        const r       = (e.result || "").toLowerCase();
+        const rCls    = r === "win" ? "win" : r === "loss" ? "loss" : r === "draw" ? "draw" : "complete";
+        const rTxt    = e.result || "Played";
+        const score   = e.score > 0 ? e.score.toLocaleString() + " pts" : "";
+        const timeTxt = e.timePlayed > 0
+            ? (e.timePlayed >= 60
+                ? Math.floor(e.timePlayed / 60) + "m " + (e.timePlayed % 60) + "s"
+                : e.timePlayed + "s")
+            : "";
+        const date = e.playedAt
+            ? new Date(e.playedAt).toLocaleDateString(undefined, { month: "short", day: "numeric" })
+            : "";
+        return `<div class="dash-recent-row">` +
+            `<span class="dash-recent-icon">${e._icon}</span>` +
+            `<div class="dash-recent-body">` +
+                `<span class="dash-recent-game">${e._label}</span>` +
+                (timeTxt ? `<span class="dash-recent-time">${timeTxt}</span>` : "") +
+            `</div>` +
+            `<span class="dash-recent-result ${rCls}">${rTxt}</span>` +
+            (score ? `<span class="dash-recent-score">${score}</span>` : "") +
+            (date  ? `<span class="dash-recent-date">${date}</span>` : "") +
+            `</div>`;
+    }).join("");
+}
 
 async function init() {
     const res = await fetch("/api/me");
@@ -18,7 +166,10 @@ async function init() {
         document.getElementById("userAvatar").style.display = "inline-block";
         document.getElementById("userAvatarEmoji").style.display = "none";
     }
-    if (me.isAdmin) document.getElementById("adminLink").style.display = "inline-block";
+    if (me.isAdmin) document.getElementById("adminLink").style.display = "flex";
+
+    // Load the activity dashboard in the background
+    loadDashboard(me);
 
     // Game picker
     document.querySelectorAll(".game-option").forEach(btn => {

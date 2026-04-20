@@ -577,8 +577,10 @@ document.getElementById("rollBtn").addEventListener("click", () => {
 function goBack() {
     connection.invoke("LeaveYahtzee", gameId).then(() => { window.location.href = "/lobby"; });
 }
-document.getElementById("backBtn").onclick = goBack;
-document.getElementById("backToLobby").onclick = goBack;
+document.addEventListener('DOMContentLoaded', () => {
+    document.getElementById("backBtn").onclick = goBack;
+    document.getElementById("backToLobby").onclick = goBack;
+});
 
 // Connect
 document.getElementById("turnIndicator").textContent = "Loading game...";

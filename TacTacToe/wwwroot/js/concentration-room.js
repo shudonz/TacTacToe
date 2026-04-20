@@ -107,8 +107,10 @@ function renderRoom(room) {
 
 document.getElementById("startBtn").addEventListener("click", () => connection.invoke("StartConcentrationGame", roomId));
 function kickPlayer(name) { connection.invoke("KickConcentrationPlayer", roomId, name); }
-document.getElementById("backBtn").addEventListener("click", () =>
-    connection.invoke("LeaveConcentrationRoom", roomId).then(() => { window.location.href = "/lobby"; }));
+document.addEventListener('DOMContentLoaded', () => {
+    document.getElementById("backBtn").addEventListener("click", () =>
+        connection.invoke("LeaveConcentrationRoom", roomId).then(() => { window.location.href = "/lobby"; }));
+});
 
 function showCopyToast(msg) {
     let t = document.getElementById("copyToast");

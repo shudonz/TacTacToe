@@ -12,16 +12,15 @@
     <div class="noise"></div>
     <div class="page-content">
         <nav class="navbar">
+            <button class="ham-btn" onclick="hamOpen()" aria-label="Open menu">
+                <span></span><span></span><span></span>
+            </button>
             <div class="logo-sm"><span class="logo-x">Tac</span><span class="logo-o">Tac</span><span class="logo-x">Toe</span></div>
-            <div class="nav-user">
-                <a href="/profile" class="nav-avatar-link" title="My Profile">
-                    <span id="userAvatarEmoji" class="nav-avatar-emoji" style="display:none"></span>
-                    <img id="userAvatar" class="avatar" src="" alt="" style="display:none">
-                </a>
-                <a href="/profile" id="userName" class="nav-username-link"></a>
-                <a id="adminLink" href="/admin" class="btn-logout" style="display:none;text-decoration:none">&#9881; Admin</a>
-                <form method="post" action="/logout" style="display:inline"><button type="submit" class="btn-logout">Logout</button></form>
-            </div>
+            <a href="/profile" class="nav-profile-btn" title="Edit Profile">
+                <span id="navbarAvatarEmoji" class="nav-profile-emoji" style="display:none"></span>
+                <img id="navbarAvatarImg" class="nav-profile-img" src="" alt="Profile" style="display:none">
+                <span id="navbarAvatarPlaceholder" class="nav-profile-placeholder">&#128100;</span>
+            </a>
         </nav>
 
         <main class="lobby-layout">
@@ -82,11 +81,34 @@
             <!-- ── RIGHT: Detail Panel ── -->
             <section class="lobby-detail" aria-live="polite">
 
-                <!-- Empty / welcome state -->
+                <!-- Activity Dashboard (shown when no game selected) -->
                 <div id="lobbyEmptyState" class="lobby-empty-state">
-                    <div class="lobby-empty-icon">&#127918;</div>
-                    <h2 class="lobby-empty-title">Welcome to the Lobby</h2>
-                    <p class="lobby-empty-hint">Select a game on the left to see single&#8209;player and multiplayer options.</p>
+
+                    <!-- Overall summary pills -->
+                    <div id="dashSummary" class="dash-summary">
+                        <div class="dash-pill dash-skeleton"></div>
+                        <div class="dash-pill dash-skeleton"></div>
+                        <div class="dash-pill dash-skeleton"></div>
+                        <div class="dash-pill dash-skeleton"></div>
+                    </div>
+
+                    <!-- Per-game breakdown -->
+                    <div>
+                        <p class="dash-section-title">&#128202; By Game</p>
+                        <div id="dashGameRows" class="dash-game-rows">
+                            <div class="dash-game-row dash-skeleton" style="height:62px"></div>
+                            <div class="dash-game-row dash-skeleton" style="height:62px"></div>
+                            <div class="dash-game-row dash-skeleton" style="height:62px"></div>
+                        </div>
+                    </div>
+
+                    <!-- Recent activity -->
+                    <div>
+                        <p class="dash-section-title">&#128336; Recent Activity</p>
+                        <div id="dashRecentList" class="dash-recent-list">
+                            <p class="dash-loading">Loading&#8230;</p>
+                        </div>
+                    </div>
                 </div>
 
                 <!-- ── Tic Tac Toe Panel ── -->
@@ -381,5 +403,29 @@
         }
     </script>
     <script src="/js/lobby.js"></script>
+    <div class="ham-overlay" onclick="hamClose()"></div>
+    <nav class="ham-drawer" aria-label="Navigation menu">
+        <div class="ham-drawer-header">
+            <div class="ham-drawer-logo"><span class="logo-x">Tac</span><span class="logo-o">Tac</span><span class="logo-x">Toe</span></div>
+            <button class="ham-close" onclick="hamClose()" aria-label="Close menu">&#10005;</button>
+        </div>
+        <a href="/profile" class="ham-user-section">
+            <span id="userAvatarEmoji" class="ham-user-emoji" style="display:none"></span>
+            <img id="userAvatar" class="ham-user-img" src="" alt="" style="display:none">
+            <div class="ham-user-info">
+                <span id="userName" class="ham-user-name"></span>
+                <span class="ham-user-sub">&#9998; Edit Profile</span>
+            </div>
+            <span class="ham-user-chevron">&#8250;</span>
+        </a>
+        <div class="ham-menu">
+            <a id="adminLink" href="/admin" class="ham-item" style="display:none">&#9881; Admin</a>
+            <div class="ham-divider"></div>
+            <form method="post" action="/logout">
+                <button type="submit" class="ham-item ham-item-danger">&#128682; Logout</button>
+            </form>
+        </div>
+    </nav>
+    <script src="/js/hamburger.js"></script>
 </body>
 </html>

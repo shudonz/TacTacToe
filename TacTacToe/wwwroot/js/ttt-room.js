@@ -122,8 +122,10 @@ function kickPlayer(name) {
     connection.invoke("KickTttPlayer", roomId, name);
 }
 
-document.getElementById("backBtn").addEventListener("click", () => {
-    connection.invoke("LeaveTttRoom", roomId).then(() => { window.location.href = "/lobby"; });
+document.addEventListener('DOMContentLoaded', () => {
+    document.getElementById("backBtn").addEventListener("click", () => {
+        connection.invoke("LeaveTttRoom", roomId).then(() => { window.location.href = "/lobby"; });
+    });
 });
 
 function showCopyToast(msg) {

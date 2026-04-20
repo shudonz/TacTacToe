@@ -259,8 +259,10 @@ function goBack() {
     connection.invoke("LeaveGame", gameId).then(() => { window.location.href = "/lobby"; });
 }
 
-document.getElementById("backBtn").onclick = goBack;
-document.getElementById("backToLobby").onclick = goBack;
+document.addEventListener('DOMContentLoaded', () => {
+    document.getElementById("backBtn").onclick = goBack;
+    document.getElementById("backToLobby").onclick = goBack;
+});
 
 connection.start().then(() => {
     return connection.invoke("JoinGame", gameId, myMark);

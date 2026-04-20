@@ -13,13 +13,22 @@
 
     <div class="page-content sol-page">
         <nav class="navbar">
+            <button class="ham-btn" onclick="hamOpen()" aria-label="Open menu">
+                <span></span><span></span><span></span>
+            </button>
             <div class="logo-sm"><span class="logo-x">Tac</span><span class="logo-o">Tac</span><span class="logo-x">Toe</span></div>
-            <div class="sol-nav-info">
-                <span id="timerDisplay" class="sol-timer">0:00</span>
-                <span id="movesDisplay" class="sol-moves">0 moves</span>
-                <span id="scoreDisplay" class="sol-score">0 pts</span>
+            <div class="nav-right-group">
+                <div class="sol-nav-info">
+                    <span id="timerDisplay" class="sol-timer">0:00</span>
+                    <span id="movesDisplay" class="sol-moves">0 moves</span>
+                    <span id="scoreDisplay" class="sol-score">0 pts</span>
+                </div>
+                <a href="/profile" class="nav-profile-btn" title="Edit Profile">
+                    <span id="navbarAvatarEmoji" class="nav-profile-emoji" style="display:none"></span>
+                    <img id="navbarAvatarImg" class="nav-profile-img" src="" alt="Profile" style="display:none">
+                    <span id="navbarAvatarPlaceholder" class="nav-profile-placeholder">&#128100;</span>
+                </a>
             </div>
-            <button id="backBtn" class="btn-logout">Back to Lobby</button>
         </nav>
 
         <main class="sol-main">
@@ -116,5 +125,16 @@
             }, 1500);
         });
     </script>
+    <div class="ham-overlay" onclick="hamClose()"></div>
+    <nav class="ham-drawer" aria-label="Navigation menu">
+        <div class="ham-drawer-header">
+            <div class="ham-drawer-logo"><span class="logo-x">Tac</span><span class="logo-o">Tac</span><span class="logo-x">Toe</span></div>
+            <button class="ham-close" onclick="hamClose()" aria-label="Close menu">&#10005;</button>
+        </div>
+        <div class="ham-menu">
+            <button id="backBtn" class="ham-item">&#8592; Back to Lobby</button>
+        </div>
+    </nav>
+    <script src="/js/hamburger.js"></script>
 </body>
 </html>

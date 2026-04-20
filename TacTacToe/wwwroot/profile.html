@@ -13,14 +13,15 @@
     <div class="page-content">
 
         <nav class="navbar">
+            <button class="ham-btn" onclick="hamOpen()" aria-label="Open menu">
+                <span></span><span></span><span></span>
+            </button>
             <div class="logo-sm"><span class="logo-x">Tac</span><span class="logo-o">Tac</span><span class="logo-x">Toe</span></div>
-            <div class="nav-user">
-                <span id="navAvatarEmoji" class="nav-avatar-emoji" style="display:none"></span>
-                <img id="navAvatarImg" class="avatar" src="" alt="" style="display:none">
-                <span id="navUsername"></span>
-                <a href="/lobby" class="btn-logout" style="text-decoration:none">&#8592; Lobby</a>
-                <form method="post" action="/logout" style="display:inline"><button type="submit" class="btn-logout">Logout</button></form>
-            </div>
+            <a href="/profile" class="nav-profile-btn" title="Edit Profile">
+                <span id="navbarAvatarEmoji" class="nav-profile-emoji" style="display:none"></span>
+                <img id="navbarAvatarImg" class="nav-profile-img" src="" alt="Profile" style="display:none">
+                <span id="navbarAvatarPlaceholder" class="nav-profile-placeholder">&#128100;</span>
+            </a>
         </nav>
 
         <main class="profile-layout">
@@ -139,6 +140,12 @@
                 document.getElementById("navAvatarEmoji").textContent = selectedAvatar;
                 document.getElementById("navAvatarEmoji").style.display = "inline-flex";
                 document.getElementById("navAvatarImg").style.display = "none";
+                const nbEmoji = document.getElementById("navbarAvatarEmoji");
+                const nbImg   = document.getElementById("navbarAvatarImg");
+                const nbPh    = document.getElementById("navbarAvatarPlaceholder");
+                if (nbEmoji) { nbEmoji.textContent = selectedAvatar; nbEmoji.style.display = "inline-flex"; }
+                if (nbImg)   { nbImg.style.display = "none"; }
+                if (nbPh)    { nbPh.style.display = "none"; }
                 showMsg(msgEl, "Avatar saved! ✓", false);
             } else {
                 showMsg(msgEl, "Failed to save avatar.", true);
@@ -205,5 +212,25 @@
 
         init();
     </script>
+    <div class="ham-overlay" onclick="hamClose()"></div>
+    <nav class="ham-drawer" aria-label="Navigation menu">
+        <div class="ham-drawer-header">
+            <div class="ham-drawer-logo"><span class="logo-x">Tac</span><span class="logo-o">Tac</span><span class="logo-x">Toe</span></div>
+            <button class="ham-close" onclick="hamClose()" aria-label="Close menu">&#10005;</button>
+        </div>
+        <div class="ham-user-section" style="cursor:default">
+            <span id="navAvatarEmoji" class="ham-user-emoji" style="display:none"></span>
+            <img id="navAvatarImg" class="ham-user-img" src="" alt="" style="display:none">
+            <span id="navUsername" class="ham-user-name"></span>
+        </div>
+        <div class="ham-menu">
+            <a href="/lobby" class="ham-item">&#8592; Lobby</a>
+            <div class="ham-divider"></div>
+            <form method="post" action="/logout">
+                <button type="submit" class="ham-item ham-item-danger">&#128682; Logout</button>
+            </form>
+        </div>
+    </nav>
+    <script src="/js/hamburger.js"></script>
 </body>
 </html>

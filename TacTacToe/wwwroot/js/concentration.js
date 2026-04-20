@@ -289,8 +289,10 @@ function backToLobby() {
     connection.invoke("LeaveConcentrationGame", roomId).finally(() => { window.location.href = "/lobby"; });
 }
 
-document.getElementById("backBtn").addEventListener("click", backToLobby);
-document.getElementById("backToLobby").addEventListener("click", backToLobby);
+document.addEventListener('DOMContentLoaded', () => {
+    document.getElementById("backBtn").addEventListener("click", backToLobby);
+    document.getElementById("backToLobby").addEventListener("click", backToLobby);
+});
 
 function initChat(conn, groupId) {
     let chatOpen = false, unread = 0;
