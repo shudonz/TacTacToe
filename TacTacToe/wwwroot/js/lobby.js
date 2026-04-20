@@ -7,6 +7,8 @@ async function init() {
     const res = await fetch("/api/me");
     const me = await res.json();
     document.getElementById("userName").textContent = me.name;
+    // Cache own avatar
+    await fetchAvatars([me.name]);
     if (me.avatar) {
         document.getElementById("userAvatarEmoji").textContent = me.avatar;
         document.getElementById("userAvatarEmoji").style.display = "inline-flex";

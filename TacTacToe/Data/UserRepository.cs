@@ -190,4 +190,14 @@ public class UserRepository
         return await c.ExecuteScalarAsync<string?>(
             "SELECT Avatar FROM Users WHERE Id = @id", new { id = userId });
     }
+
+    public async Task<Dictionary<string, string?>> GetAvatarsAsync(string[] usernames)
+    {
+        if (usernames.Length == 0) return new();
+        using var c = Open();
+        var rows = await c.QueryAsync<(string Username, string? Avatar)>(
+            "SELECT Username, Avatar FROM Users WHERE Username IN @u",
+            new { u = usernames });
+        return rows.ToDictionary(r => r.Username, r => r.Avatar, StringComparer.OrdinalIgnoreCase);
+    }
 }

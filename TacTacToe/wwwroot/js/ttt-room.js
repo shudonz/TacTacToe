@@ -31,6 +31,8 @@ async function init() {
     const res = await fetch("/api/me");
     const me = await res.json();
     myName = me.name;
+    // Pre-cache own avatar
+    await fetchAvatars([myName]);
 
     const shortCode = roomId.slice(0, 8).toUpperCase();
     document.getElementById("roomCode").textContent = shortCode;
@@ -77,12 +79,19 @@ function renderRoom(room) {
     document.getElementById("roomTitle").textContent = escapeHtml(room.roomName) || "Tic Tac Toe Room";
     document.getElementById("playerCount").textContent = room.players.length + "/2";
 
+    // Fetch any avatars we haven't seen yet, then re-render the list
+    fetchAvatars(room.players.map(p => p.name)).then(() => _renderPlayerList(room));
+    _renderPlayerList(room); // render immediately with whatever is cached
+}
+
+function _renderPlayerList(room) {
+    isHost = room.hostName === myName;
     const list = document.getElementById("roomPlayers");
     list.innerHTML = "";
     room.players.forEach(p => {
         const el = document.createElement("div");
         el.className = "room-player" + (p.name === myName ? " is-me" : "");
-        let html = '<span class="room-player-name">' + escapeHtml(p.name) + '</span>';
+        let html = avatarHtml(p.name, 'sm') + '<span class="room-player-name">' + escapeHtml(p.name) + '</span>';
         if (p.name === room.hostName) html += '<span class="room-host-badge">HOST</span>';
         if (p.name === myName) html += '<span class="you-tag">You</span>';
         if (isHost && p.name !== myName) {
@@ -157,7 +166,7 @@ function initChat(conn, groupId, isLobby) {
     conn.on('ChatMessage', (name, message) => {
         const el = document.createElement('div');
         el.className = 'chat-msg';
-        el.innerHTML = '<span class="chat-name">' + escapeHtml(name) + '</span> <span class="chat-text">' + escapeHtml(message) + '</span>';
+        el.innerHTML = avatarHtml(name, 'xs') + '<span class="chat-name">' + escapeHtml(name) + '</span> <span class="chat-text">' + escapeHtml(message) + '</span>';
         msgs.appendChild(el);
         msgs.scrollTop = msgs.scrollHeight;
         if (!chatOpen) { unread++; badge.textContent = unread; badge.style.display = 'inline-flex'; }

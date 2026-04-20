@@ -136,6 +136,16 @@ if (!gameId || !myMark) {
 document.getElementById("xName").textContent = sessionStorage.getItem("xName");
 document.getElementById("oName").textContent = sessionStorage.getItem("oName") + (isSinglePlayer ? " 🤖" : "");
 
+// Fetch & inject avatars for both players
+(async () => {
+    const xName = sessionStorage.getItem("xName");
+    const oName = sessionStorage.getItem("oName");
+    const names = [xName, oName].filter(Boolean);
+    await fetchAvatars(names);
+    if (xName) prependAvatar(document.getElementById("playerX"), xName, 'md');
+    if (oName) prependAvatar(document.getElementById("playerO"), oName, 'md');
+})();
+
 if (isSinglePlayer) {
     document.getElementById("chatWidget").style.display = "none";
 }
@@ -288,7 +298,7 @@ function initChat(conn, groupId) {
     conn.on('ChatMessage', (name, message, time) => {
         const el = document.createElement('div');
         el.className = 'chat-msg';
-        el.innerHTML = '<span class="chat-name">' + escChat(name) + '</span> <span class="chat-text">' + escChat(message) + '</span>';
+        el.innerHTML = avatarHtml(name, 'xs') + '<span class="chat-name">' + escChat(name) + '</span> <span class="chat-text">' + escChat(message) + '</span>';
         msgs.appendChild(el);
         msgs.scrollTop = msgs.scrollHeight;
         if (!chatOpen) { unread++; badge.textContent = unread; badge.style.display = 'inline-flex'; playChatReceiveSound(); }

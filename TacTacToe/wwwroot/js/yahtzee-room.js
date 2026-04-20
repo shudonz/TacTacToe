@@ -31,6 +31,7 @@ async function init() {
     const res = await fetch("/api/me");
     const me = await res.json();
     myName = me.name;
+    await fetchAvatars([myName]);
 
     // Room code display
     const shortCode = roomId.slice(0, 8).toUpperCase();
@@ -81,6 +82,12 @@ function renderRoom(room) {
     document.getElementById("roomTitle").textContent = room.settings.roomName || "Yahtzee Room";
 
     // Players
+    fetchAvatars(room.players.map(p => p.name)).then(() => _renderPlayerList(room));
+    _renderPlayerList(room);
+}
+
+function _renderPlayerList(room) {
+    isHost = room.hostName === myName;
     const list = document.getElementById("roomPlayers");
     list.innerHTML = "";
     const countHtml = '<div class="room-player-count">' + room.players.length + '/' + room.settings.maxPlayers + ' players</div>';
@@ -88,6 +95,7 @@ function renderRoom(room) {
     room.players.forEach(p => {
         const el = document.createElement("div");
         el.className = "room-player" + (p.name === myName ? " is-me" : "");
+        prependAvatar(el, p.name, 'sm');
         const nameEl = document.createElement("span");
         nameEl.className = "room-player-name";
         nameEl.textContent = p.name;
@@ -114,6 +122,15 @@ function renderRoom(room) {
         }
         list.appendChild(el);
     });
+
+    if (isHost) {
+        document.getElementById("startBtn").style.display = room.players.length >= 2 ? "inline-block" : "none";
+        document.getElementById("waitMsg").style.display = "none";
+    } else {
+        document.getElementById("startBtn").style.display = "none";
+        document.getElementById("waitMsg").style.display = "block";
+        document.getElementById("hostNameWait").textContent = room.hostName;
+    }
 
     // Settings panel
     if (isHost) {
@@ -232,7 +249,7 @@ function initChat(conn, groupId, isLobby) {
     conn.on('ChatMessage', (name, message, time) => {
         const el = document.createElement('div');
         el.className = 'chat-msg';
-        el.innerHTML = '<span class="chat-name">' + escapeHtml(name) + '</span> <span class="chat-text">' + escapeHtml(message) + '</span>';
+        el.innerHTML = avatarHtml(name, 'xs') + '<span class="chat-name">' + escapeHtml(name) + '</span> <span class="chat-text">' + escapeHtml(message) + '</span>';
         msgs.appendChild(el);
         msgs.scrollTop = msgs.scrollHeight;
         if (!chatOpen) { unread++; badge.textContent = unread; badge.style.display = 'inline-flex'; }

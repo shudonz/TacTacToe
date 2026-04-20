@@ -279,6 +279,7 @@ function renderLeaderboard(room) {
         return;
     }
     lb.style.display = "";
+    fetchAvatars(room.players.map(p => p.name));
     const sorted = [...room.players].sort((a, b) => b.score - a.score);
     lb.innerHTML = '<div class="sol-lb-title">&#127760; Race</div>';
     sorted.forEach((p, i) => {
@@ -291,6 +292,7 @@ function renderLeaderboard(room) {
         const meClass = p.name === myName ? " sol-lb-me" : "";
         lb.innerHTML += `<div class="sol-lb-row${meClass}">
             <span class="sol-lb-medal">${medal}</span>
+            ${avatarHtml(p.name, 'sm')}
             <div class="sol-lb-info">
                 <span class="sol-lb-name">${esc(p.name)}</span>
                 <div class="sol-lb-progress-bar"><div class="sol-lb-progress-fill" style="width:${pct}%"></div></div>
@@ -1002,7 +1004,7 @@ function showResults(room) {
             const row = document.createElement("div");
             row.className = "sol-final-row" + (p.name === myName ? " is-me" : "");
             row.innerHTML = (["&#129351;","&#129352;","&#129353;"][i] || "") +
-                " <strong>" + esc(p.name) + "</strong>: " + p.score + " pts";
+                " " + avatarHtml(p.name, 'xs') + " <strong>" + esc(p.name) + "</strong>: " + p.score + " pts";
             fs.appendChild(row);
         });
     }
@@ -1028,7 +1030,7 @@ function initChat(conn, groupId) {
     send.onclick = doSend; input.addEventListener("keydown", e => { if (e.key === "Enter") doSend(); });
     conn.on("ChatMessage", (name, message) => {
         const el = document.createElement("div"); el.className = "chat-msg";
-        el.innerHTML = '<span class="chat-name">' + esc(name) + '</span> <span class="chat-text">' + esc(message) + '</span>';
+        el.innerHTML = avatarHtml(name, 'xs') + '<span class="chat-name">' + esc(name) + '</span> <span class="chat-text">' + esc(message) + '</span>';
         msgs.appendChild(el); msgs.scrollTop = msgs.scrollHeight;
         if (!chatOpen) { unread++; badge.textContent = unread; badge.style.display = "inline-flex"; }
     });
@@ -1041,6 +1043,7 @@ async function init() {
     const res = await fetch("/api/me");
     const me  = await res.json();
     myName = me.name;
+    await fetchAvatars([myName]);
 
     // Board click delegation
     document.getElementById("solBoard").addEventListener("click",    handleBoardClick);

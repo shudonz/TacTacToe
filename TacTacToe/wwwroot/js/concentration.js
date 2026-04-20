@@ -244,11 +244,12 @@ async function init() {
 
 function renderState(state) {
     const players = document.getElementById("concentrationPlayers");
+    fetchAvatars(state.players.map(p => p.name));
     players.innerHTML = "";
     state.players.forEach((p, i) => {
         const item = document.createElement("div");
         item.className = "player-bar-item" + (i === state.currentPlayerIndex && !state.isOver ? " active" : "") + (p.name === myName ? " is-me" : "");
-        item.innerHTML = '<span class="room-player-name">' + esc(p.name) + '</span>'
+        item.innerHTML = avatarHtml(p.name, 'sm') + '<span class="room-player-name">' + esc(p.name) + '</span>'
             + '<span class="player-score">' + p.score + "</span>";
         players.appendChild(item);
     });
@@ -304,7 +305,7 @@ function initChat(conn, groupId) {
     input.addEventListener("keydown", e => { if (e.key === "Enter") doSend(); });
     conn.on("ChatMessage", (name, message) => {
         const el = document.createElement("div"); el.className = "chat-msg";
-        el.innerHTML = '<span class="chat-name">' + esc(name) + '</span> <span class="chat-text">' + esc(message) + '</span>';
+        el.innerHTML = avatarHtml(name, 'xs') + '<span class="chat-name">' + esc(name) + '</span> <span class="chat-text">' + esc(message) + '</span>';
         msgs.appendChild(el); msgs.scrollTop = msgs.scrollHeight;
         if (!chatOpen) { unread++; badge.textContent = unread; badge.style.display = "inline-flex"; playChatReceiveSound(); }
     });

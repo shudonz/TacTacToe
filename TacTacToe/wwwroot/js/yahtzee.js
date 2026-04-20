@@ -371,6 +371,7 @@ function buildScorecard(players, settings) {
 function renderPlayerBar(room) {
     const bar = document.getElementById("playerBar");
     bar.innerHTML = "";
+    fetchAvatars(room.players.map(p => p.name)); // async — re-render handled by next update
     room.players.forEach((p, i) => {
         const el = document.createElement("div");
         const disconnected = !p.connected;
@@ -378,7 +379,8 @@ function renderPlayerBar(room) {
         if (p.name === myName) el.classList.add("is-me");
         el.style.borderColor = playerColors[i];
         const displayName = (isSinglePlayer && p.name !== myName) ? p.name + " 🤖" : p.name;
-        el.innerHTML = '<span class="player-bar-name" style="color:' + playerColors[i] + '">' + escapeHtml(displayName) + (disconnected ? ' <span class="disconnected-tag">left</span>' : '') + '</span>' +
+        el.innerHTML = avatarHtml(p.name, 'sm') +
+            '<span class="player-bar-name" style="color:' + playerColors[i] + '">' + escapeHtml(displayName) + (disconnected ? ' <span class="disconnected-tag">left</span>' : '') + '</span>' +
             '<span class="player-bar-score">' + totalScore(p.scores, room.settings) + '</span>';
         bar.appendChild(el);
     });
@@ -550,10 +552,11 @@ connection.on("YahtzeeUpdated", room => {
         document.getElementById("resultText").textContent = msg;
         // Final scoreboard
         const fs = document.getElementById("finalScores");
+        const medals = ['🥇','🥈','🥉'];
         fs.innerHTML = room.players
             .map(p => ({ name: p.name, score: totalScore(p.scores, room.settings) }))
             .sort((a, b) => b.score - a.score)
-            .map((p, i) => '<div class="final-score-row">' + (i + 1) + '. ' + escapeHtml(p.name) + ' — <strong>' + p.score + '</strong></div>')
+            .map((p, i) => '<div class="final-score-row">' + (medals[i] || (i+1)+'.') + ' ' + avatarHtml(p.name, 'xs') + escapeHtml(p.name) + ' — <strong>' + p.score + '</strong></div>')
             .join('');
         document.getElementById("resultOverlay").style.display = "flex";
         if (!_gameOverEventFired) { _gameOverEventFired = true; document.dispatchEvent(new Event('gameOver')); }
@@ -579,8 +582,10 @@ document.getElementById("backToLobby").onclick = goBack;
 
 // Connect
 document.getElementById("turnIndicator").textContent = "Loading game...";
-connection.start().then(() => {
+connection.start().then(async () => {
     if (!isSinglePlayer) initChat(connection, gameId, false);
+    // Pre-fetch own avatar; rest fetched when room state arrives
+    await fetchAvatars([myName]);
     return connection.invoke("RejoinYahtzeeRoom", gameId);
 });
 
@@ -623,7 +628,7 @@ function initChat(conn, groupId, isLobby) {
     conn.on('ChatMessage', (name, message, time) => {
         const el = document.createElement('div');
         el.className = 'chat-msg';
-        el.innerHTML = '<span class="chat-name">' + escapeHtml(name) + '</span> <span class="chat-text">' + escapeHtml(message) + '</span>';
+        el.innerHTML = avatarHtml(name, 'xs') + '<span class="chat-name">' + escapeHtml(name) + '</span> <span class="chat-text">' + escapeHtml(message) + '</span>';
         msgs.appendChild(el);
         msgs.scrollTop = msgs.scrollHeight;
         if (!chatOpen) { unread++; badge.textContent = unread; badge.style.display = 'inline-flex'; playChatReceiveSound(); }

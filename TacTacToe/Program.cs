@@ -384,6 +384,21 @@ app.MapGet("/api/leaderboard/{gameType}", async (string gameType, int top = 10) 
     return Results.Ok(entries);
 });
 
+// Batch-fetch avatars by username — public (displayed to all players in a room)
+app.MapGet("/api/avatars", async (string? names) =>
+{
+    if (string.IsNullOrWhiteSpace(names))
+        return Results.Ok(new Dictionary<string, string?>());
+    var list = names
+        .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+        .Where(n => n.Length <= 20)   // usernames are max 20 chars
+        .Take(20)                      // cap to prevent large queries
+        .ToArray();
+    if (list.Length == 0) return Results.Ok(new Dictionary<string, string?>());
+    var result = await userRepo.GetAvatarsAsync(list);
+    return Results.Ok(result);
+});
+
 app.MapGet("/profile", (HttpContext ctx) =>
 {
     if (ctx.User.Identity?.IsAuthenticated != true)

@@ -414,6 +414,7 @@ function render(room) {
     _prevPhase = room.phase;
 
     const sorted = [...room.players].sort((a, b) => b.balance - a.balance);
+    fetchAvatars(room.players.map(p => p.name));
     const lb = document.getElementById("leaderboard");
     lb.innerHTML = '<div class="slots-lb-title">🏆 Leaderboard</div>';
     sorted.forEach((p, i) => {
@@ -485,7 +486,7 @@ function showResults(room, sorted) {
     sorted.forEach((p, i) => {
         const row = document.createElement("div");
         row.className = "slots-final-row" + (p.name === myName ? " is-me" : "");
-        row.innerHTML = (["🥇", "🥈", "🥉"][i] || "") + " <strong>" + esc(p.name) + (p.isBot ? " 🤖" : "") + "</strong>: $" + p.balance;
+        row.innerHTML = (["🥇", "🥈", "🥉"][i] || "") + " " + avatarHtml(p.name, 'xs') + " <strong>" + esc(p.name) + (p.isBot ? " 🤖" : "") + "</strong>: $" + p.balance;
         fs.appendChild(row);
     });
     document.getElementById("resultOverlay").style.display = "flex";
@@ -509,6 +510,7 @@ async function init() {
     const res = await fetch("/api/me");
     const me = await res.json();
     myName = me.name;
+    await fetchAvatars([myName]);
 
     if (isSinglePlayer) document.getElementById("chatWidget").style.display = "none";
 
@@ -574,7 +576,7 @@ function initChat(conn, groupId) {
     send.onclick = doSend; input.addEventListener("keydown", e => { if (e.key === "Enter") doSend(); });
     conn.on("ChatMessage", (name, message) => {
         const el = document.createElement("div"); el.className = "chat-msg";
-        el.innerHTML = '<span class="chat-name">' + esc(name) + '</span> <span class="chat-text">' + esc(message) + '</span>';
+        el.innerHTML = avatarHtml(name, 'xs') + '<span class="chat-name">' + esc(name) + '</span> <span class="chat-text">' + esc(message) + '</span>';
         msgs.appendChild(el); msgs.scrollTop = msgs.scrollHeight;
         if (!chatOpen) { unread++; badge.textContent = unread; badge.style.display = "inline-flex"; }
     });

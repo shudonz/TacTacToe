@@ -13,6 +13,11 @@ async function loadLeaderboard(gameType, container, top = 10) {
         const entries = lbRes.ok ? await lbRes.json() : [];
         const me = meRes.ok ? (await meRes.json()).name : null;
 
+        // Fetch avatars for all usernames in the leaderboard
+        if (entries.length > 0 && typeof fetchAvatars === 'function') {
+            await fetchAvatars(entries.map(e => e.username));
+        }
+
         if (entries.length === 0) {
             container.innerHTML = '<p class="lb-empty">No scores yet. Be the first!</p>';
             return;
@@ -28,7 +33,7 @@ async function loadLeaderboard(gameType, container, top = 10) {
                 : '';
             return `<tr class="${isMe ? 'lb-me' : ''}">
                 <td class="lb-rank">${rank}</td>
-                <td class="lb-name">${escHtml(e.username)}${isMe ? ' <span class="lb-you">(you)</span>' : ''}</td>
+                <td class="lb-name">${typeof avatarHtml === 'function' ? avatarHtml(e.username, 'xs') : ''}${escHtml(e.username)}${isMe ? ' <span class="lb-you">(you)</span>' : ''}</td>
                 <td class="lb-score">${e.score.toLocaleString()}</td>
                 <td class="lb-result">${escHtml(e.result)}</td>
                 <td class="lb-time">${time}</td>
