@@ -4106,7 +4106,10 @@ tr.row-banned td:first-child { opacity: 1; }
     flex-shrink: 0;
     transition: background var(--transition);
 }
-.ham-btn:hover { background: rgba(255, 255, 255, 0.13); }
+.ham-btn:hover  { background: rgba(255, 255, 255, 0.13); }
+.ham-btn:active { background: rgba(255, 255, 255, 0.18); }
+.ham-btn:focus,
+.ham-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; background: rgba(255, 255, 255, 0.06); }
 .ham-btn span {
     display: block;
     width: 18px;
