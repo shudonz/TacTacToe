@@ -73,6 +73,7 @@ public class GameSessionRepository
                      MAX(Score) AS BestScore,
                      CAST(ROUND(AVG(Score), 1) AS TEXT) AS AvgScore,
                      SUM(CASE WHEN Result = 'Win' THEN 1 ELSE 0 END) AS Wins,
+                     SUM(CASE WHEN Result = 'GiveUp' THEN 1 ELSE 0 END) AS GiveUps,
                      SUM(TimePlayed) AS TotalTimePlayed
               FROM GameSessions
               WHERE UserId = @uid
@@ -140,6 +141,7 @@ public class GameSessionRepository
                 SUM(CASE WHEN Result = 'Win'  THEN 1 ELSE 0 END)         AS wins,
                 SUM(CASE WHEN Result = 'Loss' THEN 1 ELSE 0 END)         AS losses,
                 SUM(CASE WHEN Result = 'Draw' THEN 1 ELSE 0 END)         AS draws,
+                SUM(CASE WHEN Result = 'GiveUp' THEN 1 ELSE 0 END)       AS giveUps,
                 ROUND(AVG(Score), 1)                                      AS avgScore,
                 SUM(TimePlayed)                                           AS totalTimeSecs,
                 ROUND(AVG(NULLIF(TimePlayed, 0)), 0)                      AS avgTimeSecs

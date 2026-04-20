@@ -2084,7 +2084,7 @@ public class GameHub : Hub
         if (room == null || room.Started) return;
         if (Context.ConnectionId != room.HostConnectionId) return;
         if (room.Players.Count < 2) return;
-        int seed = Random.Shared.Next();
+        int seed = SolitaireEngine.GetWinnableSeed();
         room.DeckSeed = seed;
         room.Started = true;
         long now = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
@@ -2092,7 +2092,12 @@ public class GameHub : Hub
         {
             p.Game = SolitaireEngine.Deal(seed);
             p.StartedAtMs = now;
+            p.FinishedAtMs = 0;
             p.HintsUsed = 0;
+            p.GaveUp = false;
+            p.HasFinished = false;
+            p.FinishRank = 0;
+            p.Score = 0;
         }
         await Clients.Group(roomId).SendAsync("SolitaireGameStarted", room);
         await BroadcastSolitaireRooms();
@@ -2102,7 +2107,7 @@ public class GameHub : Hub
     {
         var name = Context.User?.FindFirst(ClaimTypes.Name)?.Value ?? "Unknown";
         var roomId = Guid.NewGuid().ToString("N");
-        int seed = Random.Shared.Next();
+        int seed = SolitaireEngine.GetWinnableSeed();
         long now = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
         var room = new SolitaireRoom
         {
@@ -2119,7 +2124,8 @@ public class GameHub : Hub
                 Connected = true,
                 Game = SolitaireEngine.Deal(seed),
                 StartedAtMs = now,
-                HintsUsed = 0
+                HintsUsed = 0,
+                GaveUp = false
             }]
         };
         room.Settings.RoomName = "Solitaire";
@@ -2245,6 +2251,30 @@ public class GameHub : Hub
         // Send the hint only to the requester, and broadcast the updated room
         await Clients.Caller.SendAsync("SolitaireHint", hint);
         await Clients.Group(roomId).SendAsync("SolitaireUpdated", room);
+    }
+
+    public async Task GiveUpSolitaire(string roomId)
+    {
+        var room = _lobby.GetSolitaireRoom(roomId);
+        if (room == null || !room.Started || room.IsOver) return;
+        var player = room.Players.FirstOrDefault(p => p.ConnectionId == Context.ConnectionId && !p.IsBot);
+        if (player == null || player.HasFinished) return;
+
+        player.HasFinished = true;
+        player.GaveUp = true;
+        room.FinishCount++;
+        player.FinishRank = room.FinishCount;
+        player.FinishedAtMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+        player.Score = SolitaireEngine.ScoreFor(player);
+        _ = SaveSolitairePlayerSessionAsync(room, player);
+
+        if (room.IsSinglePlayer)
+            room.IsOver = true;
+
+        await Clients.Group(roomId).SendAsync("SolitaireUpdated", room);
+
+        if (!room.IsSinglePlayer)
+            CheckSolitaireOver(room);
     }
 
     private static bool HandleTableauToFoundation(SolitaireGameState g, int cardId)
@@ -2425,14 +2455,15 @@ public class GameHub : Hub
             var uid = await _users.GetIdByUsernameAsync(player.Name);
             if (!uid.HasValue) return;
             int elapsed = (int)((player.FinishedAtMs - player.StartedAtMs) / 1000);
-            var result = room.IsSinglePlayer ? "Completed"
+            var result = player.GaveUp ? "GiveUp"
+                       : room.IsSinglePlayer ? "Completed"
                        : player.FinishRank == 1 ? "Win" : "Loss";
             await _sessions.SaveAsync(new GameSession
             {
                 UserId = uid.Value, GameType = "Solitaire",
                 Score = player.Score, Result = result,
                 TimePlayed = elapsed, PlayedAt = DateTime.UtcNow.ToString("o"),
-                Details = $"Rank:{player.FinishRank},Hints:{player.HintsUsed}"
+                Details = $"Rank:{player.FinishRank},Hints:{player.HintsUsed},GaveUp:{(player.GaveUp ? 1 : 0)}"
             });
         }
         catch { }

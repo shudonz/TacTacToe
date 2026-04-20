@@ -38,6 +38,7 @@ let selected = null; // { source:'waste'|'tableau', pileIdx:N, faceUpIdx:N, card
 let timerInterval = null;
 let myStartMs = 0;
 let gameFinished = false;
+let gaveUp = false;
 let _gameOverEventFired = false;
 
 // Drag state
@@ -267,6 +268,8 @@ function renderBoard(game) {
     // ── Auto-complete bar ─────────────────────────────────────
     const canAC = game.tableau.every(p => p.faceDown.length === 0) && game.stock.length === 0;
     document.getElementById("autoCompleteBar").style.display = canAC && !gameFinished ? "flex" : "none";
+    const giveUpBtn = document.getElementById("giveUpBtn");
+    if (giveUpBtn) giveUpBtn.disabled = gameFinished;
 
     // Re-apply hint highlights (DOM was just rebuilt)
     applyHintHighlights();
@@ -317,6 +320,7 @@ function render(room) {
 
     myGame = me.game;
     gameFinished = me.hasFinished;
+    gaveUp = !!me.gaveUp;
 
     document.getElementById("movesDisplay").textContent = myGame.moveCount + " moves";
     document.getElementById("scoreDisplay").textContent = me.score + " pts";
@@ -977,11 +981,12 @@ function handleBoardDblClick(e) {
 function showResults(room) {
     if (timerInterval) clearInterval(timerInterval);
     const me = room.players.find(p => p.name === myName);
-    const isWinner = me?.finishRank === 1 || (isSinglePlayer && me?.hasFinished);
+    const gaveUpResult = !!me?.gaveUp;
+    const isWinner = !gaveUpResult && (me?.finishRank === 1 || (isSinglePlayer && me?.hasFinished));
     const allDone = room.players.filter(p => !p.isBot).every(p => p.hasFinished);
 
-    document.getElementById("resultEmoji").textContent = isWinner ? "🏆" : me?.hasFinished ? "🎉" : "🃏";
-    document.getElementById("resultText").textContent  = isWinner ? "You Win!" : me?.hasFinished ? "Well Done!" : "Game Over";
+    document.getElementById("resultEmoji").textContent = gaveUpResult ? "🏳️" : isWinner ? "🏆" : me?.hasFinished ? "🎉" : "🃏";
+    document.getElementById("resultText").textContent  = gaveUpResult ? "You Gave Up" : isWinner ? "You Win!" : me?.hasFinished ? "Well Done!" : "Game Over";
 
     if (me) {
         const secs = me.hasFinished
@@ -1012,6 +1017,16 @@ function showResults(room) {
     document.getElementById("resultOverlay").style.display = "flex";
     if (isWinner) { soundWin(); launchConfetti(); }
     if (!_gameOverEventFired) { _gameOverEventFired = true; document.dispatchEvent(new Event('gameOver')); }
+}
+
+function giveUpGame() {
+    if (!myGame || gameFinished || gaveUp) return;
+    _resumeAudio();
+    soundClick();
+    const ok = window.confirm("Give up this game? This will be recorded in your stats.");
+    if (!ok) return;
+    clearHint();
+    connection.invoke("GiveUpSolitaire", roomId).catch(err => console.error("Give up failed:", err));
 }
 
 /* ============================================================
@@ -1065,6 +1080,7 @@ async function init() {
 
     // Hint
     document.getElementById("hintBtn").addEventListener("click", showHint);
+    document.getElementById("giveUpBtn").addEventListener("click", giveUpGame);
 
     // Back button
     document.getElementById("backBtn").addEventListener("click", () => {
