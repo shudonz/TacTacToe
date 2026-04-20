@@ -128,6 +128,10 @@ const connection = new signalR.HubConnectionBuilder().withUrl("/gamehub").withAu
 const gameId = sessionStorage.getItem("gameId");
 let myMark = sessionStorage.getItem("myMark");
 const isSinglePlayer = sessionStorage.getItem("isSinglePlayer") === "1";
+if (!gameId || !myMark) {
+    window.location.replace("/lobby");
+    throw new Error("Missing Tic Tac Toe game session data");
+}
 
 document.getElementById("xName").textContent = sessionStorage.getItem("xName");
 document.getElementById("oName").textContent = sessionStorage.getItem("oName") + (isSinglePlayer ? " 🤖" : "");

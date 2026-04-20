@@ -1,6 +1,10 @@
 const connection = new signalR.HubConnectionBuilder().withUrl("/gamehub").withAutomaticReconnect().build();
 const roomId = sessionStorage.getItem("concentrationRoomId");
 const isSinglePlayer = sessionStorage.getItem("isSinglePlayer") === "1";
+if (!roomId) {
+    window.location.replace("/lobby");
+    throw new Error("Missing Concentration game room id");
+}
 const CARD_BACK_EMOJI = "";
 let myName = sessionStorage.getItem("myName") || "";
 let gameState = null;

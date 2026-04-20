@@ -4,6 +4,10 @@
 const connection = new signalR.HubConnectionBuilder().withUrl("/gamehub").withAutomaticReconnect().build();
 const roomId = sessionStorage.getItem("slotsRoomId");
 const isSinglePlayer = sessionStorage.getItem("isSinglePlayer") === "1";
+if (!roomId) {
+    window.location.replace("/lobby");
+    throw new Error("Missing Slots game room id");
+}
 
 const SYMBOLS = ["🍒", "🍋", "🍊", "🍇", "🔔", "⭐", "💎", "7️⃣"];
 const LINE_NAMES = ["Top", "Middle", "Bottom", "Diagonal ↘", "Diagonal ↗"];

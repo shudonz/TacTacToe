@@ -1,5 +1,9 @@
 const connection = new signalR.HubConnectionBuilder().withUrl("/gamehub").withAutomaticReconnect().build();
 const roomId = sessionStorage.getItem("yahtzeeRoomId");
+if (!roomId) {
+    window.location.replace("/lobby");
+    throw new Error("Missing Yahtzee room id");
+}
 let myName = "";
 let isHost = false;
 
@@ -84,13 +88,30 @@ function renderRoom(room) {
     room.players.forEach(p => {
         const el = document.createElement("div");
         el.className = "room-player" + (p.name === myName ? " is-me" : "");
-        let html = '<span class="room-player-name">' + escapeHtml(p.name) + '</span>';
-        if (p.name === room.hostName) html += '<span class="room-host-badge">HOST</span>';
-        if (p.name === myName) html += '<span class="you-tag">You</span>';
-        if (isHost && p.name !== myName) {
-            html += '<button class="btn-kick" onclick="kickPlayer(\'' + escapeHtml(p.name) + '\')">✕</button>';
+        const nameEl = document.createElement("span");
+        nameEl.className = "room-player-name";
+        nameEl.textContent = p.name;
+        el.appendChild(nameEl);
+        if (p.name === room.hostName) {
+            const host = document.createElement("span");
+            host.className = "room-host-badge";
+            host.textContent = "HOST";
+            el.appendChild(host);
         }
-        el.innerHTML = html;
+        if (p.name === myName) {
+            const you = document.createElement("span");
+            you.className = "you-tag";
+            you.textContent = "You";
+            el.appendChild(you);
+        }
+        if (isHost && p.name !== myName) {
+            const kick = document.createElement("button");
+            kick.className = "btn-kick";
+            kick.type = "button";
+            kick.textContent = "✕";
+            kick.addEventListener("click", () => kickPlayer(p.name));
+            el.appendChild(kick);
+        }
         list.appendChild(el);
     });
 

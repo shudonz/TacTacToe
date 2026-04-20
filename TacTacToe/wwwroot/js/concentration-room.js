@@ -1,5 +1,9 @@
 const connection = new signalR.HubConnectionBuilder().withUrl("/gamehub").withAutomaticReconnect().build();
 const roomId = sessionStorage.getItem("concentrationRoomId");
+if (!roomId) {
+    window.location.replace("/lobby");
+    throw new Error("Missing Concentration room id");
+}
 let myName = "";
 let isHost = false;
 
