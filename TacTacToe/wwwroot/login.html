@@ -17,7 +17,7 @@
             </div>
             <p class="login-subtitle">Sign in to start playing</p>
             <div id="errorMsg" class="login-error" style="display:none">Invalid username or password.</div>
-            <form action="/login" method="post" class="guest-form">
+            <form id="loginForm" action="/login" method="post" class="guest-form">
                 <input type="text" name="name" placeholder="Username" maxlength="20" required class="guest-input" autocomplete="username" />
                 <input type="password" name="password" placeholder="Password" maxlength="128" required class="guest-input" autocomplete="current-password" />
                 <input type="hidden" name="returnUrl" id="returnUrl" value="/lobby" />
@@ -37,6 +37,44 @@
             el.textContent = "Your account has been banned. Please contact an administrator.";
             el.style.display = "block";
         }
+
+        // Use fetch() so Safari iOS stores the auth cookie before we navigate.
+        // Native form POST + 302 redirect drops the cookie on Safari/iPadOS over HTTP.
+        (function () {
+            const form = document.getElementById('loginForm');
+            const errEl = document.getElementById('errorMsg');
+
+            form.addEventListener('submit', async function (e) {
+                e.preventDefault();
+                const btn = form.querySelector('button[type=submit]');
+                btn.disabled = true;
+                btn.textContent = 'Signing in\u2026';
+
+                try {
+                    const res = await fetch('/login', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                        body: new URLSearchParams(new FormData(form)).toString()
+                    });
+                    const dest = new URL(res.url || '/login', window.location.href);
+                    if (!dest.pathname.startsWith('/login')) {
+                        window.location.replace(dest.pathname + dest.search);
+                    } else {
+                        const err = new URLSearchParams(dest.search).get('error');
+                        errEl.textContent = err === 'banned'
+                            ? 'Your account has been banned. Please contact an administrator.'
+                            : 'Invalid username or password.';
+                        errEl.style.display = 'block';
+                        btn.disabled = false;
+                        btn.textContent = 'Sign In';
+                    }
+                } catch (_) {
+                    // Network error — fall back to native submit
+                    form.removeEventListener('submit', arguments.callee);
+                    form.submit();
+                }
+            });
+        })();
     </script>
 </body>
 </html>

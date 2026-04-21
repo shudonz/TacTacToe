@@ -246,14 +246,26 @@ body {
     background: var(--glass);
     border: 1px solid var(--glass-border);
     border-radius: var(--radius);
-    backdrop-filter: blur(32px) saturate(1.8);
-    -webkit-backdrop-filter: blur(32px) saturate(1.8);
+    /* backdrop-filter moved to ::before — fixes Safari iOS/iPadOS bug where
+       backdrop-filter on a parent corrupts hit-testing for child form elements */
+    position: relative;
+    isolation: isolate;
     padding: 3.5rem 3rem;
     text-align: center;
     max-width: 420px;
     width: 92%;
     box-shadow: var(--shadow-glow);
     animation: cardEnter 0.7s var(--transition) both;
+}
+.login-card::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    backdrop-filter: blur(32px) saturate(1.8);
+    -webkit-backdrop-filter: blur(32px) saturate(1.8);
+    pointer-events: none;
+    z-index: -1;
 }
 @keyframes cardEnter {
     from { opacity: 0; transform: translateY(30px) scale(0.96); }
@@ -311,6 +323,9 @@ body {
     letter-spacing: 0.02em;
     transition: transform var(--transition), box-shadow var(--transition);
     box-shadow: 0 4px 24px var(--accent-glow);
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+    user-select: none;
 }
 .guest-btn:hover {
     transform: translateY(-2px) scale(1.02);
@@ -355,6 +370,8 @@ body {
     border-radius: 50px;
     text-decoration: none;
     transition: background var(--transition), border-color var(--transition), transform var(--transition);
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
 }
 .google-btn:hover {
     background: rgba(196, 231, 233, 0.10);

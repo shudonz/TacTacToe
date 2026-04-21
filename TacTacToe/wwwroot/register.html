@@ -40,16 +40,49 @@
             el.style.display = 'block';
         }
 
-        document.getElementById('regForm').addEventListener('submit', function (e) {
-            const pw = document.getElementById('pwInput').value;
-            const cf = document.getElementById('cfInput').value;
-            if (pw !== cf) {
+        // Use fetch() so Safari iOS stores the auth cookie before we navigate.
+        // Native form POST + 302 redirect drops the cookie on Safari/iPadOS over HTTP.
+        (function () {
+            const form = document.getElementById('regForm');
+            const errEl = document.getElementById('errorMsg');
+
+            form.addEventListener('submit', async function (e) {
                 e.preventDefault();
-                const el = document.getElementById('errorMsg');
-                el.textContent = errors.mismatch;
-                el.style.display = 'block';
-            }
-        });
+                const pw = document.getElementById('pwInput').value;
+                const cf = document.getElementById('cfInput').value;
+                if (pw !== cf) {
+                    errEl.textContent = errors.mismatch;
+                    errEl.style.display = 'block';
+                    return;
+                }
+
+                const btn = form.querySelector('button[type=submit]');
+                btn.disabled = true;
+                btn.textContent = 'Creating account\u2026';
+
+                try {
+                    const res = await fetch('/register', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                        body: new URLSearchParams(new FormData(form)).toString()
+                    });
+                    const dest = new URL(res.url || '/register', window.location.href);
+                    if (!dest.pathname.startsWith('/register')) {
+                        window.location.replace(dest.pathname + dest.search);
+                    } else {
+                        const err = new URLSearchParams(dest.search).get('error');
+                        errEl.textContent = errors[err] || 'An error occurred. Please try again.';
+                        errEl.style.display = 'block';
+                        btn.disabled = false;
+                        btn.textContent = 'Create Account';
+                    }
+                } catch (_) {
+                    // Network error — fall back to native submit
+                    form.removeEventListener('submit', arguments.callee);
+                    form.submit();
+                }
+            });
+        })();
     </script>
 </body>
 </html>
