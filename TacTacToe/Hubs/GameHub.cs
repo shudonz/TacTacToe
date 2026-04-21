@@ -264,6 +264,76 @@ public partial class GameHub : Hub
             });
         }
 
+        // Defer Chinese Checkers waiting-room cleanup
+        var ccWaitSnapshot = _lobby.GetChineseCheckersRoomsForConnection(disconnectedConnectionId).ToList();
+        if (ccWaitSnapshot.Count > 0)
+        {
+            _ = Task.Run(async () =>
+            {
+                await Task.Delay(TimeSpan.FromSeconds(DefaultRejoinGracePeriodSeconds));
+                bool changed = false;
+                foreach (var snap in ccWaitSnapshot)
+                {
+                    var room = _lobby.GetChineseCheckersRoom(snap.Id);
+                    if (room == null || room.Started) continue;
+                    var player = room.Players.FirstOrDefault(p => p.Name == name);
+                    if (player == null || player.ConnectionId != disconnectedConnectionId) continue;
+                    room.Players.Remove(player);
+                    changed = true;
+                    if (room.Players.Count == 0 || room.HostName == name)
+                    {
+                        await _hubContext.Clients.Group(room.Id).SendAsync("ChineseCheckersRoomDissolved");
+                        _lobby.RemoveChineseCheckersRoom(room.Id);
+                    }
+                    else
+                    {
+                        await _hubContext.Clients.Group(room.Id).SendAsync("ChineseCheckersRoomUpdated", room);
+                    }
+                }
+                if (changed) await _hubContext.Clients.All.SendAsync("ChineseCheckersRoomList", ChineseCheckersRoomSummaries());
+            });
+        }
+
+        // Defer Chinese Checkers active-game disconnect handling
+        var ccGameSnapshot = _lobby.GetActiveChineseCheckersRoomsForConnection(disconnectedConnectionId).ToList();
+        if (ccGameSnapshot.Count > 0)
+        {
+            _ = Task.Run(async () =>
+            {
+                await Task.Delay(TimeSpan.FromSeconds(DefaultRejoinGracePeriodSeconds));
+                foreach (var snap in ccGameSnapshot)
+                {
+                    var room = _lobby.GetChineseCheckersRoom(snap.Id);
+                    if (room == null || room.IsOver) continue;
+                    var player = room.Players.FirstOrDefault(p => p.Name == name && !p.IsBot);
+                    if (player == null || player.ConnectionId != disconnectedConnectionId) continue;
+                    player.Connected = false;
+                    await _hubContext.Clients.Group(room.Id).SendAsync("PlayerLeft", name);
+
+                    if (room.IsSinglePlayer)
+                    {
+                        _lobby.RemoveChineseCheckersRoom(room.Id);
+                        continue;
+                    }
+
+                    var connectedHumans = room.Players.Where(p => !p.IsBot && p.Connected).ToList();
+                    if (connectedHumans.Count == 0)
+                    {
+                        _lobby.RemoveChineseCheckersRoom(room.Id);
+                        continue;
+                    }
+
+                    if (room.Players[room.CurrentPlayerIndex].ConnectionId == disconnectedConnectionId)
+                        MoveToNextChineseCheckersPlayer(room);
+
+                    await _hubContext.Clients.Group(room.Id).SendAsync("ChineseCheckersUpdated", BuildChineseCheckersState(room));
+
+                    if (!room.IsOver && room.Players[room.CurrentPlayerIndex].IsBot)
+                        _ = TakeChineseCheckersBotTurnAsync(room.Id);
+                }
+            });
+        }
+
         // Defer TTT room cleanup — the same grace period used for Yahtzee is needed here
         // because creating/joining a room causes a page navigation which disconnects the
         // lobby connection before RejoinTttRoom can update the player's ConnectionId.
@@ -1416,6 +1486,7 @@ public partial class GameHub : Hub
         await BroadcastConcentrationRooms();
         await BroadcastSolitaireRooms();
         await BroadcastYahtzeeRooms();
+        await BroadcastChineseCheckersRooms();
     }
 
     private static bool CheckWin(string[] board, string mark)

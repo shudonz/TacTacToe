@@ -17,32 +17,37 @@ const COLORS = ["#ef4444", "#22c55e", "#3b82f6", "#f59e0b", "#a855f7", "#14b8a6"
 function esc(s) { const d = document.createElement("div"); d.textContent = s; return d.innerHTML; }
 
 async function init() {
-    if (!myName) {
-        const me = await fetch("/api/me").then(r => r.json());
-        myName = me.name;
-    }
-
-    connection.on("ChineseCheckersUpdated", s => {
-        state = s;
-        renderState();
-    });
-
-    connection.on("ChineseCheckersHint", hint => {
-        if (!hint || !hint.hintAvailable) {
-            showTypedHint("No legal moves available.");
-            return;
+    try {
+        if (!myName) {
+            const me = await fetch("/api/me").then(r => r.json());
+            myName = me.name;
         }
-        selectedPiece = hint.pieceId;
-        renderState();
-        showTypedHint(hint.description || "Try advancing one of your marbles toward its goal.");
-    });
 
-    connection.on("PlayerLeft", name => {
-        document.getElementById("ccStatus").textContent = name + " left the game.";
-    });
+        connection.on("ChineseCheckersUpdated", s => {
+            state = s;
+            renderState();
+        });
 
-    await connection.start();
-    await connection.invoke("RejoinChineseCheckersRoom", roomId);
+        connection.on("ChineseCheckersHint", hint => {
+            if (!hint || !hint.hintAvailable) {
+                showTypedHint("No legal moves available.");
+                return;
+            }
+            selectedPiece = hint.pieceId;
+            renderState();
+            showTypedHint(hint.description || "Try advancing one of your marbles toward its goal.");
+        });
+
+        connection.on("PlayerLeft", name => {
+            document.getElementById("ccStatus").textContent = name + " left the game.";
+        });
+
+        await connection.start();
+        await connection.invoke("RejoinChineseCheckersRoom", roomId);
+    } catch (err) {
+        console.error("Chinese Checkers init failed:", err);
+        document.getElementById("ccStatus").textContent = "Failed to load game. Please refresh the page.";
+    }
 }
 
 function renderState() {
