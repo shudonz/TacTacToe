@@ -68,9 +68,7 @@
      Ice Wash     linear-gradient(135deg, #C4E7E9 0%, #F2F4F1 100%)
      Coral Ruin   linear-gradient(135deg, #7A4048 0%, #94979A 100%)  ⚠
 
-   DARK MODE  (default — all tokens above)
-   LIGHT MODE  @media (prefers-color-scheme: light)  — see below.
-               Inverts depth: Carrara White surfaces, Firefly text.
+   DARK MODE  (default — all tokens above, always active)
    ─────────────────────────────────────────────────────────────
 ============================================================ */
 
@@ -2626,68 +2624,6 @@ body {
     .slots-spin-row { flex-direction: column; gap: 8px; }
 }
 
-
-/* ============================================================
-   LIGHT MODE — "Bleached Wreck at Noon"
-   Inverts the depth: pale Carrara surfaces, dark Firefly text.
-   Activated automatically via OS preference.
-   ============================================================ */
-@media (prefers-color-scheme: light) {
-    :root {
-        /* Backgrounds — ocean under midday sun */
-        --bg:            #E8F2F3;          /* very pale ice wash */
-        --bg-subtle:     #F2F4F1;          /* Carrara White */
-        --surface-solid: #FFFFFF;
-        --glass:         rgba(18, 145, 158, 0.06);
-        --glass-border:  rgba(22, 82, 103, 0.15);   /* Oceanic border on light */
-
-        /* Accents — unchanged (teal reads well on light too) */
-        --accent:        #0E7A86;          /* slightly darkened teal for contrast */
-        --accent-glow:   rgba(14, 122, 134, 0.30);
-        --accent2:       #165267;          /* Oceanic Teal as secondary on light */
-        --accent2-glow:  rgba(22, 82, 103, 0.20);
-        --accent3:       #6B6E70;          /* darker Elephant for light bg */
-        --accent-hard:   #8B3A42;          /* slightly darker rust for light ⚠ */
-        --accent-hard-glow: rgba(139, 58, 66, 0.30);
-
-        /* Typography */
-        --text:          #112D38;          /* Firefly — max contrast */
-        --text-mid:      #165267;          /* Oceanic Teal */
-        --text-dim:      #6B6E70;          /* darkened Elephant */
-
-        /* Shadow */
-        --shadow-glow:   0 0 40px -8px rgba(14, 122, 134, 0.20),
-                         0 0 80px -24px rgba(22, 82, 103, 0.12);
-    }
-
-    /* Navbar gets a light frosted surface */
-    .navbar {
-        background: rgba(242, 244, 241, 0.88);
-        border-bottom-color: rgba(22, 82, 103, 0.15);
-    }
-
-    /* Cells and glass cards on light */
-    .cell {
-        background: rgba(22, 82, 103, 0.04);
-        border-color: rgba(22, 82, 103, 0.12);
-    }
-    .cell:hover:not(.taken) {
-        border-color: rgba(14, 122, 134, 0.30);
-    }
-
-    /* Modal overlay on light */
-    .modal,
-    .result-overlay {
-        background: rgba(196, 231, 233, 0.70);
-    }
-
-    /* Game toast on light */
-    .game-toast {
-        background: rgba(242, 244, 241, 0.97);
-        color: #112D38;
-        border-color: rgba(14, 122, 134, 0.40);
-    }
-}
 
 /* ============================================================
    GRADIENT UTILITIES — optional hero / result highlights

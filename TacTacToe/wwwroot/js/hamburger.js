@@ -14,6 +14,27 @@ document.addEventListener('keydown', function (e) {
     if (e.key === 'Escape') hamClose();
 });
 
+// Use fetch() for logout so Safari iOS clears the auth cookie before navigating.
+// Native form POST + 302 redirect silently drops the cookie on Safari/iPadOS over HTTP.
+(function () {
+    document.addEventListener('submit', async function (e) {
+        const form = e.target;
+        if (!form.action || !form.action.endsWith('/logout')) return;
+        e.preventDefault();
+        try {
+            await fetch('/logout', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
+            });
+        } catch (_) { /* ignore network errors — still navigate */ }
+        window.location.replace('/login');
+    });
+})();
+
+document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape') hamClose();
+});
+
 // Populate the navbar avatar button on every page
 (async function initNavbarAvatar() {
     try {
