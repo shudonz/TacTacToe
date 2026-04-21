@@ -4291,3 +4291,72 @@ tr.row-banned td:first-child { opacity: 1; }
     /* ── Slots leaderboard: scrollable in game view ──────────── */
     .slots-leaderboard { max-height: 170px; }
 }
+
+/* ===============================
+   Chinese Checkers
+=============================== */
+:root {
+    --cc-board-size: clamp(300px, 84vw, 760px);
+}
+
+.cc-page { overflow-x: hidden; }
+.cc-main {
+    display: flex;
+    flex-direction: column;
+    gap: 0.8rem;
+    align-items: center;
+    padding: 0.6rem 0.7rem 2rem;
+}
+
+.cc-header { width: min(98vw, 860px); }
+.cc-board-wrap {
+    width: min(98vw, 860px);
+    display: flex;
+    justify-content: center;
+    padding: 0.8rem;
+}
+
+.cc-board {
+    position: relative;
+    width: var(--cc-board-size);
+    height: var(--cc-board-size);
+    border-radius: 22px;
+    background: radial-gradient(circle at 50% 45%, rgba(32,119,91,0.95), #0f3a2d);
+    border: 1px solid rgba(196,231,233,0.22);
+    box-shadow: inset 0 0 0 1px rgba(196,231,233,0.12);
+}
+
+.cc-node {
+    position: absolute;
+    width: clamp(15px, 2.3vw, 24px);
+    height: clamp(15px, 2.3vw, 24px);
+    transform: translate(-50%, -50%);
+    border-radius: 50%;
+    border: 1px solid rgba(196,231,233,0.38);
+    background: rgba(255,255,255,0.08);
+    padding: 0;
+}
+
+.cc-node-clickable { cursor: pointer; box-shadow: 0 0 0 2px rgba(196,231,233,0.25); }
+.cc-legal-move { cursor: pointer; background: rgba(34,197,94,0.35); border-color: rgba(34,197,94,0.9); }
+
+.cc-piece {
+    display: block;
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    box-shadow: 0 1px 0 rgba(255,255,255,0.45) inset, 0 3px 7px rgba(0,0,0,0.45);
+}
+.cc-piece.selected {
+    outline: 2px solid #fbbf24;
+    outline-offset: 2px;
+}
+
+.cc-actions { display: flex; gap: 0.65rem; }
+.cc-hint-banner {
+    min-height: 1.3rem;
+    color: var(--text);
+    font-size: 0.9rem;
+    letter-spacing: 0.01em;
+}
+.cc-rank { color: var(--text-dim); margin-left: 0.25rem; }

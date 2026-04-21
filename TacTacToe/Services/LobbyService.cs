@@ -10,6 +10,7 @@ public class LobbyService
     private readonly ConcurrentDictionary<string, TttRoom> _tttRooms = new();
     private readonly ConcurrentDictionary<string, SlotsRoom> _slotsRooms = new();
     private readonly ConcurrentDictionary<string, ConcentrationRoom> _concentrationRooms = new();
+    private readonly ConcurrentDictionary<string, ChineseCheckersRoom> _chineseCheckersRooms = new();
 
     public bool AddPlayer(string connectionId, string name, string email, string picture)
     {
@@ -247,6 +248,39 @@ public class LobbyService
             r.Players.Any(p => p.ConnectionId == connectionId && !p.IsBot));
 
     public void RemoveSolitaireRoom(string id) => _solitaireRooms.TryRemove(id, out _);
+
+    // --- Chinese Checkers Rooms ---
+
+    public ChineseCheckersRoom CreateChineseCheckersRoom(string id, string hostConnectionId)
+    {
+        var host = _players.GetValueOrDefault(hostConnectionId);
+        var room = new ChineseCheckersRoom
+        {
+            Id = id,
+            HostConnectionId = hostConnectionId,
+            HostName = host?.Name ?? "Host",
+            Players = [new ChineseCheckersPlayer { ConnectionId = hostConnectionId, Name = host?.Name ?? "Host", Connected = true }]
+        };
+        _chineseCheckersRooms[id] = room;
+        return room;
+    }
+
+    public ChineseCheckersRoom? GetChineseCheckersRoom(string id) { _chineseCheckersRooms.TryGetValue(id, out var r); return r; }
+    public void StoreChineseCheckersRoom(string id, ChineseCheckersRoom room) => _chineseCheckersRooms[id] = room;
+
+    public IEnumerable<ChineseCheckersRoom> GetOpenChineseCheckersRooms() =>
+        _chineseCheckersRooms.Values.Where(r => !r.Started && !r.IsOver &&
+            IsOnlineConnection(r.HostConnectionId) &&
+            r.Players.Any(p => p.IsBot || IsOnlineConnection(p.ConnectionId)));
+
+    public IEnumerable<ChineseCheckersRoom> GetChineseCheckersRoomsForConnection(string connectionId) =>
+        _chineseCheckersRooms.Values.Where(r => !r.Started && r.Players.Any(p => p.ConnectionId == connectionId));
+
+    public IEnumerable<ChineseCheckersRoom> GetActiveChineseCheckersRoomsForConnection(string connectionId) =>
+        _chineseCheckersRooms.Values.Where(r => r.Started && !r.IsOver &&
+            r.Players.Any(p => p.ConnectionId == connectionId && !p.IsBot));
+
+    public void RemoveChineseCheckersRoom(string id) => _chineseCheckersRooms.TryRemove(id, out _);
 }
 
 public class LobbyPlayer

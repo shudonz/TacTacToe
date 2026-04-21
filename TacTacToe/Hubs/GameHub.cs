@@ -8,7 +8,7 @@ using TacTacToe.Services;
 namespace TacTacToe.Hubs;
 
 [Authorize]
-public class GameHub : Hub
+public partial class GameHub : Hub
 {
     private const int RoomNameMaxLength = 30;
     private const int DefaultRejoinGracePeriodSeconds = 8;
