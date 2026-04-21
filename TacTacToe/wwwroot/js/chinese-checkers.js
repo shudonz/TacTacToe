@@ -161,12 +161,14 @@ function backToLobby() {
     });
 }
 
-document.getElementById("ccHintBtn").addEventListener("click", () => {
-    connection.invoke("RequestChineseCheckersHint", roomId);
-});
+document.addEventListener('DOMContentLoaded', () => {
+    document.getElementById("ccHintBtn").addEventListener("click", () => {
+        connection.invoke("RequestChineseCheckersHint", roomId);
+    });
 
-document.getElementById("ccBackBtn").addEventListener("click", backToLobby);
-document.getElementById("backToLobby").addEventListener("click", backToLobby);
-document.getElementById("hamBackBtn").addEventListener("click", backToLobby);
+    document.getElementById("ccBackBtn").addEventListener("click", backToLobby);
+    document.getElementById("backToLobby").addEventListener("click", backToLobby);
+    document.getElementById("hamBackBtn").addEventListener("click", backToLobby);
+});
 
 init();
