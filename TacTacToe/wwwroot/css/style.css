@@ -2815,34 +2815,33 @@ body {
    ============================================================ */
 
 /* ── CSS Variables (responsive card sizes) ─────────────────── */
+/*
+ * Card sizing uses clamp() so the board fills available space on
+ * any screen:  phone → tablet → desktop / large monitor.
+ * Formula: clamp(min, preferred-vw, max)
+ *   -- card width  ≈ 11.5 vw, capped at 130 px on huge screens
+ *   -- card height ≈ 1.4× width  (standard poker aspect ratio)
+ *   -- gap / offsets scale proportionally
+ */
 :root {
-    --sol-card-w:  78px;
-    --sol-card-h: 109px;
-    --sol-card-r:   8px;
-    --sol-fan-fu:   28px;   /* face-up vertical offset */
-    --sol-fan-fd:   18px;   /* face-down vertical offset */
-    --sol-gap:       8px;
+    --sol-card-w:  clamp(44px, 11.5vw, 130px);
+    --sol-card-h:  clamp(62px, 16.1vw, 182px);
+    --sol-card-r:  clamp(5px,  0.9vw,  12px);
+    --sol-fan-fu:  clamp(17px, 3.2vw,  42px);   /* face-up vertical offset */
+    --sol-fan-fd:  clamp(11px, 2.0vw,  26px);   /* face-down vertical offset */
+    --sol-gap:     clamp(4px,  1.0vw,  14px);
     --sol-felt:    #0d3322;
     --sol-felt-2:  #0a2a1c;
 }
+/* Explicit small-screen overrides kept for clarity / safety */
 @media (max-width: 640px) {
     :root {
-        --sol-card-w:  58px;
-        --sol-card-h:  81px;
-        --sol-card-r:   6px;
-        --sol-fan-fu:   22px;
-        --sol-fan-fd:   14px;
-        --sol-gap:       5px;
-    }
-}
-@media (max-width: 420px) {
-    :root {
-        --sol-card-w:  44px;
-        --sol-card-h:  62px;
-        --sol-card-r:   5px;
-        --sol-fan-fu:   17px;
-        --sol-fan-fd:   11px;
-        --sol-gap:       4px;
+        --sol-card-w:  clamp(44px, 13.5vw, 78px);
+        --sol-card-h:  clamp(62px, 18.9vw, 109px);
+        --sol-card-r:  clamp(5px,  0.9vw,  8px);
+        --sol-fan-fu:  clamp(17px, 3.5vw,  28px);
+        --sol-fan-fd:  clamp(11px, 2.2vw,  18px);
+        --sol-gap:     clamp(4px,  1.0vw,  8px);
     }
 }
 
@@ -2852,8 +2851,8 @@ body {
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 1rem;
-    padding: 1rem 1rem 2rem;
+    gap: clamp(0.6rem, 1.5vw, 1.5rem);
+    padding: clamp(0.75rem, 1.5vw, 2rem) clamp(0.5rem, 2vw, 2rem) clamp(1.5rem, 3vw, 3rem);
     min-height: calc(100vh - 64px);
     min-height: calc(100svh - 64px);
 }
@@ -2881,17 +2880,18 @@ body {
     align-items: center;
     gap: 0.75rem;
     width: 100%;
-    max-width: 700px;
+    /* grows to fill the screen; 7 cards + 6 gaps + board padding */
+    max-width: min(96vw, calc(var(--sol-card-w) * 7 + var(--sol-gap) * 6 + 24px));
 }
 
 .sol-board {
     background: var(--sol-felt);
-    border-radius: 14px;
-    padding: 12px 10px 16px;
+    border-radius: clamp(10px, 1.2vw, 20px);
+    padding: clamp(10px, 1.2vw, 22px) clamp(8px, 1.0vw, 18px) clamp(14px, 1.6vw, 28px);
     box-shadow: 0 8px 40px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.04);
     display: flex;
     flex-direction: column;
-    gap: 12px;
+    gap: clamp(10px, 1.2vw, 20px);
     width: 100%;
     position: relative;
 }
@@ -2921,7 +2921,7 @@ body {
 .sol-slot:hover { border-color: rgba(196,231,233,0.40); }
 
 .sol-foundation {
-    font-size: 1.5rem;
+    font-size: calc(var(--sol-card-w) * 0.38);
     color: rgba(196,231,233,0.30);
     user-select: none;
 }
@@ -2943,7 +2943,7 @@ body {
     height: var(--sol-card-h);
     border-radius: var(--sol-card-r);
     border: 2px dashed rgba(196,231,233,0.30);
-    font-size: 1.8rem;
+    font-size: calc(var(--sol-card-w) * 0.38);
     color: rgba(196,231,233,0.40);
     cursor: pointer;
     transition: color 0.15s, border-color 0.15s;
@@ -3099,7 +3099,7 @@ body {
     font-size: 0.88rem;
     font-weight: 600;
     text-align: center;
-    max-width: 700px;
+    max-width: min(96vw, calc(var(--sol-card-w) * 7 + var(--sol-gap) * 6 + 24px));
     width: 100%;
     animation: solHintBannerIn 0.22s ease;
 }
@@ -3147,7 +3147,7 @@ body {
 /* ── Leaderboard ────────────────────────────────────────────── */
 .sol-leaderboard {
     width: 100%;
-    max-width: 700px;
+    max-width: min(96vw, calc(var(--sol-card-w) * 7 + var(--sol-gap) * 6 + 24px));
     padding: 0.5rem 0.75rem;
     max-height: 180px;
     overflow-y: auto;
