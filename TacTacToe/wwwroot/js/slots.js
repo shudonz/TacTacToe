@@ -32,12 +32,6 @@ let _prevPhase = null;
 let _prevSpun = false;
 let _reelsAnimating = false;
 let _gameOverEventFired = false;
-// Local client-side cache so the player's last spin result can be shown
-// until they explicitly click to spin again.
-let _localHasResult = false;
-let _localReels = null;
-let _localWinningPaylines = [];
-let _localLastWin = 0;
 
 function esc(s) { const d = document.createElement("div"); d.textContent = s; return d.innerHTML; }
 function totalBet() { return selectedBetPerLine * selectedPaylines; }
@@ -392,16 +386,11 @@ function syncBetDisplay() {
 }
 function applyAffordableSelection(balance) {
     if (balance <= 0) return;
-    // Only adjust the client's selection if the current selection is not affordable
-    // or not yet initialized. This preserves the user's last chosen bet between
-    // rounds instead of forcing it back to a "best fit" default every update.
-    if (!selectedPaylines || !selectedBetPerLine || (selectedBetPerLine * selectedPaylines) > balance) {
-        const bestLineChoice = PAYLINE_OPTIONS_DESC.find(lines => selectedBetPerLine * lines <= balance);
-        selectedPaylines = bestLineChoice || 1;
+    const bestLineChoice = PAYLINE_OPTIONS_DESC.find(lines => selectedBetPerLine * lines <= balance);
+    selectedPaylines = bestLineChoice || 1;
 
-        const bestBetPerLine = BET_PER_LINE_OPTIONS_DESC.find(bet => bet * selectedPaylines <= balance);
-        selectedBetPerLine = bestBetPerLine || 1;
-    }
+    const bestBetPerLine = BET_PER_LINE_OPTIONS_DESC.find(bet => bet * selectedPaylines <= balance);
+    selectedBetPerLine = bestBetPerLine || 1;
 
     document.querySelectorAll(".slots-line-chip").forEach(b => b.classList.toggle("active", Number(b.dataset.lines) === selectedPaylines));
     document.querySelectorAll(".slots-bet-chip").forEach(b => b.classList.toggle("active", Number(b.dataset.betPerLine) === selectedBetPerLine));
@@ -432,18 +421,9 @@ function render(room) {
         const row = document.createElement("div");
         row.className = "slots-lb-row" + (p.name === myName ? " is-me" : "");
         const medal = ["🥇", "🥈", "🥉"][i] || (i + 1) + ".";
-        // For the local player, prefer showing the locally cached result if
-        // the server has already cleared hasSpun for the new betting phase.
-        let reelStr = "", lineStr = "", winStr = "";
-        if (p.hasSpun && hasValidReels(p.reels)) {
-            reelStr = `<span class="slots-lb-reels">${formatReelsInline(p.reels)}</span>`;
-            lineStr = p.activePaylines ? `<span class="slots-lb-lines">${p.activePaylines}L @ $${p.betPerLine || 0}</span>` : "";
-            winStr = p.lastWin > 0 ? `<span class="slots-lb-win">+$${p.lastWin}</span>` : "";
-        } else if (p.name === myName && _localHasResult && _localReels) {
-            reelStr = `<span class="slots-lb-reels">${formatReelsInline(_localReels)}</span>`;
-            lineStr = _localWinningPaylines && _localWinningPaylines.length ? `<span class="slots-lb-lines">${(_localReels && selectedPaylines) || ""}L @ $${selectedBetPerLine}</span>` : "";
-            winStr = _localLastWin > 0 ? `<span class="slots-lb-win">+$${_localLastWin}</span>` : "";
-        }
+        const reelStr = p.hasSpun && hasValidReels(p.reels) ? `<span class="slots-lb-reels">${formatReelsInline(p.reels)}</span>` : "";
+        const lineStr = p.hasSpun && p.activePaylines ? `<span class="slots-lb-lines">${p.activePaylines}L @ $${p.betPerLine || 0}</span>` : "";
+        const winStr = p.hasSpun && p.lastWin > 0 ? `<span class="slots-lb-win">+$${p.lastWin}</span>` : "";
         const bustStr = p.balance <= 0 ? '<span class="slots-lb-bust">BUST</span>' : "";
         row.innerHTML = '<span class="slots-lb-rank">' + medal + '</span>'
             + '<span class="slots-lb-name">' + esc(p.name) + (p.isBot ? " 🤖" : "") + '</span>'
@@ -466,12 +446,6 @@ function render(room) {
                 const winning = Array.isArray(myPlayer.winningPaylines) ? myPlayer.winningPaylines : [];
                 const label = getWinLabel(myPlayer);
                 winEl.textContent = label || (myPlayer.lastWin > 0 ? "Win!" : "No win");
-                // Cache the result locally so it can be displayed during the
-                // subsequent betting phase until the player clicks to spin again.
-                _localHasResult = true;
-                _localReels = myPlayer.reels;
-                _localWinningPaylines = winning;
-                _localLastWin = myPlayer.lastWin || 0;
                 if (myPlayer.lastWin > 0) {
                     highlightWinningPaylines(winning);
                     renderPaylineLegend(activeLines, winning);
@@ -483,34 +457,12 @@ function render(room) {
                 }
             });
         } else if (!myPlayer.hasSpun) {
-            // Instead of clearing the last spin result immediately when the
-            // server resets hasSpun for a new betting phase, prefer showing
-            // the locally cached last result until the player clicks Spin
-            // again. If no cached result exists, show the default ? placeholders.
-            if (_localHasResult && _localReels) {
-                for (let r = 0; r < 3; r++) for (let c = 0; c < 3; c++) reelEl(r, c).textContent = SYMBOLS[_localReels[r][c]];
-                const winEl = document.getElementById("winLabel");
-                const label = _localWinningPaylines && _localWinningPaylines.length ? (_localWinningPaylines.length > 0 ? `${_localWinningPaylines.length} line${_localWinningPaylines.length>1?"s":""} hit` : "") : (_localLastWin > 0 ? "Win!" : "");
-                winEl.textContent = label || (_localLastWin > 0 ? "Win!" : "");
-                if (_localLastWin > 0) {
-                    highlightWinningPaylines(_localWinningPaylines || []);
-                    renderPaylineLegend(activeLines, _localWinningPaylines || []);
-                } else {
-                    clearPaylineHighlights();
-                }
-            } else {
-                for (let r = 0; r < 3; r++) for (let c = 0; c < 3; c++) reelEl(r, c).textContent = "?";
-                document.getElementById("winLabel").textContent = "";
-                clearPaylineHighlights();
-            }
+            for (let r = 0; r < 3; r++) for (let c = 0; c < 3; c++) reelEl(r, c).textContent = "?";
+            document.getElementById("winLabel").textContent = "";
+            clearPaylineHighlights();
         } else if (!_reelsAnimating && myPlayer.lastWin > 0) {
             highlightWinningPaylines(myPlayer.winningPaylines || []);
             renderPaylineLegend(activeLines, myPlayer.winningPaylines || []);
-            // keep local cache in sync in case server still reports lastWin
-            _localHasResult = true;
-            _localReels = myPlayer.reels;
-            _localWinningPaylines = myPlayer.winningPaylines || [];
-            _localLastWin = myPlayer.lastWin || 0;
         }
 
         if (!justSpun || myPlayer.lastWin === 0) document.getElementById("myBalance").textContent = "$" + myPlayer.balance;
@@ -592,11 +544,6 @@ async function init() {
         const btn = document.getElementById("spinBtn");
         btn.classList.add("slots-spin-pressed");
         setTimeout(() => btn.classList.remove("slots-spin-pressed"), 200);
-        // Clear the locally cached last result now that the player has chosen
-        // to spin again so the UI transitions into the new spin state.
-        _localHasResult = false; _localReels = null; _localWinningPaylines = []; _localLastWin = 0;
-        clearPaylineHighlights();
-        for (let r = 0; r < 3; r++) for (let c = 0; c < 3; c++) reelEl(r, c).textContent = "?";
         connection.invoke("SpinSlots", roomId, selectedBetPerLine, selectedPaylines);
     });
 
