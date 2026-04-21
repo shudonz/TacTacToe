@@ -19,7 +19,7 @@ public class ChineseCheckersRoom
 public class ChineseCheckersSettings
 {
     public string RoomName { get; set; } = "Chinese Checkers Room";
-    public int MaxPlayers { get; set; } = 7;
+    public int MaxPlayers { get; set; } = 6;
     public bool FillWithBotsOnStart { get; set; }
 }
 
@@ -66,18 +66,59 @@ public class ChineseCheckersMove
 
 public static class ChineseCheckersEngine
 {
-    private const int Arms = 7;
-    private const int OuterRing = 6;
-    private const int PiecesPerPlayer = 3;
+    // The board is a hexagram with 6 arms (N, NE, SE, S, SW, NW) of 10 nodes each
+    // and a 61-node central hexagon — 121 nodes total.
+    // Nodes use "row_dcol" IDs in a 17-row doubled-column triangular grid.
+    private const int TotalArms = 6;
+    private const int PiecesPerPlayer = 10;
+
+    // Row layout: (startDcol, nodeCount) for each of 17 rows (0–16).
+    // Nodes in each row have dcol = start, start+2, start+4, …
+    // The parity of dcol always matches the parity of row.
+    private static readonly (int Start, int Count)[] RowLayout =
+    [
+        (12, 1),  // row  0 – top tip (arm 0)
+        (11, 2),  // row  1
+        (10, 3),  // row  2
+        (9,  4),  // row  3
+        (0,  13), // row  4 – widest upper row
+        (1,  12), // row  5
+        (2,  11), // row  6
+        (3,  10), // row  7
+        (4,  9),  // row  8 – equator
+        (3,  10), // row  9
+        (2,  11), // row 10
+        (1,  12), // row 11
+        (0,  13), // row 12 – widest lower row
+        (9,  4),  // row 13
+        (10, 3),  // row 14
+        (11, 2),  // row 15
+        (12, 1),  // row 16 – bottom tip (arm 3)
+    ];
+
+    // Which arm each player occupies, keyed by player count.
+    // Opposite arm = (startArm + 3) % 6 is always the goal.
+    private static readonly int[][] PlayerArmMap =
+    [
+        [],                     // 0 players
+        [0],                    // 1 player
+        [0, 3],                 // 2 players
+        [0, 2, 4],              // 3 players
+        [0, 1, 3, 4],           // 4 players
+        [0, 1, 2, 3, 4],        // 5 players
+        [0, 1, 2, 3, 4, 5],     // 6 players
+    ];
 
     private static readonly List<ChineseCheckersNode> _nodes = BuildNodes();
     private static readonly Dictionary<string, HashSet<string>> _adjacency = BuildAdjacency(_nodes);
+    private static readonly HashSet<string>[] _armNodes = BuildArmNodeSets(_nodes);
+    private static readonly HashSet<string> _boardNodeSet = new(_nodes.Select(n => n.Id));
 
     public static IReadOnlyList<ChineseCheckersNode> Nodes => _nodes;
 
     public static void StartGame(ChineseCheckersRoom room)
     {
-        room.Settings.MaxPlayers = 7;
+        room.Settings.MaxPlayers = TotalArms;
         room.Started = true;
         room.IsOver = false;
         room.WinnerName = null;
@@ -103,20 +144,19 @@ public static class ChineseCheckersEngine
 
         foreach (var piece in room.Pieces.Where(p => p.OwnerIndex == playerIndex))
         {
+            // Single steps to adjacent empty nodes
             foreach (var next in _adjacency[piece.NodeId])
             {
                 if (!occupancy.ContainsKey(next))
-                {
                     moves.Add(new ChineseCheckersMove { PieceId = piece.Id, ToNodeId = next, IsJump = false });
-                    continue;
-                }
-
-                var landing = FindLandingNode(piece.NodeId, next);
-                if (landing != null && !occupancy.ContainsKey(landing))
-                    moves.Add(new ChineseCheckersMove { PieceId = piece.Id, ToNodeId = landing, IsJump = true });
             }
+
+            // All destinations reachable via one or more chained jumps
+            foreach (var dest in FindAllJumpDestinations(piece.NodeId, occupancy))
+                moves.Add(new ChineseCheckersMove { PieceId = piece.Id, ToNodeId = dest, IsJump = true });
         }
 
+        // If a destination is reachable both by step and jump, prefer the jump
         return moves
             .GroupBy(m => (m.PieceId, m.ToNodeId))
             .Select(g => g.OrderByDescending(x => x.IsJump).First())
@@ -137,10 +177,9 @@ public static class ChineseCheckersEngine
 
     public static bool HasPlayerFinished(ChineseCheckersRoom room, int playerIndex)
     {
-        int targetArm = TargetArm(playerIndex);
-        var targets = GoalNodesForArm(targetArm);
+        int targetArm = TargetArm(playerIndex, room.Players.Count);
         var mine = room.Pieces.Where(p => p.OwnerIndex == playerIndex).Select(p => p.NodeId).ToHashSet();
-        return targets.All(mine.Contains);
+        return _armNodes[targetArm].All(mine.Contains);
     }
 
     public static ChineseCheckersHint ComputeHint(ChineseCheckersRoom room, int playerIndex)
@@ -155,8 +194,6 @@ public static class ChineseCheckersEngine
             .First();
 
         var piece = room.Pieces.First(p => p.Id == best.PieceId);
-        var fromLabel = LabelForNode(piece.NodeId);
-        var toLabel = LabelForNode(best.ToNodeId);
 
         return new ChineseCheckersHint
         {
@@ -164,8 +201,8 @@ public static class ChineseCheckersEngine
             PieceId = best.PieceId,
             ToNodeId = best.ToNodeId,
             Description = best.IsJump
-                ? $"Jump from {fromLabel} to {toLabel}."
-                : $"Step from {fromLabel} to {toLabel}."
+                ? $"Jump from {LabelForNode(piece.NodeId)} to {LabelForNode(best.ToNodeId)}."
+                : $"Step from {LabelForNode(piece.NodeId)} to {LabelForNode(best.ToNodeId)}."
         };
     }
 
@@ -182,169 +219,207 @@ public static class ChineseCheckersEngine
 
     public static int ScoreForPlayer(ChineseCheckersRoom room, int playerIndex)
     {
-        int targetArm = TargetArm(playerIndex);
-        int progress = 0;
+        int score = 0;
         foreach (var piece in room.Pieces.Where(p => p.OwnerIndex == playerIndex))
-        {
-            var node = _nodes.First(n => n.Id == piece.NodeId);
-            int ringBonus = Math.Clamp(node.Ring, 0, OuterRing) * 10;
-            int armBonus = node.Arm == targetArm ? 25 : 0;
-            progress += ringBonus + armBonus;
-        }
-
-        if (HasPlayerFinished(room, playerIndex)) progress += 300;
-        return progress;
+            score += 8 - DistanceToGoal(playerIndex, piece.NodeId, room.Players.Count);
+        if (HasPlayerFinished(room, playerIndex)) score += 100;
+        return score;
     }
+
+    // ── Private helpers ──────────────────────────────────────────────────────
 
     private static int ScoreMove(ChineseCheckersRoom room, int playerIndex, ChineseCheckersMove move)
     {
         var piece = room.Pieces.First(p => p.Id == move.PieceId);
-        int before = DistanceToGoal(playerIndex, piece.NodeId);
-        int after = DistanceToGoal(playerIndex, move.ToNodeId);
-        int gain = before - after;
-        if (move.IsJump) gain += 2;
+        int gain = DistanceToGoal(playerIndex, piece.NodeId, room.Players.Count)
+                 - DistanceToGoal(playerIndex, move.ToNodeId, room.Players.Count);
+        if (move.IsJump) gain += 1;
         return gain;
     }
 
-    private static int DistanceToGoal(int playerIndex, string nodeId)
+    // Cube-coordinate distance from 'nodeId' to the nearest node in the target arm.
+    // Cube coords centred on (row=8, dcol=12):
+    //   q = (dcol - row - 4) / 2,  rc = row - 8,  s = -q - rc
+    private static int DistanceToGoal(int playerIndex, string nodeId, int playerCount)
     {
-        var node = _nodes.First(n => n.Id == nodeId);
-        int target = TargetArm(playerIndex);
+        int targetArm = TargetArm(playerIndex, playerCount);
+        var (nr, nd) = ParseNode(nodeId);
+        int nq = (nd - nr - 4) / 2;
+        int nrc = nr - 8;
+        int ns = -nq - nrc;
 
-        int armDelta = Math.Abs(node.Arm - target);
-        armDelta = Math.Min(armDelta, Arms - armDelta);
-
-        int radial = OuterRing - node.Ring;
-        int outward = Math.Abs(OuterRing - node.Ring);
-
-        return armDelta * 3 + radial + outward;
+        int minDist = int.MaxValue;
+        foreach (var gId in _armNodes[targetArm])
+        {
+            var (gr, gd) = ParseNode(gId);
+            int gq = (gd - gr - 4) / 2;
+            int grc = gr - 8;
+            int gs = -gq - grc;
+            int d = Math.Max(Math.Abs(nq - gq), Math.Max(Math.Abs(nrc - grc), Math.Abs(ns - gs)));
+            if (d < minDist) minDist = d;
+        }
+        return minDist == int.MaxValue ? 0 : minDist;
     }
 
     private static string LabelForNode(string nodeId)
     {
-        var n = _nodes.First(x => x.Id == nodeId);
-        return $"arm {n.Arm + 1}, ring {n.Ring}";
+        var (r, d) = ParseNode(nodeId);
+        return $"row {r + 1}, col {d / 2 + 1}";
     }
 
-    private static int TargetArm(int playerIndex) => (playerIndex + 3) % Arms;
+    // The arm a given player starts in
+    private static int PlayerArm(int playerIndex, int playerCount)
+    {
+        var map = PlayerArmMap[Math.Clamp(playerCount, 0, TotalArms)];
+        return map[playerIndex % map.Length];
+    }
 
-    private static HashSet<string> GoalNodesForArm(int arm) =>
-        [$"{arm}-6", $"{arm}-5", $"{arm}-4"];
+    // The arm a given player is trying to fill (opposite start arm)
+    private static int TargetArm(int playerIndex, int playerCount) =>
+        (PlayerArm(playerIndex, playerCount) + 3) % TotalArms;
+
+    private static HashSet<string>[] BuildArmNodeSets(List<ChineseCheckersNode> nodes)
+    {
+        var sets = new HashSet<string>[TotalArms];
+        for (int i = 0; i < TotalArms; i++)
+            sets[i] = new HashSet<string>(nodes.Where(n => n.Arm == i).Select(n => n.Id));
+        return sets;
+    }
 
     private static List<ChineseCheckersPiece> BuildStartingPieces(int playerCount)
     {
         var pieces = new List<ChineseCheckersPiece>();
         for (int p = 0; p < playerCount; p++)
         {
-            pieces.Add(new ChineseCheckersPiece { Id = $"P{p}_0", OwnerIndex = p, NodeId = $"{p}-6" });
-            pieces.Add(new ChineseCheckersPiece { Id = $"P{p}_1", OwnerIndex = p, NodeId = $"{p}-5" });
-            pieces.Add(new ChineseCheckersPiece { Id = $"P{p}_2", OwnerIndex = p, NodeId = $"{p}-4" });
+            int arm = PlayerArm(p, playerCount);
+            int i = 0;
+            foreach (var nodeId in _armNodes[arm])
+                pieces.Add(new ChineseCheckersPiece { Id = $"P{p}_{i++}", OwnerIndex = p, NodeId = nodeId });
         }
         return pieces;
     }
 
+    // Compact node ID: "{row}_{dcol}"
+    private static string NodeId(int row, int dcol) => $"{row}_{dcol}";
+
+    private static (int row, int dcol) ParseNode(string id)
+    {
+        int sep = id.IndexOf('_');
+        return (int.Parse(id[..sep]), int.Parse(id[(sep + 1)..]));
+    }
+
+    // BFS over all nodes reachable from 'from' by one or more consecutive jumps.
+    private static HashSet<string> FindAllJumpDestinations(string from, Dictionary<string, string> occupancy)
+    {
+        var visited = new HashSet<string> { from };
+        var queue = new Queue<string>();
+        queue.Enqueue(from);
+
+        while (queue.Count > 0)
+        {
+            var current = queue.Dequeue();
+            var (cr, cd) = ParseNode(current);
+
+            foreach (var neighbor in _adjacency[current])
+            {
+                if (!occupancy.ContainsKey(neighbor)) continue; // must jump over an occupied node
+
+                var (nr, nd) = ParseNode(neighbor);
+                int dr = nr - cr, dd = nd - cd;
+                string landing = NodeId(nr + dr, nd + dd);
+
+                if (!_boardNodeSet.Contains(landing)) continue;
+                if (occupancy.ContainsKey(landing)) continue;  // landing must be empty
+                if (visited.Contains(landing)) continue;        // avoid revisiting
+
+                visited.Add(landing);
+                queue.Enqueue(landing);
+            }
+        }
+
+        visited.Remove(from); // the starting node is not a valid destination
+        return visited;
+    }
+
+    // Build the 121 board nodes from the row layout.
+    // Positions: x = dcol/24*96+2 (%), y = row/16*96+2 (%) — both in range [2, 98].
     private static List<ChineseCheckersNode> BuildNodes()
     {
-        var nodes = new List<ChineseCheckersNode>
+        var nodes = new List<ChineseCheckersNode>();
+        for (int r = 0; r < RowLayout.Length; r++)
         {
-            new() { Id = "C", Arm = 0, Ring = 0, X = 50, Y = 50 }
-        };
-
-        for (int ring = 1; ring <= OuterRing; ring++)
-        {
-            for (int arm = 0; arm < Arms; arm++)
+            var (start, count) = RowLayout[r];
+            for (int i = 0; i < count; i++)
             {
-                double angle = (Math.PI * 2 * arm / Arms) - (Math.PI / 2);
-                double radius = 7 + ring * 7.2;
+                int dcol = start + i * 2;
+                double x = (double)dcol / 24.0 * 96.0 + 2.0;
+                double y = (double)r   / 16.0 * 96.0 + 2.0;
                 nodes.Add(new ChineseCheckersNode
                 {
-                    Id = $"{arm}-{ring}",
-                    Arm = arm,
-                    Ring = ring,
-                    X = 50 + Math.Cos(angle) * radius,
-                    Y = 50 + Math.Sin(angle) * radius
+                    Id   = NodeId(r, dcol),
+                    Arm  = GetNodeArm(r, dcol),
+                    Ring = GetNodeRing(r, dcol),
+                    X    = x,
+                    Y    = y,
                 });
             }
         }
-
         return nodes;
     }
 
+    // Arm index for a node: 0=N, 1=NE, 2=SE, 3=S, 4=SW, 5=NW, -1=central hex
+    private static int GetNodeArm(int r, int dcol)
+    {
+        if (r <= 3)  return 0;  // top arm (N)
+        if (r >= 13) return 3;  // bottom arm (S)
+
+        // Central-hexagon left boundary = |r−8| + 4
+        int cl = Math.Abs(r - 8) + 4;
+        int cr = 24 - cl;
+
+        if (r <= 8) // upper half
+        {
+            if (dcol < cl) return 5;  // NW arm
+            if (dcol > cr) return 1;  // NE arm
+        }
+        else        // lower half
+        {
+            if (dcol < cl) return 4;  // SW arm
+            if (dcol > cr) return 2;  // SE arm
+        }
+        return -1;  // central hexagon
+    }
+
+    // Cube-coordinate distance from the board centre — used as the "Ring" metadata.
+    private static int GetNodeRing(int r, int dcol)
+    {
+        int q  = (dcol - r - 4) / 2;
+        int rc = r - 8;
+        int s  = -q - rc;
+        return Math.Max(Math.Abs(q), Math.Max(Math.Abs(rc), Math.Abs(s)));
+    }
+
+    // Build the 6-neighbour adjacency list for the triangular grid.
+    // Two nodes are adjacent when they are reachable by one of the six
+    // unit vectors: (row±1, dcol±1) for diagonal steps or (row, dcol±2) for lateral steps.
     private static Dictionary<string, HashSet<string>> BuildAdjacency(List<ChineseCheckersNode> nodes)
     {
-        var graph = nodes.ToDictionary(n => n.Id, _ => new HashSet<string>());
+        var nodeSet = new HashSet<string>(nodes.Select(n => n.Id));
+        var graph   = nodes.ToDictionary(n => n.Id, _ => new HashSet<string>());
 
-        for (int arm = 0; arm < Arms; arm++)
+        int[][] deltas = [[0, -2], [0, 2], [-1, -1], [-1, 1], [1, -1], [1, 1]];
+
+        foreach (var node in nodes)
         {
-            graph["C"].Add($"{arm}-1");
-            graph[$"{arm}-1"].Add("C");
-
-            for (int ring = 1; ring < OuterRing; ring++)
+            var (r, d) = ParseNode(node.Id);
+            foreach (var delta in deltas)
             {
-                string a = $"{arm}-{ring}";
-                string b = $"{arm}-{ring + 1}";
-                graph[a].Add(b);
-                graph[b].Add(a);
-            }
-        }
-
-        for (int ring = 1; ring <= OuterRing; ring++)
-        {
-            for (int arm = 0; arm < Arms; arm++)
-            {
-                string a = $"{arm}-{ring}";
-                string left = $"{(arm + Arms - 1) % Arms}-{ring}";
-                string right = $"{(arm + 1) % Arms}-{ring}";
-                graph[a].Add(left);
-                graph[a].Add(right);
+                string nb = NodeId(r + delta[0], d + delta[1]);
+                if (nodeSet.Contains(nb))
+                    graph[node.Id].Add(nb);
             }
         }
 
         return graph;
-    }
-
-    private static string? FindLandingNode(string from, string over)
-    {
-        if (from == "C")
-        {
-            var (oa, or) = ParseNode(over);
-            return or == 1 ? $"{oa}-2" : null;
-        }
-
-        var (fa, fr) = ParseNode(from);
-        if (over == "C") return null;
-
-        var (oa2, or2) = ParseNode(over);
-
-        if (fa == oa2)
-        {
-            int delta = or2 - fr;
-            int ring = or2 + delta;
-            if (ring < 1 || ring > OuterRing) return null;
-            return $"{fa}-{ring}";
-        }
-
-        if (fr == or2)
-        {
-            int deltaArm = WrapDelta(fa, oa2);
-            int landingArm = (oa2 + deltaArm + Arms) % Arms;
-            return $"{landingArm}-{fr}";
-        }
-
-        return null;
-    }
-
-    private static (int arm, int ring) ParseNode(string id)
-    {
-        var parts = id.Split('-');
-        return (int.Parse(parts[0]), int.Parse(parts[1]));
-    }
-
-    private static int WrapDelta(int a, int b)
-    {
-        int d = b - a;
-        if (d > Arms / 2) d -= Arms;
-        if (d < -Arms / 2) d += Arms;
-        return Math.Clamp(d, -1, 1);
     }
 }

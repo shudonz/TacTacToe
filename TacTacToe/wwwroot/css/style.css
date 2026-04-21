@@ -4319,7 +4319,8 @@ tr.row-banned td:first-child { opacity: 1; }
 .cc-board {
     position: relative;
     width: var(--cc-board-size);
-    height: var(--cc-board-size);
+    /* Height = width × (2√3/3) ≈ 1.1547 to maintain equilateral-triangle spacing */
+    height: calc(var(--cc-board-size) * 1.1547);
     border-radius: 22px;
     background: radial-gradient(circle at 50% 45%, rgba(32,119,91,0.95), #0f3a2d);
     border: 1px solid rgba(196,231,233,0.22);
@@ -4328,8 +4329,8 @@ tr.row-banned td:first-child { opacity: 1; }
 
 .cc-node {
     position: absolute;
-    width: clamp(15px, 2.3vw, 24px);
-    height: clamp(15px, 2.3vw, 24px);
+    width: clamp(10px, 1.8vw, 20px);
+    height: clamp(10px, 1.8vw, 20px);
     transform: translate(-50%, -50%);
     border-radius: 50%;
     border: 1px solid rgba(196,231,233,0.38);

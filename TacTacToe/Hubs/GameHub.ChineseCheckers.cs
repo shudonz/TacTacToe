@@ -119,11 +119,11 @@ public partial class GameHub
             HostName = name,
             IsSinglePlayer = true,
             Started = true,
-            Settings = new ChineseCheckersSettings { RoomName = "Chinese Checkers vs 6 Bots", MaxPlayers = 7, FillWithBotsOnStart = true },
+            Settings = new ChineseCheckersSettings { RoomName = "Chinese Checkers vs 5 Bots", MaxPlayers = 6, FillWithBotsOnStart = true },
             Players = [new ChineseCheckersPlayer { ConnectionId = Context.ConnectionId, Name = name, Connected = true }]
         };
 
-        for (int i = 0; i < 6; i++)
+        for (int i = 0; i < 5; i++)
         {
             room.Players.Add(new ChineseCheckersPlayer
             {
