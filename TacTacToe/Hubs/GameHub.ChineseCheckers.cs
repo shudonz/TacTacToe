@@ -1,4 +1,5 @@
 using System.Security.Claims;
+using Microsoft.AspNetCore.SignalR;
 using TacTacToe.Models;
 using TacTacToe.Services;
 
@@ -81,6 +82,8 @@ public partial class GameHub
             for (int i = 0; i < needed; i++)
             {
                 string botName = ChineseCheckersBotNames[botIdx % ChineseCheckersBotNames.Length];
+                if (room.Players.Any(p => p.Name == botName))
+                    botName = $"{botName} #{botIdx + 1}";
                 room.Players.Add(new ChineseCheckersPlayer
                 {
                     ConnectionId = $"BOT_{roomId}_{i}",
@@ -125,7 +128,7 @@ public partial class GameHub
             room.Players.Add(new ChineseCheckersPlayer
             {
                 ConnectionId = $"BOT_{roomId}_{i}",
-                Name = ChineseCheckersBotNames[i % ChineseCheckersBotNames.Length],
+                Name = $"{ChineseCheckersBotNames[i % ChineseCheckersBotNames.Length]} #{i + 1}",
                 IsBot = true,
                 Connected = true
             });
