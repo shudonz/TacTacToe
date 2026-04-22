@@ -12,8 +12,10 @@ const SUIT_CLASS = ['black','red','red','black'];
 
 let myName = sessionStorage.getItem('myName') || '';
 let state = null;
+let _prevState = null;
 let _ac = null;
 let _gameOverFired = false;
+let _toastTimer = null;
 
 function esc(s) {
     const d = document.createElement('div');
@@ -21,13 +23,8 @@ function esc(s) {
     return d.innerHTML;
 }
 
-function rank(card) {
-    return card % 13;
-}
-
-function suit(card) {
-    return Math.floor(card / 13);
-}
+function rank(card) { return card % 13; }
+function suit(card) { return Math.floor(card / 13); }
 
 function cardHtml(cardId, extraClass = '') {
     const r = rank(cardId), s = suit(cardId);
@@ -39,23 +36,51 @@ function cardBackHtml() {
     return '<div class="sol-card sol-card-back ce-card-back"></div>';
 }
 
-function audioCtx(){ if (!_ac) { try { _ac = new (window.AudioContext || window.webkitAudioContext)(); } catch(e){} } return _ac; }
-function tone(freq, dur = 0.1, vol = 0.08) {
-    const ac = audioCtx(); if (!ac) return;
-    const o = ac.createOscillator(), g = ac.createGain(), t = ac.currentTime;
-    o.connect(g); g.connect(ac.destination);
-    o.type = 'sine'; o.frequency.setValueAtTime(freq, t);
-    g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(0.001, t + dur);
-    o.start(t); o.stop(t + dur + 0.03);
+// ─── Audio ────────────────────────────────────────────────────────────────────
+function audioCtx() {
+    if (!_ac) { try { _ac = new (window.AudioContext || window.webkitAudioContext)(); } catch(e){} }
+    return _ac;
 }
-function sndPlay(){ tone(740, 0.08, 0.1); tone(520, 0.09, 0.07); }
-function sndDraw(){ tone(300, 0.06, 0.08); }
-function sndHint(){ tone(980, 0.06, 0.07); tone(1300, 0.06, 0.05); }
-function sndWin(){ [523,659,784,1047].forEach((f,i)=>setTimeout(()=>tone(f,0.22,0.13), i*100)); }
+function tone(freq, dur = 0.1, vol = 0.08, type = 'sine', delay = 0) {
+    const ac = audioCtx(); if (!ac) return;
+    const o = ac.createOscillator(), g = ac.createGain(), t = ac.currentTime + delay;
+    o.connect(g); g.connect(ac.destination);
+    o.type = type; o.frequency.setValueAtTime(freq, t);
+    g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(0.001, t + dur);
+    o.start(t); o.stop(t + dur + 0.05);
+}
+function sndPlay() {
+    tone(523, 0.07, 0.12);
+    tone(784, 0.08, 0.10, 'sine', 0.07);
+}
+function sndDraw() {
+    tone(330, 0.05, 0.09);
+    tone(262, 0.07, 0.07, 'sine', 0.05);
+}
+function sndPass() {
+    tone(440, 0.06, 0.07);
+    tone(392, 0.07, 0.06, 'sine', 0.06);
+}
+function sndTurnStart() {
+    tone(523, 0.06, 0.08);
+    tone(659, 0.06, 0.08, 'sine', 0.07);
+    tone(784, 0.10, 0.10, 'sine', 0.14);
+}
+function sndLastCard() {
+    tone(880, 0.08, 0.13);
+    tone(1047, 0.10, 0.12, 'sine', 0.09);
+    tone(1319, 0.14, 0.11, 'sine', 0.20);
+}
+function sndHint() { tone(980, 0.06, 0.07); tone(1300, 0.06, 0.05, 'sine', 0.07); }
+function sndWin() { [523,659,784,1047].forEach((f,i) => setTimeout(() => tone(f, 0.22, 0.13), i * 100)); }
+function sndEight() {
+    [523,622,740,988].forEach((f,i) => tone(f, 0.09, 0.10, 'sine', i * 0.08));
+}
 
-function launchConfetti() {
+// ─── Confetti ─────────────────────────────────────────────────────────────────
+function launchConfetti(count = 90) {
     const colors = ['#12919E','#C4E7E9','#fbbf24','#f472b6','#7c6aff','#36d6c3'];
-    for (let i = 0; i < 90; i++) {
+    for (let i = 0; i < count; i++) {
         setTimeout(() => {
             const el = document.createElement('div');
             el.className = 'ce-confetti';
@@ -68,6 +93,29 @@ function launchConfetti() {
     }
 }
 
+function launchMiniConfetti() {
+    const colors = ['#fbbf24','#f472b6','#36d6c3','#7c6aff'];
+    for (let i = 0; i < 18; i++) {
+        const el = document.createElement('div');
+        el.className = 'ce-confetti ce-confetti-mini';
+        el.style.left = (30 + Math.random() * 40) + '%';
+        el.style.background = colors[i % colors.length];
+        el.style.animationDuration = (0.8 + Math.random() * 0.8) + 's';
+        document.body.appendChild(el);
+        setTimeout(() => el.remove(), 1800);
+    }
+}
+
+// ─── Toast ────────────────────────────────────────────────────────────────────
+function showToast(msg, extra = '') {
+    const el = document.getElementById('ceToast');
+    el.className = 'ce-toast ce-toast-show' + (extra ? ' ' + extra : '');
+    el.textContent = msg;
+    clearTimeout(_toastTimer);
+    _toastTimer = setTimeout(() => { el.className = 'ce-toast'; }, 2200);
+}
+
+// ─── Render helpers ───────────────────────────────────────────────────────────
 function renderPlayers() {
     const wrap = document.getElementById('cePlayers');
     wrap.innerHTML = '';
@@ -103,7 +151,9 @@ function renderPile() {
 
     draw.innerHTML = state.drawCount > 0 ? cardBackHtml() : '<div class="ce-empty">Empty</div>';
     drawCount.textContent = `${state.drawCount} left`;
-    discard.innerHTML = state.topCard >= 0 ? cardHtml(state.topCard, 'ce-discard-card') : '<div class="ce-empty">—</div>';
+
+    const topChanged = !_prevState || _prevState.topCard !== state.topCard;
+    discard.innerHTML = state.topCard >= 0 ? cardHtml(state.topCard, topChanged ? 'ce-discard-card' : '') : '<div class="ce-empty">—</div>';
 
     const si = state.activeSuit;
     if (si >= 0 && si < 4) {
@@ -119,13 +169,15 @@ function renderHand() {
 
     const legal = new Map((state.legalMoves || []).map(m => [m.cardId, m]));
     const myTurn = state.players[state.currentPlayerIndex]?.name === myName && !state.isOver;
+    const justMyTurn = myTurn && (!_prevState || _prevState.players[_prevState.currentPlayerIndex]?.name !== myName);
 
-    state.myHand.forEach(cardId => {
+    state.myHand.forEach((cardId, i) => {
         const wrap = document.createElement('button');
         const move = legal.get(cardId);
         const valid = !!move;
         wrap.type = 'button';
-        wrap.className = 'ce-card-btn' + (valid ? ' ce-valid' : '');
+        wrap.className = 'ce-card-btn' + (valid && myTurn ? ' ce-valid' : '');
+        if (justMyTurn && valid) wrap.style.animationDelay = `${i * 40}ms`;
         wrap.innerHTML = cardHtml(cardId);
         if (myTurn && valid) {
             wrap.onclick = () => playCard(cardId, move.requiresSuitChoice);
@@ -139,11 +191,51 @@ function renderHand() {
 function renderActions() {
     if (!state) return;
     const myTurn = state.players[state.currentPlayerIndex]?.name === myName && !state.isOver;
-    document.getElementById('ceDrawBtn').disabled = !(myTurn && state.canDraw);
+    const mustDraw = myTurn && state.canDraw && (!state.legalMoves || state.legalMoves.length === 0) && !state.canPass;
+    const draw = document.getElementById('ceDrawPile');
+    draw.disabled = !(myTurn && state.canDraw);
+    draw.classList.toggle('ce-draw-glow', mustDraw);
+
     const passBtn = document.getElementById('cePassBtn');
     passBtn.style.display = (myTurn && state.canPass) ? '' : 'none';
     document.getElementById('ceHintBtn').disabled = !myTurn;
-    document.getElementById('ceDrawPile').disabled = !(myTurn && state.canDraw);
+}
+
+function checkSideEffects() {
+    if (!state || !_prevState) return;
+
+    const myTurn = state.players[state.currentPlayerIndex]?.name === myName && !state.isOver;
+    const wasMine = _prevState.players[_prevState.currentPlayerIndex]?.name === myName;
+
+    // Turn-start toast & jingle
+    if (myTurn && !wasMine && !state.isOver) {
+        audioCtx()?.resume();
+        sndTurnStart();
+        showToast('🎴 Your turn!', 'ce-toast-turn');
+    }
+
+    // "Last card!" warning
+    state.players.forEach((p, idx) => {
+        const prev = _prevState.players[idx];
+        if (prev && prev.cardCount > 1 && p.cardCount === 1) {
+            setTimeout(() => {
+                sndLastCard();
+                showToast(p.name === myName ? '🃏 Last card!' : `🃏 ${p.name} has 1 card!`, 'ce-toast-lastcard');
+            }, 400);
+        }
+    });
+
+    // Mini confetti when you play a card
+    const myPrev = _prevState.players.find(p => p.name === myName);
+    const myCur = state.players.find(p => p.name === myName);
+    if (myPrev && myCur && myCur.cardCount < myPrev.cardCount) {
+        setTimeout(launchMiniConfetti, 250);
+    }
+
+    // Crazy 8 sound
+    if (state.topCard !== _prevState.topCard && state.topCard >= 0 && rank(state.topCard) === 7) {
+        setTimeout(sndEight, 120);
+    }
 }
 
 function render() {
@@ -153,6 +245,8 @@ function render() {
     renderPile();
     renderHand();
     renderActions();
+    checkSideEffects();
+    _prevState = state;
 
     if (state.isOver) {
         document.getElementById('resultText').textContent = state.winnerName === myName ? 'You won Crazy Eights! 🎉' : (state.winnerName ? `${state.winnerName} wins!` : 'Game over');
@@ -241,16 +335,13 @@ async function init() {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
-    document.getElementById('ceDrawBtn').addEventListener('click', () => {
-        audioCtx()?.resume(); sndDraw();
-        connection.invoke('DrawCrazyEightsCard', roomId);
-    });
     document.getElementById('ceDrawPile').addEventListener('click', () => {
         if (document.getElementById('ceDrawPile').disabled) return;
         audioCtx()?.resume(); sndDraw();
         connection.invoke('DrawCrazyEightsCard', roomId);
     });
     document.getElementById('cePassBtn').addEventListener('click', () => {
+        audioCtx()?.resume(); sndPass();
         connection.invoke('DrawCrazyEightsCard', roomId);
     });
     document.getElementById('ceHintBtn').addEventListener('click', () => {
