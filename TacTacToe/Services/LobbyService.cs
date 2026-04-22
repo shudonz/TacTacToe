@@ -13,6 +13,7 @@ public class LobbyService
     private readonly ConcurrentDictionary<string, SolitaireRoom> _solitaireRooms = new();
     private readonly ConcurrentDictionary<string, PegSolitaireRoom> _pegSolitaireRooms = new();
     private readonly ConcurrentDictionary<string, ChineseCheckersRoom> _chineseCheckersRooms = new();
+    private readonly ConcurrentDictionary<string, CrazyEightsRoom> _crazyEightsRooms = new();
 
     public bool AddPlayer(string connectionId, string name, string email, string picture)
     {
@@ -314,6 +315,39 @@ public class LobbyService
             r.Players.Any(p => p.ConnectionId == connectionId && !p.IsBot));
 
     public void RemoveChineseCheckersRoom(string id) => _chineseCheckersRooms.TryRemove(id, out _);
+
+    // --- Crazy Eights Rooms ---
+
+    public CrazyEightsRoom CreateCrazyEightsRoom(string id, string hostConnectionId)
+    {
+        var host = _players.GetValueOrDefault(hostConnectionId);
+        var room = new CrazyEightsRoom
+        {
+            Id = id,
+            HostConnectionId = hostConnectionId,
+            HostName = host?.Name ?? "Host",
+            Players = [new CrazyEightsPlayer { ConnectionId = hostConnectionId, Name = host?.Name ?? "Host", Connected = true }]
+        };
+        _crazyEightsRooms[id] = room;
+        return room;
+    }
+
+    public CrazyEightsRoom? GetCrazyEightsRoom(string id) { _crazyEightsRooms.TryGetValue(id, out var r); return r; }
+    public void StoreCrazyEightsRoom(string id, CrazyEightsRoom room) => _crazyEightsRooms[id] = room;
+
+    public IEnumerable<CrazyEightsRoom> GetOpenCrazyEightsRooms() =>
+        _crazyEightsRooms.Values.Where(r => !r.Started && !r.IsOver &&
+            IsOnlineConnection(r.HostConnectionId) &&
+            r.Players.Any(p => p.IsBot || IsOnlineConnection(p.ConnectionId)));
+
+    public IEnumerable<CrazyEightsRoom> GetCrazyEightsRoomsForConnection(string connectionId) =>
+        _crazyEightsRooms.Values.Where(r => !r.Started && r.Players.Any(p => p.ConnectionId == connectionId));
+
+    public IEnumerable<CrazyEightsRoom> GetActiveCrazyEightsRoomsForConnection(string connectionId) =>
+        _crazyEightsRooms.Values.Where(r => r.Started && !r.IsOver &&
+            r.Players.Any(p => p.ConnectionId == connectionId && !p.IsBot));
+
+    public void RemoveCrazyEightsRoom(string id) => _crazyEightsRooms.TryRemove(id, out _);
 }
 
 public class LobbyPlayer

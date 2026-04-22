@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>TacTacToe &#8211; Crazy Eights</title>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="/css/style.css" rel="stylesheet">
+</head>
+<body>
+    <div class="ambient"></div>
+    <div class="noise"></div>
+    <div class="page-content ce-page">
+        <nav class="navbar">
+            <button class="ham-btn" onclick="hamOpen()" aria-label="Open menu"><span></span><span></span><span></span></button>
+            <div class="logo-sm"><span class="logo-x">Tac</span><span class="logo-o">Tac</span><span class="logo-x">Toe</span></div>
+            <a href="/profile" class="nav-profile-btn" title="Edit Profile">
+                <span id="navbarAvatarEmoji" class="nav-profile-emoji" style="display:none"></span>
+                <img id="navbarAvatarImg" class="nav-profile-img" src="" alt="Profile" style="display:none">
+                <span id="navbarAvatarPlaceholder" class="nav-profile-placeholder">&#128100;</span>
+                <span id="navbarUsername" class="nav-profile-username"></span>
+            </a>
+        </nav>
+
+        <main class="ce-main">
+            <div class="ce-header glass-card">
+                <h2 class="lobby-title" style="margin:0">Crazy Eights</h2>
+                <div id="ceStatus" class="turn-indicator" style="margin:0">Loading game...</div>
+            </div>
+
+            <div id="cePlayers" class="player-bar"></div>
+
+            <div class="ce-board glass-card">
+                <div class="ce-top-row">
+                    <div>
+                        <div class="ce-pile-label">Draw Pile</div>
+                        <button id="ceDrawPile" class="ce-pile" title="Draw card"></button>
+                        <div id="ceDrawCount" class="ce-pile-count"></div>
+                    </div>
+                    <div>
+                        <div class="ce-pile-label">Discard</div>
+                        <div id="ceDiscard" class="ce-pile"></div>
+                        <div id="ceSuitText" class="ce-suit-text"></div>
+                    </div>
+                </div>
+
+                <div class="ce-actions">
+                    <button id="ceDrawBtn" class="btn btn-outline">Draw</button>
+                    <button id="cePassBtn" class="btn btn-outline">Pass</button>
+                    <button id="ceHintBtn" class="btn btn-sp">&#128161; Hint</button>
+                    <button id="ceBackBtn" class="btn btn-outline">Back to Lobby</button>
+                </div>
+
+                <div id="ceHintBanner" class="ce-hint-banner" style="display:none"></div>
+
+                <div class="ce-hand-wrap">
+                    <div class="ce-pile-label">Your Hand</div>
+                    <div id="ceMyHand" class="ce-hand"></div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <div id="ceSuitModal" class="modal" style="display:none">
+        <div class="modal-content">
+            <h3 style="margin-top:0">Choose a Suit</h3>
+            <div id="ceSuitChoices" class="ce-suit-choices"></div>
+            <div class="modal-actions">
+                <button id="ceSuitCancel" class="btn btn-decline">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="resultOverlay" class="result-overlay" style="display:none">
+        <div class="result-card">
+            <h2 id="resultText"></h2>
+            <button id="backToLobby" class="btn btn-outline">Back to Lobby</button>
+            <div class="leaderboard-panel" style="margin-top:1rem;">
+                <div class="leaderboard-panel-tabs">
+                    <button class="lb-tab active" onclick="showLbTab(this,'ce-lb')">&#127942; Top Scores</button>
+                    <button class="lb-tab" onclick="showLbTab(this,'ce-hist')">&#128196; My History</button>
+                </div>
+                <div class="lb-body" id="ce-lb"></div>
+                <div class="lb-body" id="ce-hist" style="display:none"></div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/8.0.0/signalr.min.js"></script>
+    <script src="/js/avatarCache.js"></script>
+    <script src="/js/leaderboard.js"></script>
+    <script src="/js/crazy-eights.js"></script>
+    <script>
+        function showLbTab(btn, id) {
+            btn.closest('.leaderboard-panel').querySelectorAll('.lb-tab').forEach(t => t.classList.remove('active'));
+            btn.classList.add('active');
+            btn.closest('.leaderboard-panel').querySelectorAll('.lb-body').forEach(b => b.style.display = 'none');
+            document.getElementById(id).style.display = '';
+        }
+        document.addEventListener('gameOver', () => {
+            setTimeout(() => {
+                loadLeaderboard('CrazyEights', document.getElementById('ce-lb'));
+                loadPersonalHistory('CrazyEights', document.getElementById('ce-hist'));
+            }, 1200);
+        });
+    </script>
+    <div class="ham-overlay" onclick="hamClose()"></div>
+    <nav class="ham-drawer" aria-label="Navigation menu">
+        <div class="ham-drawer-header">
+            <div class="ham-drawer-logo"><span class="logo-x">Tac</span><span class="logo-o">Tac</span><span class="logo-x">Toe</span></div>
+            <button class="ham-close" onclick="hamClose()" aria-label="Close menu">&#10005;</button>
+        </div>
+        <div class="ham-menu">
+            <button id="hamBackBtn" class="ham-item">&#8592; Back to Lobby</button>
+        </div>
+    </nav>
+    <script src="/js/hamburger.js"></script>
+</body>
+</html>

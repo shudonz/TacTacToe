@@ -21,6 +21,7 @@ const DASH_GAMES = [
     { key: "solitaire",     api: "Solitaire",      icon: "🂡",  label: "Solitaire"      },
     { key: "pegsolitaire",  api: "PegSolitaire",   icon: "🟠",  label: "Peg Solitaire"  },
     { key: "chinese-checkers", api: "ChineseCheckers", icon: "🎮", label: "Chinese Checkers" },
+    { key: "crazy-eights",  api: "CrazyEights",    icon: "🃏",  label: "Crazy Eights"   },
 ];
 
 async function loadDashboard(me) {
@@ -202,7 +203,8 @@ async function init() {
             concentration: "concentrationPanel",
             solitaire:     "solitairePanel",
             pegsolitaire:  "pegsolitairePanel",
-            "chinese-checkers": "chineseCheckersPanel"
+            "chinese-checkers": "chineseCheckersPanel",
+            "crazy-eights": "crazyEightsPanel"
         };
 
         // Leaderboard containers per game  [apiGameType, lbId, histId]
@@ -213,7 +215,8 @@ async function init() {
             concentration: ["Concentration",  "con-lobby-lb", "con-lobby-hist"],
             solitaire:     ["Solitaire",      "sol-lobby-lb", "sol-lobby-hist"],
             pegsolitaire:  ["PegSolitaire",   "peg-lobby-lb", "peg-lobby-hist"],
-            "chinese-checkers": ["ChineseCheckers", "cc-lobby-lb", "cc-lobby-hist"]
+            "chinese-checkers": ["ChineseCheckers", "cc-lobby-lb", "cc-lobby-hist"],
+            "crazy-eights": ["CrazyEights", "ce-lobby-lb", "ce-lobby-hist"]
         };
 
         // Show welcome state when no game is selected, otherwise hide it
@@ -223,7 +226,7 @@ async function init() {
         Object.entries(panels).forEach(([game, id]) => {
             document.getElementById(id).style.display = selectedGame === game ? "" : "none";
         });
-        ["ttt", "yahtzee", "slots", "concentration", "solitaire", "pegsolitaire", "chineseCheckers"].forEach(key => {
+        ["ttt", "yahtzee", "slots", "concentration", "solitaire", "pegsolitaire", "chineseCheckers", "crazyEights"].forEach(key => {
             const el = document.getElementById(key + "PlaySections");
             if (el) { el.style.display = "none"; el.classList.remove("is-visible"); }
         });
@@ -235,6 +238,7 @@ async function init() {
         else if (selectedGame === "solitaire")     connection.invoke("GetSolitaireRooms");
         else if (selectedGame === "pegsolitaire")  connection.invoke("GetPegSolitaireRooms");
         else if (selectedGame === "chinese-checkers") connection.invoke("GetChineseCheckersRooms");
+        else if (selectedGame === "crazy-eights")  connection.invoke("GetCrazyEightsRooms");
         else if (selectedGame === "yahtzee")       connection.invoke("GetYahtzeeRooms");
 
         // Load leaderboard + personal history for the selected game
@@ -506,6 +510,49 @@ async function init() {
         window.location.href = "/chinese-checkers";
     });
 
+    // Crazy Eights room list
+    connection.on("CrazyEightsRoomList", rooms => {
+        const list = document.getElementById("crazyEightsRoomList");
+        const noRooms = document.getElementById("noCrazyEightsRooms");
+        list.innerHTML = "";
+        const open = rooms.filter(r => !r.started);
+        if (open.length === 0) {
+            noRooms.style.display = "block";
+        } else {
+            noRooms.style.display = "none";
+            open.forEach(r => {
+                const isFull = r.isFull;
+                const card = document.createElement("div");
+                card.className = "player-card room-list-card" + (isFull ? " room-full" : "");
+                const badge = isFull ? '<span class="room-badge room-badge-full">Full</span>' : '<span class="room-badge room-badge-open">Open</span>';
+                card.innerHTML =
+                    '<span class="game-option-icon" style="font-size:1.4rem;">🃏</span>'
+                    + '<div class="room-card-info"><span class="name">' + escapeHtml(r.roomName) + '</span>'
+                    + '<span class="room-card-host">Hosted by ' + escapeHtml(r.hostName) + '</span></div>'
+                    + '<div class="room-card-right"><span class="room-player-count-badge">' + r.playerCount + '/' + r.maxPlayers + '</span>'
+                    + badge + (!isFull ? '<button class="btn btn-accept room-join-btn">Join &rarr;</button>' : '') + '</div>';
+                if (!isFull) {
+                    card.querySelector(".room-join-btn").addEventListener("click", e => { e.stopPropagation(); joinCrazyEightsRoom(r.id); });
+                    card.onclick = () => joinCrazyEightsRoom(r.id);
+                }
+                list.appendChild(card);
+            });
+        }
+    });
+
+    connection.on("CrazyEightsRoomCreated", roomId => {
+        sessionStorage.setItem("crazyEightsRoomId", roomId);
+        sessionStorage.setItem("isSinglePlayer", "0");
+        window.location.href = "/crazy-eights-room";
+    });
+
+    connection.on("CrazyEightsSinglePlayerStarted", roomId => {
+        sessionStorage.setItem("crazyEightsRoomId", roomId);
+        sessionStorage.setItem("myName", me.name);
+        sessionStorage.setItem("isSinglePlayer", "1");
+        window.location.href = "/crazy-eights";
+    });
+
     // Yahtzee room list
     connection.on("YahtzeeRoomList", rooms => {
         const list = document.getElementById("roomList");
@@ -591,6 +638,7 @@ async function init() {
         else if (gameParam === "solitaire") joinSolitaireRoom(joinParam);
         else if (gameParam === "pegsolitaire") joinPegSolitaireRoom(joinParam);
         else if (gameParam === "chinese-checkers") joinChineseCheckersRoom(joinParam);
+        else if (gameParam === "crazy-eights") joinCrazyEightsRoom(joinParam);
         else joinYahtzeeRoom(joinParam);
     }
 
@@ -714,6 +762,32 @@ async function init() {
         if (e.key === "Escape") document.getElementById("createChineseCheckersRoomCancelBtn").click();
     });
 
+    // Crazy Eights single player
+    document.getElementById("crazyEightsSpBtn").addEventListener("click", () => {
+        sessionStorage.setItem("myName", me.name);
+        const botCount = parseInt(document.getElementById("ceBotCountSelect").value, 10) || 3;
+        connection.invoke("StartCrazyEightsSinglePlayer", botCount);
+    });
+
+    // Create Crazy Eights room
+    document.getElementById("createCrazyEightsRoomBtn").addEventListener("click", () => {
+        document.getElementById("newCrazyEightsRoomName").value = "";
+        document.getElementById("createCrazyEightsRoomModal").style.display = "flex";
+        setTimeout(() => document.getElementById("newCrazyEightsRoomName").focus(), 50);
+    });
+    document.getElementById("createCrazyEightsRoomCancelBtn").addEventListener("click", () => {
+        document.getElementById("createCrazyEightsRoomModal").style.display = "none";
+    });
+    document.getElementById("createCrazyEightsRoomConfirmBtn").addEventListener("click", () => {
+        const name = document.getElementById("newCrazyEightsRoomName").value.trim() || "Crazy Eights Room";
+        document.getElementById("createCrazyEightsRoomModal").style.display = "none";
+        connection.invoke("CreateCrazyEightsRoom", name);
+    });
+    document.getElementById("newCrazyEightsRoomName").addEventListener("keydown", e => {
+        if (e.key === "Enter") document.getElementById("createCrazyEightsRoomConfirmBtn").click();
+        if (e.key === "Escape") document.getElementById("createCrazyEightsRoomCancelBtn").click();
+    });
+
     // Concentration single player
     document.getElementById("concentrationEasyBtn").addEventListener("click",    () => spConcentration("easy"));
     document.getElementById("concentrationRegularBtn").addEventListener("click", () => spConcentration("regular"));
@@ -814,6 +888,14 @@ function joinChineseCheckersRoom(roomId) {
     connection.invoke("JoinChineseCheckersRoom", roomId).then(() => {
         sessionStorage.setItem("chineseCheckersRoomId", roomId);
         window.location.href = "/chinese-checkers-room";
+    });
+}
+
+function joinCrazyEightsRoom(roomId) {
+    sessionStorage.setItem("isSinglePlayer", "0");
+    connection.invoke("JoinCrazyEightsRoom", roomId).then(() => {
+        sessionStorage.setItem("crazyEightsRoomId", roomId);
+        window.location.href = "/crazy-eights-room";
     });
 }
 

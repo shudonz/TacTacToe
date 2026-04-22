@@ -285,6 +285,20 @@ app.MapGet("/chinese-checkers-room", (HttpContext ctx) =>
     return Results.File("chinese-checkers-room.html", "text/html");
 });
 
+app.MapGet("/crazy-eights", (HttpContext ctx) =>
+{
+    if (ctx.User.Identity?.IsAuthenticated != true)
+        return Results.Redirect("/login");
+    return Results.File("crazy-eights.html", "text/html");
+});
+
+app.MapGet("/crazy-eights-room", (HttpContext ctx) =>
+{
+    if (ctx.User.Identity?.IsAuthenticated != true)
+        return Results.Redirect("/login");
+    return Results.File("crazy-eights-room.html", "text/html");
+});
+
 app.MapGet("/api/me", async (HttpContext ctx) =>
 {
     if (ctx.User.Identity?.IsAuthenticated != true)

@@ -4582,3 +4582,187 @@ tr.row-banned td:first-child { opacity: 1; }
     50%     { text-shadow: 0 0 18px rgba(0,255,200,1.0), 0 0 38px rgba(0,255,200,0.60); }
 }
 .cc-rank { color: var(--text-dim); margin-left: 0.25rem; }
+
+/* ============================================================
+   Crazy Eights
+============================================================ */
+.ce-main {
+    width: min(1200px, 98vw);
+    margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+    gap: 0.8rem;
+}
+
+.ce-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.7rem 1rem;
+}
+
+.ce-board {
+    padding: 0.9rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.8rem;
+}
+
+.ce-top-row {
+    display: flex;
+    justify-content: center;
+    gap: clamp(18px, 6vw, 56px);
+    align-items: flex-start;
+}
+
+.ce-pile-label {
+    text-align: center;
+    color: var(--text-dim);
+    font-size: 0.85rem;
+    margin-bottom: 0.35rem;
+}
+
+.ce-pile {
+    width: var(--sol-card-w);
+    min-height: var(--sol-card-h);
+    border: 1px solid rgba(196,231,233,0.18);
+    border-radius: var(--sol-card-r);
+    background: rgba(15,25,45,0.55);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+}
+
+button.ce-pile {
+    cursor: pointer;
+}
+
+.ce-pile:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+}
+
+.ce-pile-count,
+.ce-suit-text {
+    text-align: center;
+    margin-top: 0.3rem;
+    color: var(--text-dim);
+    font-size: 0.82rem;
+}
+
+.ce-empty {
+    color: rgba(196,231,233,0.45);
+    font-size: 0.85rem;
+}
+
+.ce-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    justify-content: center;
+}
+
+.ce-hint-banner {
+    min-height: 2.35rem;
+    border-radius: 12px;
+    border: 1px solid rgba(196,231,233,0.16);
+    background: rgba(18, 145, 158, 0.14);
+    color: var(--text);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.5rem 0.75rem;
+    text-align: center;
+    font-size: 0.9rem;
+}
+
+.ce-hand-wrap {
+    padding-top: 0.25rem;
+}
+
+.ce-hand {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 0.45rem;
+}
+
+.ce-card-btn {
+    border: 0;
+    background: transparent;
+    padding: 0;
+    border-radius: var(--sol-card-r);
+    transition: transform 0.15s ease, filter 0.15s ease;
+}
+
+.ce-card-btn .sol-card {
+    transform-origin: center;
+}
+
+.ce-card-btn:not(:disabled):hover .sol-card {
+    transform: translateY(-4px);
+}
+
+.ce-card-btn:disabled {
+    opacity: 0.7;
+}
+
+.ce-card-btn.ce-valid .sol-card {
+    box-shadow: 0 0 0 2px rgba(54, 214, 195, 0.75), 0 8px 16px rgba(0, 0, 0, 0.4);
+}
+
+.ce-card-back {
+    cursor: pointer;
+}
+
+.ce-discard-card {
+    animation: ceCardPop 220ms ease;
+}
+
+@keyframes ceCardPop {
+    from { transform: scale(0.88); opacity: 0.5; }
+    to { transform: scale(1); opacity: 1; }
+}
+
+.ce-suit-choices {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.65rem;
+}
+
+.ce-suit-btn {
+    background: rgba(196,231,233,0.09);
+    border: 1px solid rgba(196,231,233,0.2);
+    color: var(--text);
+}
+
+.ce-confetti {
+    position: fixed;
+    top: -10px;
+    width: 8px;
+    height: 12px;
+    border-radius: 2px;
+    z-index: 80;
+    pointer-events: none;
+    animation-name: ceConfettiFall;
+    animation-timing-function: linear;
+    animation-fill-mode: forwards;
+}
+
+@keyframes ceConfettiFall {
+    to {
+        transform: translateY(110vh) rotate(520deg);
+        opacity: 0;
+    }
+}
+
+@media (max-width: 700px) {
+    .ce-actions {
+        justify-content: stretch;
+    }
+
+    .ce-actions .btn {
+        flex: 1 1 calc(50% - 0.5rem);
+    }
+}

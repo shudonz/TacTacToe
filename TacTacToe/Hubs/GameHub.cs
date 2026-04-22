@@ -396,6 +396,84 @@ public partial class GameHub : Hub
             });
         }
 
+        // Defer Crazy Eights waiting-room cleanup
+        var ceWaitSnapshot = _lobby.GetCrazyEightsRoomsForConnection(disconnectedConnectionId).ToList();
+        if (ceWaitSnapshot.Count > 0)
+        {
+            _ = Task.Run(async () =>
+            {
+                await Task.Delay(TimeSpan.FromSeconds(DefaultRejoinGracePeriodSeconds));
+                bool changed = false;
+                foreach (var snap in ceWaitSnapshot)
+                {
+                    var room = _lobby.GetCrazyEightsRoom(snap.Id);
+                    if (room == null || room.Started) continue;
+                    var player = room.Players.FirstOrDefault(p => p.Name == name);
+                    if (player == null || player.ConnectionId != disconnectedConnectionId) continue;
+                    room.Players.Remove(player);
+                    changed = true;
+                    if (room.Players.Count == 0 || room.HostName == name)
+                    {
+                        await _hubContext.Clients.Group(room.Id).SendAsync("CrazyEightsRoomDissolved");
+                        _lobby.RemoveCrazyEightsRoom(room.Id);
+                    }
+                    else
+                    {
+                        await _hubContext.Clients.Group(room.Id).SendAsync("CrazyEightsRoomUpdated", room);
+                    }
+                }
+                if (changed) await _hubContext.Clients.All.SendAsync("CrazyEightsRoomList", CrazyEightsRoomSummaries());
+            });
+        }
+
+        // Defer Crazy Eights active-game disconnect handling
+        var ceGameSnapshot = _lobby.GetActiveCrazyEightsRoomsForConnection(disconnectedConnectionId).ToList();
+        if (ceGameSnapshot.Count > 0)
+        {
+            _ = Task.Run(async () =>
+            {
+                await Task.Delay(TimeSpan.FromSeconds(DefaultRejoinGracePeriodSeconds));
+                foreach (var snap in ceGameSnapshot)
+                {
+                    var room = _lobby.GetCrazyEightsRoom(snap.Id);
+                    if (room == null || room.IsOver) continue;
+                    var player = room.Players.FirstOrDefault(p => p.Name == name && !p.IsBot);
+                    if (player == null || player.ConnectionId != disconnectedConnectionId) continue;
+                    player.Connected = false;
+                    await _hubContext.Clients.Group(room.Id).SendAsync("PlayerLeft", name);
+
+                    if (room.IsSinglePlayer)
+                    {
+                        _lobby.RemoveCrazyEightsRoom(room.Id);
+                        continue;
+                    }
+
+                    var connectedHumans = room.Players.Where(p => !p.IsBot && p.Connected).ToList();
+                    if (connectedHumans.Count == 0)
+                    {
+                        _lobby.RemoveCrazyEightsRoom(room.Id);
+                        continue;
+                    }
+
+                    if (connectedHumans.Count == 1)
+                    {
+                        room.IsOver = true;
+                        room.WinnerName = connectedHumans[0].Name;
+                        await SaveCrazyEightsSessionsAsync(room);
+                        await BroadcastCrazyEightsState(room);
+                        continue;
+                    }
+
+                    if (room.Players[room.CurrentPlayerIndex].ConnectionId == disconnectedConnectionId)
+                        MoveToNextCrazyEightsPlayer(room);
+
+                    await BroadcastCrazyEightsState(room);
+                    if (!room.IsOver && room.Players[room.CurrentPlayerIndex].IsBot)
+                        _ = TakeCrazyEightsBotTurnAsync(room.Id);
+                }
+            });
+        }
+
         // Defer TTT room cleanup — the same grace period used for Yahtzee is needed here
         // because creating/joining a room causes a page navigation which disconnects the
         // lobby connection before RejoinTttRoom can update the player's ConnectionId.
@@ -1550,6 +1628,7 @@ public partial class GameHub : Hub
         await BroadcastPegSolitaireRooms();
         await BroadcastYahtzeeRooms();
         await BroadcastChineseCheckersRooms();
+        await BroadcastCrazyEightsRooms();
     }
 
     private static bool CheckWin(string[] board, string mark)
