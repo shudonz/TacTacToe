@@ -382,12 +382,19 @@
                     <div id="chineseCheckersPlaySections" class="game-play-sections" style="display:none">
                     <div class="detail-section">
                         <h3 class="detail-section-title">&#129302; Single Player</h3>
-                        <p class="lobby-hint">Play against six computer opponents.</p>
-                        <div class="sp-section">
-                            <span class="sp-label">vs 5 Bots</span>
-                            <div class="sp-btns">
-                                <button id="chineseCheckersSpBtn" class="btn btn-sp">Play Solo</button>
-                            </div>
+                        <p class="lobby-hint">Choose how many computer opponents you want to face (1–5).</p>
+                        <div class="sp-section" style="flex-direction:column;align-items:flex-start;gap:0.55rem;">
+                            <label style="display:flex;align-items:center;gap:0.75rem;color:var(--text);font-size:0.93rem;font-weight:500;">
+                                Bots:
+                                <select id="ccBotCountSelect" class="guest-input" style="width:auto;padding:0.22rem 0.55rem;font-size:0.93rem;">
+                                    <option value="1">1 Bot</option>
+                                    <option value="2">2 Bots</option>
+                                    <option value="3">3 Bots</option>
+                                    <option value="4">4 Bots</option>
+                                    <option value="5" selected>5 Bots</option>
+                                </select>
+                            </label>
+                            <button id="chineseCheckersSpBtn" class="btn btn-sp">&#127918; Play Solo</button>
                         </div>
                     </div>
 

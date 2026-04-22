@@ -618,7 +618,8 @@ async function init() {
     // Chinese Checkers single player
     document.getElementById("chineseCheckersSpBtn").addEventListener("click", () => {
         sessionStorage.setItem("myName", me.name);
-        connection.invoke("StartChineseCheckersSinglePlayer");
+        const botCount = parseInt(document.getElementById("ccBotCountSelect").value, 10) || 5;
+        connection.invoke("StartChineseCheckersSinglePlayer", botCount);
     });
 
     // Create Chinese Checkers room

@@ -140,19 +140,25 @@ public static class ChineseCheckersEngine
     public static List<ChineseCheckersMove> GetLegalMoves(ChineseCheckersRoom room, int playerIndex)
     {
         var occupancy = BuildOccupancy(room);
-        var moves = new List<ChineseCheckersMove>();
+        var moves     = new List<ChineseCheckersMove>();
+        int targetArm = TargetArm(playerIndex, room.Players.Count);
 
         foreach (var piece in room.Pieces.Where(p => p.OwnerIndex == playerIndex))
         {
+            // Once a piece has entered its destination zone it cannot leave.
+            bool inGoal     = _armNodes[targetArm].Contains(piece.NodeId);
+            int  restrictTo = inGoal ? targetArm : -1;
+
             // Single steps to adjacent empty nodes
             foreach (var next in _adjacency[piece.NodeId])
             {
-                if (!occupancy.ContainsKey(next))
-                    moves.Add(new ChineseCheckersMove { PieceId = piece.Id, ToNodeId = next, IsJump = false });
+                if (occupancy.ContainsKey(next)) continue;
+                if (inGoal && !_armNodes[targetArm].Contains(next)) continue; // must stay in goal
+                moves.Add(new ChineseCheckersMove { PieceId = piece.Id, ToNodeId = next, IsJump = false });
             }
 
             // All destinations reachable via one or more chained jumps
-            foreach (var dest in FindAllJumpDestinations(piece.NodeId, occupancy))
+            foreach (var dest in FindAllJumpDestinations(piece.NodeId, occupancy, restrictTo))
                 moves.Add(new ChineseCheckersMove { PieceId = piece.Id, ToNodeId = dest, IsJump = true });
         }
 
@@ -190,6 +196,7 @@ public static class ChineseCheckersEngine
 
         var best = moves
             .OrderByDescending(m => ScoreMove(room, playerIndex, m))
+            .ThenByDescending(m => PieceDistanceToGoal(room, playerIndex, m.PieceId)) // advance laggards first
             .ThenByDescending(m => m.IsJump)
             .First();
 
@@ -211,10 +218,21 @@ public static class ChineseCheckersEngine
         var moves = GetLegalMoves(room, playerIndex);
         if (moves.Count == 0) return null;
 
+        // Primary:   biggest distance gain toward goal
+        // Secondary: advance laggards first — prefer the piece that is furthest from its goal
+        // Tertiary:  prefer jumps (free distance)
         return moves
             .OrderByDescending(m => ScoreMove(room, playerIndex, m))
+            .ThenByDescending(m => PieceDistanceToGoal(room, playerIndex, m.PieceId))
             .ThenByDescending(m => m.IsJump)
             .First();
+    }
+
+    // Helper: current distance-to-goal for the piece being moved
+    private static int PieceDistanceToGoal(ChineseCheckersRoom room, int playerIndex, string pieceId)
+    {
+        var piece = room.Pieces.FirstOrDefault(p => p.Id == pieceId);
+        return piece == null ? 0 : DistanceToGoal(playerIndex, piece.NodeId, room.Players.Count);
     }
 
     public static int ScoreForPlayer(ChineseCheckersRoom room, int playerIndex)
@@ -309,7 +327,9 @@ public static class ChineseCheckersEngine
     }
 
     // BFS over all nodes reachable from 'from' by one or more consecutive jumps.
-    private static HashSet<string> FindAllJumpDestinations(string from, Dictionary<string, string> occupancy)
+    // When restrictToArm >= 0 the piece must stay within that arm on every landing
+    // (enforces the "can't leave destination zone" rule).
+    private static HashSet<string> FindAllJumpDestinations(string from, Dictionary<string, string> occupancy, int restrictToArm = -1)
     {
         var visited = new HashSet<string> { from };
         var queue = new Queue<string>();
@@ -331,6 +351,8 @@ public static class ChineseCheckersEngine
                 if (!_boardNodeSet.Contains(landing)) continue;
                 if (occupancy.ContainsKey(landing)) continue;  // landing must be empty
                 if (visited.Contains(landing)) continue;        // avoid revisiting
+                // Honour destination-zone restriction: landing must stay in the arm
+                if (restrictToArm >= 0 && !_armNodes[restrictToArm].Contains(landing)) continue;
 
                 visited.Add(landing);
                 queue.Enqueue(landing);

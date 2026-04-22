@@ -107,8 +107,9 @@ public partial class GameHub
             _ = TakeChineseCheckersBotTurnAsync(roomId);
     }
 
-    public async Task StartChineseCheckersSinglePlayer()
+    public async Task StartChineseCheckersSinglePlayer(int botCount = 5)
     {
+        botCount = Math.Clamp(botCount, 1, 5);
         var name = Context.User?.FindFirst(ClaimTypes.Name)?.Value ?? "Unknown";
         var roomId = Guid.NewGuid().ToString("N");
 
@@ -119,16 +120,21 @@ public partial class GameHub
             HostName = name,
             IsSinglePlayer = true,
             Started = true,
-            Settings = new ChineseCheckersSettings { RoomName = "Chinese Checkers vs 5 Bots", MaxPlayers = 6, FillWithBotsOnStart = true },
+            Settings = new ChineseCheckersSettings
+            {
+                RoomName = $"Chinese Checkers vs {botCount} Bot{(botCount == 1 ? "" : "s")}",
+                MaxPlayers = botCount + 1,
+                FillWithBotsOnStart = true
+            },
             Players = [new ChineseCheckersPlayer { ConnectionId = Context.ConnectionId, Name = name, Connected = true }]
         };
 
-        for (int i = 0; i < 5; i++)
+        for (int i = 0; i < botCount; i++)
         {
             room.Players.Add(new ChineseCheckersPlayer
             {
                 ConnectionId = $"BOT_{roomId}_{i}",
-                Name = $"{ChineseCheckersBotNames[i % ChineseCheckersBotNames.Length]} #{i + 1}",
+                Name = ChineseCheckersBotNames[i % ChineseCheckersBotNames.Length],
                 IsBot = true,
                 Connected = true
             });
