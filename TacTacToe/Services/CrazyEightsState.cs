@@ -48,7 +48,7 @@ public class CrazyEightsHint
 
 public static class CrazyEightsEngine
 {
-    public const int WildRank = 7; // 8s are wild (A=0 ... 8=7)
+    public const int WildEightRank = 7; // 8s are wild (A=0 ... 8=7)
 
     public static int Rank(int card) => card % 13;
     public static int Suit(int card) => card / 13;
@@ -83,7 +83,7 @@ public static class CrazyEightsEngine
         }
 
         var first = DrawRaw(room);
-        while (Rank(first) == WildRank && room.DrawPile.Count > 0)
+        while (Rank(first) == WildEightRank && room.DrawPile.Count > 0)
         {
             room.DrawPile.Insert(0, first);
             first = DrawRaw(room);
@@ -97,7 +97,7 @@ public static class CrazyEightsEngine
     {
         if (room.DiscardPile.Count == 0) return true;
         var top = room.DiscardPile[^1];
-        return Rank(card) == WildRank || Suit(card) == room.ActiveSuit || Rank(card) == Rank(top);
+        return Rank(card) == WildEightRank || Suit(card) == room.ActiveSuit || Rank(card) == Rank(top);
     }
 
     public static List<int> GetPlayableCards(CrazyEightsRoom room, CrazyEightsPlayer player) =>
@@ -115,7 +115,7 @@ public static class CrazyEightsEngine
         p.Hand.Remove(cardId);
         room.DiscardPile.Add(cardId);
 
-        if (Rank(cardId) == WildRank)
+        if (Rank(cardId) == WildEightRank)
         {
             int suit = chosenSuit.HasValue ? Math.Clamp(chosenSuit.Value, 0, 3) : BestSuitForHand(p.Hand);
             room.ActiveSuit = suit;
@@ -176,16 +176,16 @@ public static class CrazyEightsEngine
         var playable = GetPlayableCards(room, player);
         if (playable.Count > 0)
         {
-            var nonWild = playable.Where(c => Rank(c) != WildRank).ToList();
+            var nonWild = playable.Where(c => Rank(c) != WildEightRank).ToList();
             int card = nonWild.Count > 0 ? nonWild[0] : playable[0];
-            int suggestedSuit = Rank(card) == WildRank ? BestSuitForHand(player.Hand.Where(c => c != card)) : Suit(card);
+            int suggestedSuit = Rank(card) == WildEightRank ? BestSuitForHand(player.Hand.Where(c => c != card)) : Suit(card);
             var suitName = SuitName(suggestedSuit);
             return new CrazyEightsHint
             {
                 HintAvailable = true,
                 CardId = card,
                 SuggestedSuit = suggestedSuit,
-                Description = Rank(card) == WildRank
+                Description = Rank(card) == WildEightRank
                     ? $"Play an 8 and call {suitName}."
                     : $"Play {CardLabel(card)}."
             };
@@ -214,7 +214,7 @@ public static class CrazyEightsEngine
         foreach (var card in hand)
         {
             var r = Rank(card);
-            score += r == WildRank ? 50 : Math.Min(10, r + 1);
+            score += r == WildEightRank ? 50 : Math.Min(10, r + 1);
         }
         return score;
     }

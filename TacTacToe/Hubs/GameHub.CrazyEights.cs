@@ -1,4 +1,5 @@
 using System.Security.Claims;
+using Microsoft.AspNetCore.SignalR;
 using TacTacToe.Models;
 using TacTacToe.Services;
 
@@ -81,7 +82,10 @@ public partial class GameHub
             for (int i = 0; i < needed; i++)
             {
                 var baseName = CrazyEightsBotNames[botIdx % CrazyEightsBotNames.Length];
-                var botName = room.Players.Any(p => p.Name == baseName) ? $"{baseName} #{botIdx + 1}" : baseName;
+                var botName = baseName;
+                int suffix = 2;
+                while (room.Players.Any(p => p.Name == botName))
+                    botName = $"{baseName} #{suffix++}";
                 room.Players.Add(new CrazyEightsPlayer
                 {
                     ConnectionId = $"BOT_{roomId}_{i}",
@@ -313,7 +317,8 @@ public partial class GameHub
         if (!bot.IsBot || bot.FinishRank > 0) return;
 
         var playable = CrazyEightsEngine.GetPlayableCards(room, bot)
-            .OrderBy(c => CrazyEightsEngine.Rank(c) == CrazyEightsEngine.WildRank ? 1 : 0)
+            // Preserve wild 8s until needed so bots keep suit-control flexibility.
+            .OrderBy(c => CrazyEightsEngine.Rank(c) == CrazyEightsEngine.WildEightRank ? 1 : 0)
             .ToList();
 
         if (playable.Count == 0)
@@ -329,7 +334,7 @@ public partial class GameHub
         }
 
         int card = playable[0];
-        int? chosenSuit = CrazyEightsEngine.Rank(card) == CrazyEightsEngine.WildRank
+        int? chosenSuit = CrazyEightsEngine.Rank(card) == CrazyEightsEngine.WildEightRank
             ? CrazyEightsEngine.BestSuitForHand(bot.Hand.Where(c => c != card))
             : null;
 
@@ -378,7 +383,7 @@ public partial class GameHub
             ? CrazyEightsEngine.GetPlayableCards(room, me!).Select(c => new
             {
                 CardId = c,
-                RequiresSuitChoice = CrazyEightsEngine.Rank(c) == CrazyEightsEngine.WildRank
+                RequiresSuitChoice = CrazyEightsEngine.Rank(c) == CrazyEightsEngine.WildEightRank
             }).ToList()
             : [];
 

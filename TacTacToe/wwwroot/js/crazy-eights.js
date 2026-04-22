@@ -15,9 +15,19 @@ let state = null;
 let _ac = null;
 let _gameOverFired = false;
 
-function esc(s) { const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
-function rank(card){ return card % 13; }
-function suit(card){ return Math.floor(card / 13); }
+function esc(s) {
+    const d = document.createElement('div');
+    d.textContent = s;
+    return d.innerHTML;
+}
+
+function rank(card) {
+    return card % 13;
+}
+
+function suit(card) {
+    return Math.floor(card / 13);
+}
 
 function cardHtml(cardId, extraClass = '') {
     const r = rank(cardId), s = suit(cardId);
