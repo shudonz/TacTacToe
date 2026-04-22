@@ -4297,6 +4297,8 @@ tr.row-banned td:first-child { opacity: 1; }
 =============================== */
 :root {
     --cc-board-size: clamp(300px, 84vw, 760px);
+    /* 2√3/3 ≈ 1.1547 — keeps the 17-row triangular grid equilateral */
+    --cc-board-ratio: 1.1547;
 }
 
 .cc-page { overflow-x: hidden; }
@@ -4316,48 +4318,267 @@ tr.row-banned td:first-child { opacity: 1; }
     padding: 0.8rem;
 }
 
+/* ── Wood-grain board ──────────────────────────────────────── */
 .cc-board {
     position: relative;
     width: var(--cc-board-size);
-    /* Height = width × (2√3/3) ≈ 1.1547 to maintain equilateral-triangle spacing */
-    height: calc(var(--cc-board-size) * 1.1547);
-    border-radius: 22px;
-    background: radial-gradient(circle at 50% 45%, rgba(32,119,91,0.95), #0f3a2d);
-    border: 1px solid rgba(196,231,233,0.22);
-    box-shadow: inset 0 0 0 1px rgba(196,231,233,0.12);
+    /* Height = width × --cc-board-ratio to maintain equilateral-triangle spacing */
+    height: calc(var(--cc-board-size) * var(--cc-board-ratio));
+    border-radius: 18px;
+    overflow: visible;           /* allow hop-arc to peek above edge          */
+    background-color: #9a5a22;
+    background-image:
+        /* Vignette for depth */
+        radial-gradient(ellipse at 50% 50%, transparent 36%, rgba(0,0,0,0.40) 100%),
+        /* Varnish gloss highlight at top */
+        radial-gradient(ellipse 80% 26% at 50% 1%, rgba(255,225,170,0.20) 0%, transparent 70%),
+        /* Fine-grain lines */
+        repeating-linear-gradient(
+            92.4deg,
+            transparent 0px, transparent 1px,
+            rgba(55,22,4,0.07) 1px, rgba(55,22,4,0.07) 2px,
+            transparent 2px, transparent 5px,
+            rgba(55,22,4,0.04) 5px, rgba(55,22,4,0.04) 6px,
+            transparent 6px, transparent 10px
+        ),
+        /* Medium grain bands */
+        repeating-linear-gradient(
+            88.1deg,
+            transparent 0px, transparent 16px,
+            rgba(80,35,5,0.11) 16px, rgba(80,35,5,0.11) 18px,
+            transparent 18px, transparent 34px,
+            rgba(140,70,12,0.07) 34px, rgba(140,70,12,0.07) 36px,
+            transparent 36px, transparent 55px
+        ),
+        /* Base walnut gradient */
+        linear-gradient(
+            166deg,
+            #cc8d4e 0%, #a8622c 18%,
+            #8a4618 36%, #7c3c12 52%,
+            #9a5a24 68%, #b47038 86%,
+            #cc8d4e 100%
+        );
+    border: 4px solid #3e1c08;
+    box-shadow:
+        0 14px 45px rgba(0,0,0,0.72),
+        0 4px 14px rgba(0,0,0,0.5),
+        inset 0 2px 5px rgba(255,205,130,0.28),
+        inset 0 -2px 7px rgba(0,0,0,0.38);
+    animation: ccBoardIn 0.55s cubic-bezier(0.34,1.56,0.64,1) both;
 }
 
+/* ── Board holes (nodes) ───────────────────────────────────── */
 .cc-node {
     position: absolute;
     width: clamp(10px, 1.8vw, 20px);
     height: clamp(10px, 1.8vw, 20px);
     transform: translate(-50%, -50%);
     border-radius: 50%;
-    border: 1px solid rgba(196,231,233,0.38);
-    background: rgba(255,255,255,0.08);
+    border: 1px solid rgba(35,12,2,0.72);
+    background:
+        radial-gradient(circle at 38% 32%, rgba(255,185,90,0.18) 0%, transparent 55%),
+        radial-gradient(circle at 50% 50%, rgba(18,5,0,0.94) 0%, rgba(52,18,3,0.80) 100%);
+    box-shadow:
+        inset 0 1.5px 4px rgba(0,0,0,0.88),
+        inset 0 -1px 1px rgba(255,170,60,0.08),
+        0 1px 1px rgba(210,140,50,0.22);
     padding: 0;
+    cursor: default;
+    z-index: 2;
+}
+.cc-node-clickable {
+    cursor: pointer;
+    background:
+        radial-gradient(circle at 38% 32%, rgba(255,210,110,0.36) 0%, transparent 55%),
+        radial-gradient(circle at 50% 50%, rgba(22,7,0,0.84) 0%, rgba(70,30,3,0.70) 100%);
+    box-shadow:
+        inset 0 1.5px 4px rgba(0,0,0,0.78),
+        0 0 7px rgba(255,195,80,0.32);
+}
+.cc-legal-move {
+    cursor: pointer;
+    background:
+        radial-gradient(circle at 50% 50%, rgba(55,220,100,0.58) 0%, rgba(12,75,22,0.48) 100%);
+    box-shadow:
+        inset 0 1px 3px rgba(0,0,0,0.5),
+        0 0 9px rgba(35,205,75,0.70),
+        0 0 22px rgba(35,205,75,0.30);
+    animation: ccLegalPulse 0.95s ease-in-out infinite;
 }
 
-.cc-node-clickable { cursor: pointer; box-shadow: 0 0 0 2px rgba(196,231,233,0.25); }
-.cc-legal-move { cursor: pointer; background: rgba(34,197,94,0.35); border-color: rgba(34,197,94,0.9); }
-
+/* ── 3-D Marbles ───────────────────────────────────────────── */
 .cc-piece {
     display: block;
     width: 100%;
     height: 100%;
     border-radius: 50%;
-    box-shadow: 0 1px 0 rgba(255,255,255,0.45) inset, 0 3px 7px rgba(0,0,0,0.45);
+    /* Layered radial gradients: glint → soft fill → underside shadow → rim → base colour */
+    background:
+        radial-gradient(ellipse 30% 23% at 33% 27%, rgba(255,255,255,0.93) 0%, transparent 100%),
+        radial-gradient(ellipse 56% 46% at 41% 37%, rgba(255,255,255,0.28) 0%, transparent 100%),
+        radial-gradient(ellipse 68% 58% at 66% 72%, rgba(0,0,0,0.50) 0%, transparent 100%),
+        radial-gradient(circle at 50% 50%, transparent 58%, rgba(0,0,0,0.30) 100%),
+        var(--mc, #888);
+    box-shadow:
+        0 3px 9px rgba(0,0,0,0.62),
+        0 1px 3px rgba(0,0,0,0.40),
+        inset 0 1px 0 rgba(255,255,255,0.55),
+        inset -1px -2px 4px rgba(0,0,0,0.35);
+    transition: transform 0.12s ease, box-shadow 0.12s ease, filter 0.12s ease;
+    will-change: transform;
+}
+.cc-node-clickable .cc-piece:hover {
+    transform: scale(1.18) translateY(-1px);
+    filter: brightness(1.15);
+    box-shadow:
+        0 6px 16px rgba(0,0,0,0.65),
+        0 0 14px var(--mc, #888),
+        inset 0 1px 0 rgba(255,255,255,0.60),
+        inset -1px -2px 4px rgba(0,0,0,0.35);
 }
 .cc-piece.selected {
-    outline: 2px solid #fbbf24;
-    outline-offset: 2px;
+    animation: ccMarblePulse 0.95s ease-in-out infinite;
+}
+
+/* ── Flying marble (hop animation element) ─────────────────── */
+.cc-marble-flying {
+    position: absolute;
+    border-radius: 50%;
+    z-index: 200;
+    pointer-events: none;
+    background:
+        radial-gradient(ellipse 30% 23% at 33% 27%, rgba(255,255,255,0.93) 0%, transparent 100%),
+        radial-gradient(ellipse 56% 46% at 41% 37%, rgba(255,255,255,0.28) 0%, transparent 100%),
+        radial-gradient(ellipse 68% 58% at 66% 72%, rgba(0,0,0,0.50) 0%, transparent 100%),
+        radial-gradient(circle at 50% 50%, transparent 58%, rgba(0,0,0,0.30) 100%),
+        var(--mc, #888);
+    box-shadow:
+        0 3px 9px rgba(0,0,0,0.62),
+        0 1px 3px rgba(0,0,0,0.40),
+        inset 0 1px 0 rgba(255,255,255,0.55),
+        inset -1px -2px 4px rgba(0,0,0,0.35);
+}
+
+/* ── Hint laser SVG overlay ────────────────────────────────── */
+.cc-hint-svg {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 50;
+    overflow: visible;
+}
+.cc-laser-glow {
+    fill: none;
+    stroke: rgba(0,255,200,0.28);
+    stroke-width: 9;
+    stroke-linecap: round;
+    filter: url(#ccGlw);
+}
+.cc-laser-line {
+    fill: none;
+    stroke: #00ffcc;
+    stroke-width: 2.4;
+    stroke-linecap: round;
+    stroke-dasharray: 12 6;
+    stroke-dashoffset: 0;
+    filter: url(#ccGlw);
+    animation: ccLaserDash 0.45s linear infinite;
+}
+.cc-laser-origin {
+    fill: rgba(255,255,0,0.14);
+    stroke: #ffff44;
+    stroke-width: 2;
+    filter: url(#ccGlw);
+    animation: ccLaserPulse 0.75s ease-in-out infinite;
+}
+.cc-laser-origin-2 {
+    fill: none;
+    stroke: rgba(255,255,0,0.38);
+    stroke-width: 1.5;
+    animation-direction: reverse;
+}
+.cc-laser-target {
+    fill: rgba(0,255,200,0.16);
+    stroke: #00ffcc;
+    stroke-width: 2;
+    filter: url(#ccGlw);
+    animation: ccLaserPulse 0.75s ease-in-out infinite;
+}
+.cc-laser-target-2 {
+    fill: none;
+    stroke: rgba(0,255,200,0.38);
+    stroke-width: 1.5;
+    animation-delay: 0.37s;
+}
+
+/* ── Win confetti particles ────────────────────────────────── */
+.cc-confetti {
+    position: fixed;
+    top: -12px;
+    z-index: 9999;
+    pointer-events: none;
+}
+
+/* ── "Your turn" status flash ──────────────────────────────── */
+.cc-your-turn-anim {
+    animation: ccYourTurnFlash 0.55s ease-in-out 2;
+    border-radius: 6px;
+}
+
+/* ── Keyframe animations ───────────────────────────────────── */
+@keyframes ccBoardIn {
+    from { opacity: 0; transform: scale(0.96) translateY(6px); }
+    to   { opacity: 1; transform: scale(1)    translateY(0); }
+}
+@keyframes ccLegalPulse {
+    0%,100% { box-shadow: inset 0 1px 3px rgba(0,0,0,0.5), 0 0 9px rgba(35,205,75,0.70), 0 0 22px rgba(35,205,75,0.30); }
+    50%     { box-shadow: inset 0 1px 3px rgba(0,0,0,0.5), 0 0 16px rgba(55,255,95,0.95), 0 0 34px rgba(35,205,75,0.52); }
+}
+@keyframes ccMarblePulse {
+    0%,100% {
+        box-shadow:
+            0 3px 9px rgba(0,0,0,0.62), 0 0 0 2.5px #fbbf24, 0 0 10px #fbbf24,
+            inset 0 1px 0 rgba(255,255,255,0.55), inset -1px -2px 4px rgba(0,0,0,0.35);
+    }
+    50% {
+        box-shadow:
+            0 3px 9px rgba(0,0,0,0.62), 0 0 0 3.5px #fde68a, 0 0 24px #f59e0b, 0 0 42px rgba(245,158,11,0.42),
+            inset 0 1px 0 rgba(255,255,255,0.55), inset -1px -2px 4px rgba(0,0,0,0.35);
+    }
+}
+@keyframes ccLaserDash {
+    to { stroke-dashoffset: -18; }
+}
+@keyframes ccLaserPulse {
+    0%,100% { opacity: 1; }
+    50%     { opacity: 0.35; }
+}
+@keyframes ccYourTurnFlash {
+    0%   { background: transparent; }
+    40%  { background: rgba(34,197,94,0.28); box-shadow: 0 0 20px rgba(34,197,94,0.55); color: #d1fae5; }
+    100% { background: transparent; }
+}
+@keyframes ccConfettiFall {
+    0%   { transform: translateY(0)    rotate(0deg)   scaleX(1);    opacity: 1; }
+    30%  { transform: translateY(30vh) rotate(200deg) scaleX(-0.7); }
+    65%  { opacity: 1; }
+    100% { transform: translateY(108vh) rotate(700deg) scaleX(0.4); opacity: 0; }
 }
 
 .cc-actions { display: flex; gap: 0.65rem; }
 .cc-hint-banner {
-    min-height: 1.3rem;
-    color: var(--text);
-    font-size: 0.9rem;
-    letter-spacing: 0.01em;
+    min-height: 1.4rem;
+    color: #00ffcc;
+    font-size: 0.92rem;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-shadow: 0 0 10px rgba(0,255,200,0.65), 0 0 22px rgba(0,255,200,0.30);
+    animation: ccHintGlow 2s ease-in-out infinite;
+}
+@keyframes ccHintGlow {
+    0%,100% { text-shadow: 0 0 10px rgba(0,255,200,0.65), 0 0 22px rgba(0,255,200,0.30); }
+    50%     { text-shadow: 0 0 18px rgba(0,255,200,1.0), 0 0 38px rgba(0,255,200,0.60); }
 }
 .cc-rank { color: var(--text-dim); margin-left: 0.25rem; }
