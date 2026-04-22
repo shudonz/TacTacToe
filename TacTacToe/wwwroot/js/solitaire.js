@@ -174,15 +174,42 @@ function buildCard(cardId, opts = {}) {
         return `<div class="sol-card sol-card-back" data-role="facedown"></div>`;
     }
     const r = cRankStr(cardId), s = cSuitStr(cardId);
+    const ri = cRank(cardId);
     const color = cIsRed(cardId) ? "red" : "black";
     const selClass = sel ? " sol-selected" : "";
     const grabClass = (source === "waste" || source === "tableau") ? " sol-draggable" : "";
     const dAttrs = `data-card="${cardId}" data-source="${source}" data-pile="${pileIdx}" data-fup="${faceUpIdx}"`;
+    const centerHtml = buildCardCenter(ri, r, s);
     return `<div class="sol-card ${color}${selClass}${grabClass}" ${dAttrs}>
         <div class="sol-card-tl">${r}<br>${s}</div>
-        <div class="sol-card-center">${s}</div>
+        ${centerHtml}
         <div class="sol-card-br">${r}<br>${s}</div>
     </div>`;
+}
+
+function buildCardCenter(rankIdx, rankText, suitText) {
+    const pipRows = {
+        0: [1],
+        1: [1, 1],
+        2: [1, 1, 1],
+        3: [2, 2],
+        4: [2, 1, 2],
+        5: [2, 2, 2],
+        6: [2, 1, 2, 2],
+        7: [2, 2, 2, 2],
+        8: [2, 2, 1, 2, 2],
+        9: [2, 2, 2, 2, 2]
+    }[rankIdx];
+
+    if (!pipRows) {
+        return `<div class="sol-card-center sol-card-face-rank"><div class="sol-card-face-letter">${rankText}</div><div class="sol-card-face-suit">${suitText}</div></div>`;
+    }
+
+    const rowsHtml = pipRows.map(count => {
+        const row = Array.from({ length: count }, () => `<span class="sol-card-pip">${suitText}</span>`).join("");
+        return `<div class="sol-card-pip-row">${row}</div>`;
+    }).join("");
+    return `<div class="sol-card-center sol-card-pips">${rowsHtml}</div>`;
 }
 
 function buildEmptySlot(role, extra = "") {

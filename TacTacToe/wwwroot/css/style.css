@@ -2991,6 +2991,47 @@ body {
     opacity: 0.75;
 }
 
+.sol-card-pips {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    gap: calc(var(--sol-card-h) * 0.018);
+    padding: calc(var(--sol-card-h) * 0.115) 0;
+    opacity: 0.9;
+}
+
+.sol-card-pip-row {
+    display: flex;
+    justify-content: center;
+    gap: calc(var(--sol-card-w) * 0.08);
+    line-height: 1;
+}
+
+.sol-card-pip {
+    font-size: calc(var(--sol-card-w) * 0.205);
+}
+
+.sol-card-face-rank {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    opacity: 0.9;
+    line-height: 1.05;
+}
+
+.sol-card-face-letter {
+    font-size: calc(var(--sol-card-w) * 0.28);
+    font-weight: 800;
+}
+
+.sol-card-face-suit {
+    font-size: calc(var(--sol-card-w) * 0.22);
+}
+
 /* Card back — teal diagonal stripe (matches app theme) */
 .sol-card-back {
     background:
