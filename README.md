@@ -10,6 +10,8 @@ A real-time multiplayer game hub with Google login, a shared lobby, and live gam
 - **Concentration Madness** — Emoji memory matching game with 1vCPU mode and online rooms for 2–4 players.
 - **Solitaire** — Klondike solitaire with solo mode and multiplayer races on identical decks.
 - **Peg Solitaire (Triangular)** — Remove pegs by jumping over adjacent pegs on a 15-hole triangle board; solo or 2–4 player race mode with points for each peg removed.
+- **Chinese Checkers** — Strategy race mode with solo (vs 6 bots) and multiplayer options.
+
 
 ## Tech Stack
 

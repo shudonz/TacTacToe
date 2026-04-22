@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>TacTacToe &#8211; Chinese Checkers</title>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="/css/style.css" rel="stylesheet">
+</head>
+<body>
+    <div class="ambient"></div>
+    <div class="noise"></div>
+    <div class="page-content cc-page">
+        <nav class="navbar">
+            <button class="ham-btn" onclick="hamOpen()" aria-label="Open menu"><span></span><span></span><span></span></button>
+            <div class="logo-sm"><span class="logo-x">Tac</span><span class="logo-o">Tac</span><span class="logo-x">Toe</span></div>
+            <a href="/profile" class="nav-profile-btn" title="Edit Profile">
+                <span id="navbarAvatarEmoji" class="nav-profile-emoji" style="display:none"></span>
+                <img id="navbarAvatarImg" class="nav-profile-img" src="" alt="Profile" style="display:none">
+                <span id="navbarAvatarPlaceholder" class="nav-profile-placeholder">&#128100;</span>
+                <span id="navbarUsername" class="nav-profile-username"></span>
+            </a>
+        </nav>
+
+        <main class="cc-main">
+            <div class="cc-header glass-card">
+                <h2 class="lobby-title" style="margin:0">Chinese Checkers</h2>
+                <div id="ccStatus" class="turn-indicator" style="margin:0">Loading game...</div>
+            </div>
+
+            <div id="ccPlayers" class="player-bar"></div>
+
+            <div class="cc-board-wrap glass-card">
+                <div id="ccBoard" class="cc-board"></div>
+            </div>
+
+            <div class="cc-actions">
+                <button id="ccHintBtn" class="btn btn-sp">&#128161; Hint</button>
+                <button id="ccBackBtn" class="btn btn-outline">Back to Lobby</button>
+            </div>
+            <div id="ccHintBanner" class="cc-hint-banner" style="display:none"></div>
+        </main>
+    </div>
+
+    <div id="resultOverlay" class="result-overlay" style="display:none">
+        <div class="result-card">
+            <h2 id="resultText"></h2>
+            <button id="backToLobby" class="btn btn-outline">Back to Lobby</button>
+            <div class="leaderboard-panel" style="margin-top:1rem;">
+                <div class="leaderboard-panel-tabs">
+                    <button class="lb-tab active" onclick="showLbTab(this,'cc-lb')">&#127942; Top Scores</button>
+                    <button class="lb-tab" onclick="showLbTab(this,'cc-hist')">&#128196; My History</button>
+                </div>
+                <div class="lb-body" id="cc-lb"></div>
+                <div class="lb-body" id="cc-hist" style="display:none"></div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/8.0.0/signalr.min.js"></script>
+    <script src="/js/avatarCache.js"></script>
+    <script src="/js/leaderboard.js"></script>
+    <script src="/js/chinese-checkers.js"></script>
+    <script>
+        function showLbTab(btn, id) {
+            btn.closest('.leaderboard-panel').querySelectorAll('.lb-tab').forEach(t => t.classList.remove('active'));
+            btn.classList.add('active');
+            btn.closest('.leaderboard-panel').querySelectorAll('.lb-body').forEach(b => b.style.display = 'none');
+            document.getElementById(id).style.display = '';
+        }
+        document.addEventListener('gameOver', () => {
+            setTimeout(() => {
+                loadLeaderboard('ChineseCheckers', document.getElementById('cc-lb'));
+                loadPersonalHistory('ChineseCheckers', document.getElementById('cc-hist'));
+            }, 1200);
+        });
+    </script>
+    <div class="ham-overlay" onclick="hamClose()"></div>
+    <nav class="ham-drawer" aria-label="Navigation menu">
+        <div class="ham-drawer-header">
+            <div class="ham-drawer-logo"><span class="logo-x">Tac</span><span class="logo-o">Tac</span><span class="logo-x">Toe</span></div>
+            <button class="ham-close" onclick="hamClose()" aria-label="Close menu">&#10005;</button>
+        </div>
+        <div class="ham-menu">
+            <button id="hamBackBtn" class="ham-item">&#8592; Back to Lobby</button>
+        </div>
+    </nav>
+    <script src="/js/hamburger.js"></script>
+</body>
+</html>

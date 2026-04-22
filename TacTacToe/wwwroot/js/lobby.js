@@ -20,6 +20,7 @@ const DASH_GAMES = [
     { key: "concentration", api: "Concentration",  icon: "🧩",  label: "Concentration"  },
     { key: "solitaire",     api: "Solitaire",      icon: "🂡",  label: "Solitaire"      },
     { key: "pegsolitaire",  api: "PegSolitaire",   icon: "🟠",  label: "Peg Solitaire"  },
+    { key: "chinese-checkers", api: "ChineseCheckers", icon: "🎮", label: "Chinese Checkers" },
 ];
 
 async function loadDashboard(me) {
@@ -201,6 +202,7 @@ async function init() {
             concentration: "concentrationPanel",
             solitaire:     "solitairePanel",
             pegsolitaire:  "pegsolitairePanel"
+            "chinese-checkers": "chineseCheckersPanel"
         };
 
         // Leaderboard containers per game  [apiGameType, lbId, histId]
@@ -211,6 +213,7 @@ async function init() {
             concentration: ["Concentration",  "con-lobby-lb", "con-lobby-hist"],
             solitaire:     ["Solitaire",      "sol-lobby-lb", "sol-lobby-hist"],
             pegsolitaire:  ["PegSolitaire",   "peg-lobby-lb", "peg-lobby-hist"]
+            "chinese-checkers": ["ChineseCheckers", "cc-lobby-lb", "cc-lobby-hist"]
         };
 
         // Show welcome state when no game is selected, otherwise hide it
@@ -221,6 +224,7 @@ async function init() {
             document.getElementById(id).style.display = selectedGame === game ? "" : "none";
         });
         ["ttt", "yahtzee", "slots", "concentration", "solitaire", "pegsolitaire"].forEach(key => {
+        ["ttt", "yahtzee", "slots", "concentration", "solitaire", "chineseCheckers"].forEach(key => {
             const el = document.getElementById(key + "PlaySections");
             if (el) { el.style.display = "none"; el.classList.remove("is-visible"); }
         });
@@ -231,6 +235,7 @@ async function init() {
         else if (selectedGame === "concentration") connection.invoke("GetConcentrationRooms");
         else if (selectedGame === "solitaire")     connection.invoke("GetSolitaireRooms");
         else if (selectedGame === "pegsolitaire")  connection.invoke("GetPegSolitaireRooms");
+        else if (selectedGame === "chinese-checkers") connection.invoke("GetChineseCheckersRooms");
         else if (selectedGame === "yahtzee")       connection.invoke("GetYahtzeeRooms");
 
         // Load leaderboard + personal history for the selected game
@@ -420,6 +425,10 @@ async function init() {
     connection.on("PegSolitaireRoomList", rooms => {
         const list = document.getElementById("pegSolitaireRoomList");
         const noRooms = document.getElementById("noPegSolitaireRooms");
+    // Chinese Checkers room list
+    connection.on("ChineseCheckersRoomList", rooms => {
+        const list = document.getElementById("chineseCheckersRoomList");
+        const noRooms = document.getElementById("noChineseCheckersRooms");
         list.innerHTML = "";
         const open = rooms.filter(r => !r.started);
         if (open.length === 0) {
@@ -433,6 +442,7 @@ async function init() {
                 const badge = isFull ? '<span class="room-badge room-badge-full">Full</span>' : '<span class="room-badge room-badge-open">Open</span>';
                 card.innerHTML =
                     '<span class="game-option-icon" style="font-size:1.4rem;">🟠</span>'
+                    '<span class="game-option-icon" style="font-size:1.4rem;">🎮</span>'
                     + '<div class="room-card-info"><span class="name">' + escapeHtml(r.roomName) + '</span>'
                     + '<span class="room-card-host">Hosted by ' + escapeHtml(r.hostName) + '</span></div>'
                     + '<div class="room-card-right"><span class="room-player-count-badge">' + r.playerCount + '/' + r.maxPlayers + '</span>'
@@ -440,6 +450,8 @@ async function init() {
                 if (!isFull) {
                     card.querySelector(".room-join-btn").addEventListener("click", e => { e.stopPropagation(); joinPegSolitaireRoom(r.id); });
                     card.onclick = () => joinPegSolitaireRoom(r.id);
+                    card.querySelector(".room-join-btn").addEventListener("click", e => { e.stopPropagation(); joinChineseCheckersRoom(r.id); });
+                    card.onclick = () => joinChineseCheckersRoom(r.id);
                 }
                 list.appendChild(card);
             });
@@ -457,6 +469,17 @@ async function init() {
         sessionStorage.setItem("myName", me.name);
         sessionStorage.setItem("isSinglePlayer", "1");
         window.location.href = "/peg-solitaire";
+    connection.on("ChineseCheckersRoomCreated", roomId => {
+        sessionStorage.setItem("chineseCheckersRoomId", roomId);
+        sessionStorage.setItem("isSinglePlayer", "0");
+        window.location.href = "/chinese-checkers-room";
+    });
+
+    connection.on("ChineseCheckersSinglePlayerStarted", roomId => {
+        sessionStorage.setItem("chineseCheckersRoomId", roomId);
+        sessionStorage.setItem("myName", me.name);
+        sessionStorage.setItem("isSinglePlayer", "1");
+        window.location.href = "/chinese-checkers";
     });
 
     // Yahtzee room list
@@ -543,6 +566,7 @@ async function init() {
         else if (gameParam === "concentration") joinConcentrationRoom(joinParam);
         else if (gameParam === "solitaire") joinSolitaireRoom(joinParam);
         else if (gameParam === "pegsolitaire") joinPegSolitaireRoom(joinParam);
+        else if (gameParam === "chinese-checkers") joinChineseCheckersRoom(joinParam);
         else joinYahtzeeRoom(joinParam);
     }
 
@@ -638,6 +662,30 @@ async function init() {
     document.getElementById("newPegSolitaireRoomName").addEventListener("keydown", e => {
         if (e.key === "Enter") document.getElementById("createPegSolitaireRoomConfirmBtn").click();
         if (e.key === "Escape") document.getElementById("createPegSolitaireRoomCancelBtn").click();
+    // Chinese Checkers single player
+    document.getElementById("chineseCheckersSpBtn").addEventListener("click", () => {
+        sessionStorage.setItem("myName", me.name);
+        const botCount = parseInt(document.getElementById("ccBotCountSelect").value, 10) || 5;
+        connection.invoke("StartChineseCheckersSinglePlayer", botCount);
+    });
+
+    // Create Chinese Checkers room
+    document.getElementById("createChineseCheckersRoomBtn").addEventListener("click", () => {
+        document.getElementById("newChineseCheckersRoomName").value = "";
+        document.getElementById("createChineseCheckersRoomModal").style.display = "flex";
+        setTimeout(() => document.getElementById("newChineseCheckersRoomName").focus(), 50);
+    });
+    document.getElementById("createChineseCheckersRoomCancelBtn").addEventListener("click", () => {
+        document.getElementById("createChineseCheckersRoomModal").style.display = "none";
+    });
+    document.getElementById("createChineseCheckersRoomConfirmBtn").addEventListener("click", () => {
+        const name = document.getElementById("newChineseCheckersRoomName").value.trim() || "Chinese Checkers Room";
+        document.getElementById("createChineseCheckersRoomModal").style.display = "none";
+        connection.invoke("CreateChineseCheckersRoom", name);
+    });
+    document.getElementById("newChineseCheckersRoomName").addEventListener("keydown", e => {
+        if (e.key === "Enter") document.getElementById("createChineseCheckersRoomConfirmBtn").click();
+        if (e.key === "Escape") document.getElementById("createChineseCheckersRoomCancelBtn").click();
     });
 
     // Concentration single player
@@ -732,6 +780,11 @@ function joinPegSolitaireRoom(roomId) {
     connection.invoke("JoinPegSolitaireRoom", roomId).then(() => {
         sessionStorage.setItem("pegSolitaireRoomId", roomId);
         window.location.href = "/peg-solitaire-room";
+function joinChineseCheckersRoom(roomId) {
+    sessionStorage.setItem("isSinglePlayer", "0");
+    connection.invoke("JoinChineseCheckersRoom", roomId).then(() => {
+        sessionStorage.setItem("chineseCheckersRoomId", roomId);
+        window.location.href = "/chinese-checkers-room";
     });
 }
 

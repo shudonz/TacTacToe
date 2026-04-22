@@ -8,7 +8,7 @@ using TacTacToe.Services;
 namespace TacTacToe.Hubs;
 
 [Authorize]
-public class GameHub : Hub
+public partial class GameHub : Hub
 {
     private const int RoomNameMaxLength = 30;
     private const int DefaultRejoinGracePeriodSeconds = 8;
@@ -267,6 +267,9 @@ public class GameHub : Hub
         // Defer Peg Solitaire waiting-room cleanup
         var pegWaitSnapshot = _lobby.GetPegSolitaireRoomsForConnection(disconnectedConnectionId).ToList();
         if (pegWaitSnapshot.Count > 0)
+        // Defer Chinese Checkers waiting-room cleanup
+        var ccWaitSnapshot = _lobby.GetChineseCheckersRoomsForConnection(disconnectedConnectionId).ToList();
+        if (ccWaitSnapshot.Count > 0)
         {
             _ = Task.Run(async () =>
             {
@@ -275,6 +278,9 @@ public class GameHub : Hub
                 foreach (var snap in pegWaitSnapshot)
                 {
                     var room = _lobby.GetPegSolitaireRoom(snap.Id);
+                foreach (var snap in ccWaitSnapshot)
+                {
+                    var room = _lobby.GetChineseCheckersRoom(snap.Id);
                     if (room == null || room.Started) continue;
                     var player = room.Players.FirstOrDefault(p => p.Name == name);
                     if (player == null || player.ConnectionId != disconnectedConnectionId) continue;
@@ -292,6 +298,22 @@ public class GameHub : Hub
         // Defer Peg Solitaire active-game disconnect
         var pegGameSnapshot = _lobby.GetActivePegSolitaireRoomsForConnection(disconnectedConnectionId).ToList();
         if (pegGameSnapshot.Count > 0)
+                    {
+                        await _hubContext.Clients.Group(room.Id).SendAsync("ChineseCheckersRoomDissolved");
+                        _lobby.RemoveChineseCheckersRoom(room.Id);
+                    }
+                    else
+                    {
+                        await _hubContext.Clients.Group(room.Id).SendAsync("ChineseCheckersRoomUpdated", room);
+                    }
+                }
+                if (changed) await _hubContext.Clients.All.SendAsync("ChineseCheckersRoomList", ChineseCheckersRoomSummaries());
+            });
+        }
+
+        // Defer Chinese Checkers active-game disconnect handling
+        var ccGameSnapshot = _lobby.GetActiveChineseCheckersRoomsForConnection(disconnectedConnectionId).ToList();
+        if (ccGameSnapshot.Count > 0)
         {
             _ = Task.Run(async () =>
             {
@@ -299,6 +321,9 @@ public class GameHub : Hub
                 foreach (var snap in pegGameSnapshot)
                 {
                     var room = _lobby.GetPegSolitaireRoom(snap.Id);
+                foreach (var snap in ccGameSnapshot)
+                {
+                    var room = _lobby.GetChineseCheckersRoom(snap.Id);
                     if (room == null || room.IsOver) continue;
                     var player = room.Players.FirstOrDefault(p => p.Name == name && !p.IsBot);
                     if (player == null || player.ConnectionId != disconnectedConnectionId) continue;
@@ -322,6 +347,26 @@ public class GameHub : Hub
                         await _hubContext.Clients.Group(room.Id).SendAsync("PegSolitaireUpdated", room);
                         CheckPegSolitaireOver(room);
                     }
+                    if (room.IsSinglePlayer)
+                    {
+                        _lobby.RemoveChineseCheckersRoom(room.Id);
+                        continue;
+                    }
+
+                    var connectedHumans = room.Players.Where(p => !p.IsBot && p.Connected).ToList();
+                    if (connectedHumans.Count == 0)
+                    {
+                        _lobby.RemoveChineseCheckersRoom(room.Id);
+                        continue;
+                    }
+
+                    if (room.Players[room.CurrentPlayerIndex].ConnectionId == disconnectedConnectionId)
+                        MoveToNextChineseCheckersPlayer(room);
+
+                    await _hubContext.Clients.Group(room.Id).SendAsync("ChineseCheckersUpdated", BuildChineseCheckersState(room));
+
+                    if (!room.IsOver && room.Players[room.CurrentPlayerIndex].IsBot)
+                        _ = TakeChineseCheckersBotTurnAsync(room.Id);
                 }
             });
         }
@@ -1479,6 +1524,7 @@ public class GameHub : Hub
         await BroadcastSolitaireRooms();
         await BroadcastPegSolitaireRooms();
         await BroadcastYahtzeeRooms();
+        await BroadcastChineseCheckersRooms();
     }
 
     private static bool CheckWin(string[] board, string mark)
