@@ -10,6 +10,7 @@ public class LobbyService
     private readonly ConcurrentDictionary<string, TttRoom> _tttRooms = new();
     private readonly ConcurrentDictionary<string, SlotsRoom> _slotsRooms = new();
     private readonly ConcurrentDictionary<string, ConcentrationRoom> _concentrationRooms = new();
+    private readonly ConcurrentDictionary<string, SolitaireRoom> _solitaireRooms = new();
     private readonly ConcurrentDictionary<string, PegSolitaireRoom> _pegSolitaireRooms = new();
     private readonly ConcurrentDictionary<string, ChineseCheckersRoom> _chineseCheckersRooms = new();
 
@@ -217,8 +218,6 @@ public class LobbyService
 
     // --- Solitaire Rooms ---
 
-    private readonly ConcurrentDictionary<string, SolitaireRoom> _solitaireRooms = new();
-
     public SolitaireRoom CreateSolitaireRoom(string id, string hostConnectionId)
     {
         var host = _players.GetValueOrDefault(hostConnectionId);
@@ -256,12 +255,6 @@ public class LobbyService
     {
         var host = _players.GetValueOrDefault(hostConnectionId);
         var room = new PegSolitaireRoom
-    // --- Chinese Checkers Rooms ---
-
-    public ChineseCheckersRoom CreateChineseCheckersRoom(string id, string hostConnectionId)
-    {
-        var host = _players.GetValueOrDefault(hostConnectionId);
-        var room = new ChineseCheckersRoom
         {
             Id = id,
             HostConnectionId = hostConnectionId,
@@ -288,6 +281,17 @@ public class LobbyService
             r.Players.Any(p => p.ConnectionId == connectionId && !p.IsBot));
 
     public void RemovePegSolitaireRoom(string id) => _pegSolitaireRooms.TryRemove(id, out _);
+
+    // --- Chinese Checkers Rooms ---
+
+    public ChineseCheckersRoom CreateChineseCheckersRoom(string id, string hostConnectionId)
+    {
+        var host = _players.GetValueOrDefault(hostConnectionId);
+        var room = new ChineseCheckersRoom
+        {
+            Id = id,
+            HostConnectionId = hostConnectionId,
+            HostName = host?.Name ?? "Host",
             Players = [new ChineseCheckersPlayer { ConnectionId = hostConnectionId, Name = host?.Name ?? "Host", Connected = true }]
         };
         _chineseCheckersRooms[id] = room;

@@ -379,25 +379,6 @@
                                 <div class="lobby-lb-scroll">
                                     <div class="lb-body" id="peg-lobby-lb"></div>
                                     <div class="lb-body" id="peg-lobby-hist" style="display:none"></div>
-                <!-- ── Chinese Checkers Panel ── -->
-                <div id="chineseCheckersPanel" class="game-detail-panel" style="display:none">
-                    <div class="game-detail-header">
-                        <span class="game-detail-icon">&#127918;</span>
-                        <div class="game-detail-header-body">
-                            <div class="game-title-row">
-                                <h2 class="game-detail-title">Chinese Checkers</h2>
-                                <button class="btn-play" onclick="showPlaySections('chineseCheckers')">&#9654; Play</button>
-                            </div>
-                            <p class="game-detail-desc">Race your marbles to the far side. Play solo against 5 bots or multiplayer with optional bot-fill.</p>
-                            <div class="lobby-lb-inline">
-                                <div class="lobby-lb-inline-tabs">
-                                    <span class="lobby-lb-title">&#127942; High Scores</span>
-                                    <button class="lb-tab active" onclick="lobbyLbTab(this,'cc-lobby-lb','cc-lobby-hist')">Top 5</button>
-                                    <button class="lb-tab" onclick="lobbyLbTab(this,'cc-lobby-hist','cc-lobby-lb')">My Scores</button>
-                                </div>
-                                <div class="lobby-lb-scroll">
-                                    <div class="lb-body" id="cc-lobby-lb"></div>
-                                    <div class="lb-body" id="cc-lobby-hist" style="display:none"></div>
                                 </div>
                             </div>
                         </div>
@@ -412,6 +393,43 @@
                             <div class="sp-btns">
                                 <button id="pegSolitaireSpBtn" class="btn btn-sp">Play Solo</button>
                             </div>
+                        </div>
+                    </div>
+
+                    <div class="detail-section">
+                        <h3 class="detail-section-title">&#127760; Multiplayer</h3>
+                        <p class="lobby-hint">Create a room (up to 4 players) or join one and race for the highest score.</p>
+                        <button id="createPegSolitaireRoomBtn" class="btn btn-accept detail-create-btn">&#43; Create Room</button>
+                        <div id="pegSolitaireRoomList" class="player-list"></div>
+                        <p id="noPegSolitaireRooms" class="lobby-hint lobby-no-rooms" style="display:none;">No open rooms right now — create one to get started!</p>
+                    </div>
+                    </div>
+                </div>
+
+                <!-- ── Chinese Checkers Panel ── -->
+                <div id="chineseCheckersPanel" class="game-detail-panel" style="display:none">
+                    <div class="game-detail-header">
+                        <span class="game-detail-icon">🎮</span>
+                        <div class="game-detail-header-body">
+                            <div class="game-title-row">
+                                <h2 class="game-detail-title">Chinese Checkers</h2>
+                                <button class="btn-play" onclick="showPlaySections('chineseCheckers')">&#9654; Play</button>
+                            </div>
+                            <p class="game-detail-desc">Race your pieces across the star-shaped board to the opposite corner. In multiplayer, everyone gets their own corner and the first to get all pieces across wins.</p>
+                            <div class="lobby-lb-inline">
+                                <div class="lobby-lb-inline-tabs">
+                                    <span class="lobby-lb-title">&#127942; High Scores</span>
+                                    <button class="lb-tab active" onclick="lobbyLbTab(this,'cc-lobby-lb','cc-lobby-hist')">Top 5</button>
+                                    <button class="lb-tab" onclick="lobbyLbTab(this,'cc-lobby-hist','cc-lobby-lb')">My Scores</button>
+                                </div>
+                                <div class="lobby-lb-scroll">
+                                    <div class="lb-body" id="cc-lobby-lb"></div>
+                                    <div class="lb-body" id="cc-lobby-hist" style="display:none"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
                     <div id="chineseCheckersPlaySections" class="game-play-sections" style="display:none">
                     <div class="detail-section">
                         <h3 class="detail-section-title">&#129302; Single Player</h3>
@@ -433,11 +451,7 @@
 
                     <div class="detail-section">
                         <h3 class="detail-section-title">&#127760; Multiplayer</h3>
-                        <p class="lobby-hint">Create a room (up to 4 players) or join one and race for the highest score.</p>
-                        <button id="createPegSolitaireRoomBtn" class="btn btn-accept detail-create-btn">&#43; Create Room</button>
-                        <div id="pegSolitaireRoomList" class="player-list"></div>
-                        <p id="noPegSolitaireRooms" class="lobby-hint lobby-no-rooms" style="display:none;">No open rooms right now — create one to get started!</p>
-                        <p class="lobby-hint">Create a room and choose whether to fill empty seats with bots when starting.</p>
+                        <p class="lobby-hint">Create a room or join an existing one.</p>
                         <button id="createChineseCheckersRoomBtn" class="btn btn-accept detail-create-btn">&#43; Create Room</button>
                         <div id="chineseCheckersRoomList" class="player-list"></div>
                         <p id="noChineseCheckersRooms" class="lobby-hint lobby-no-rooms" style="display:none;">No open rooms right now — create one to get started!</p>
