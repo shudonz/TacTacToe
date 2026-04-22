@@ -417,7 +417,7 @@ public partial class GameHub
     private async Task BroadcastCrazyEightsState(CrazyEightsRoom room)
     {
         foreach (var p in room.Players.Where(p => !p.IsBot && p.Connected))
-            await Clients.Client(p.ConnectionId).SendAsync("CrazyEightsUpdated", BuildCrazyEightsStateFor(room, p.Name));
+            await _hubContext.Clients.Client(p.ConnectionId).SendAsync("CrazyEightsUpdated", BuildCrazyEightsStateFor(room, p.Name));
     }
 
     private IEnumerable<object> CrazyEightsRoomSummaries() =>
