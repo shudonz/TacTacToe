@@ -264,6 +264,9 @@ public partial class GameHub : Hub
             });
         }
 
+        // Defer Peg Solitaire waiting-room cleanup
+        var pegWaitSnapshot = _lobby.GetPegSolitaireRoomsForConnection(disconnectedConnectionId).ToList();
+        if (pegWaitSnapshot.Count > 0)
         // Defer Chinese Checkers waiting-room cleanup
         var ccWaitSnapshot = _lobby.GetChineseCheckersRoomsForConnection(disconnectedConnectionId).ToList();
         if (ccWaitSnapshot.Count > 0)
@@ -272,6 +275,9 @@ public partial class GameHub : Hub
             {
                 await Task.Delay(TimeSpan.FromSeconds(DefaultRejoinGracePeriodSeconds));
                 bool changed = false;
+                foreach (var snap in pegWaitSnapshot)
+                {
+                    var room = _lobby.GetPegSolitaireRoom(snap.Id);
                 foreach (var snap in ccWaitSnapshot)
                 {
                     var room = _lobby.GetChineseCheckersRoom(snap.Id);
@@ -281,6 +287,17 @@ public partial class GameHub : Hub
                     room.Players.Remove(player);
                     changed = true;
                     if (room.Players.Count == 0 || room.HostName == name)
+                    { await _hubContext.Clients.Group(room.Id).SendAsync("PegSolitaireRoomDissolved"); _lobby.RemovePegSolitaireRoom(room.Id); }
+                    else
+                    { await _hubContext.Clients.Group(room.Id).SendAsync("PegSolitaireRoomUpdated", room); }
+                }
+                if (changed) await _hubContext.Clients.All.SendAsync("PegSolitaireRoomList", PegSolitaireRoomSummaries());
+            });
+        }
+
+        // Defer Peg Solitaire active-game disconnect
+        var pegGameSnapshot = _lobby.GetActivePegSolitaireRoomsForConnection(disconnectedConnectionId).ToList();
+        if (pegGameSnapshot.Count > 0)
                     {
                         await _hubContext.Clients.Group(room.Id).SendAsync("ChineseCheckersRoomDissolved");
                         _lobby.RemoveChineseCheckersRoom(room.Id);
@@ -301,6 +318,9 @@ public partial class GameHub : Hub
             _ = Task.Run(async () =>
             {
                 await Task.Delay(TimeSpan.FromSeconds(DefaultRejoinGracePeriodSeconds));
+                foreach (var snap in pegGameSnapshot)
+                {
+                    var room = _lobby.GetPegSolitaireRoom(snap.Id);
                 foreach (var snap in ccGameSnapshot)
                 {
                     var room = _lobby.GetChineseCheckersRoom(snap.Id);
@@ -310,6 +330,23 @@ public partial class GameHub : Hub
                     player.Connected = false;
                     await _hubContext.Clients.Group(room.Id).SendAsync("PlayerLeft", name);
 
+                    var connectedHumans = room.Players.Where(p => !p.IsBot && p.Connected).ToList();
+                    if (connectedHumans.Count == 0)
+                    {
+                        _lobby.RemovePegSolitaireRoom(room.Id);
+                    }
+                    else if (connectedHumans.Count == 1 && !room.IsSinglePlayer)
+                    {
+                        var winner = connectedHumans[0];
+                        FinalizePegSolitairePlayer(room, winner);
+                        room.IsOver = true;
+                        await _hubContext.Clients.Group(room.Id).SendAsync("PegSolitaireUpdated", room);
+                    }
+                    else
+                    {
+                        await _hubContext.Clients.Group(room.Id).SendAsync("PegSolitaireUpdated", room);
+                        CheckPegSolitaireOver(room);
+                    }
                     if (room.IsSinglePlayer)
                     {
                         _lobby.RemoveChineseCheckersRoom(room.Id);
@@ -1485,6 +1522,7 @@ public partial class GameHub : Hub
         await BroadcastSlotsRooms();
         await BroadcastConcentrationRooms();
         await BroadcastSolitaireRooms();
+        await BroadcastPegSolitaireRooms();
         await BroadcastYahtzeeRooms();
         await BroadcastChineseCheckersRooms();
     }
@@ -2402,6 +2440,250 @@ public partial class GameHub : Hub
         await Clients.All.SendAsync("SolitaireRoomList", SolitaireRoomSummaries());
 
     /* ================================================================
+       Peg Solitaire Methods
+       ================================================================ */
+
+    public async Task CreatePegSolitaireRoom(string? roomName = null)
+    {
+        var roomId = Guid.NewGuid().ToString("N");
+        var room = _lobby.CreatePegSolitaireRoom(roomId, Context.ConnectionId);
+        if (!string.IsNullOrWhiteSpace(roomName))
+            room.Settings.RoomName = roomName.Trim()[..Math.Min(roomName.Trim().Length, RoomNameMaxLength)];
+        await Groups.AddToGroupAsync(Context.ConnectionId, roomId);
+        await Clients.Caller.SendAsync("PegSolitaireRoomCreated", roomId);
+        await BroadcastPegSolitaireRooms();
+    }
+
+    public async Task GetPegSolitaireRooms() =>
+        await Clients.Caller.SendAsync("PegSolitaireRoomList", PegSolitaireRoomSummaries());
+
+    public async Task JoinPegSolitaireRoom(string roomId)
+    {
+        var room = _lobby.GetPegSolitaireRoom(roomId);
+        if (room == null || room.Started || room.IsOver) return;
+        if (room.Players.Count >= room.Settings.MaxPlayers) return;
+        if (room.Players.Any(p => p.ConnectionId == Context.ConnectionId)) return;
+        var name = Context.User?.FindFirst(ClaimTypes.Name)?.Value ?? "Unknown";
+        room.Players.Add(new PegSolitairePlayer { ConnectionId = Context.ConnectionId, Name = name, Connected = true });
+        await Groups.AddToGroupAsync(Context.ConnectionId, roomId);
+        await Clients.Group(roomId).SendAsync("PegSolitaireRoomUpdated", room);
+        await BroadcastPegSolitaireRooms();
+    }
+
+    public async Task RejoinPegSolitaireRoom(string roomId)
+    {
+        if (string.IsNullOrEmpty(roomId)) return;
+        var room = _lobby.GetPegSolitaireRoom(roomId);
+        if (room == null) return;
+        var name = Context.User?.FindFirst(ClaimTypes.Name)?.Value ?? "Unknown";
+        var player = room.Players.FirstOrDefault(p => p.Name == name && !p.IsBot);
+        if (player == null) return;
+        player.ConnectionId = Context.ConnectionId;
+        player.Connected = true;
+        if (room.HostName == name) room.HostConnectionId = Context.ConnectionId;
+        await Groups.AddToGroupAsync(Context.ConnectionId, roomId);
+        if (room.Started)
+        {
+            _lobby.SetInGame(Context.ConnectionId, true);
+            await BroadcastLobby();
+            await Clients.Caller.SendAsync("PegSolitaireUpdated", room);
+        }
+        else
+        {
+            await Clients.Group(roomId).SendAsync("PegSolitaireRoomUpdated", room);
+        }
+    }
+
+    public async Task StartPegSolitaireGame(string roomId)
+    {
+        var room = _lobby.GetPegSolitaireRoom(roomId);
+        if (room == null || room.Started) return;
+        if (Context.ConnectionId != room.HostConnectionId) return;
+        if (room.Players.Count < 2) return;
+
+        room.Started = true;
+        room.IsOver = false;
+        room.FinishCount = 0;
+        room.Settings.MaxPlayers = Math.Clamp(room.Settings.MaxPlayers, 2, 4);
+        long now = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+        foreach (var p in room.Players) ResetPegSolitairePlayerForNewGame(room, p, now);
+
+        await Clients.Group(roomId).SendAsync("PegSolitaireGameStarted", room);
+        await Clients.Group(roomId).SendAsync("PegSolitaireUpdated", room);
+        await BroadcastPegSolitaireRooms();
+    }
+
+    public async Task StartPegSolitaireSinglePlayer()
+    {
+        var name = Context.User?.FindFirst(ClaimTypes.Name)?.Value ?? "Unknown";
+        var roomId = Guid.NewGuid().ToString("N");
+        long now = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+        var room = new PegSolitaireRoom
+        {
+            Id = roomId,
+            HostConnectionId = Context.ConnectionId,
+            HostName = name,
+            IsSinglePlayer = true,
+            Started = true,
+            Players = [new PegSolitairePlayer { ConnectionId = Context.ConnectionId, Name = name, Connected = true }]
+        };
+        room.Settings.RoomName = "Peg Solitaire";
+        room.Settings.MaxPlayers = 1;
+        ResetPegSolitairePlayerForNewGame(room, room.Players[0], now);
+        _lobby.StorePegSolitaireRoom(roomId, room);
+        await Groups.AddToGroupAsync(Context.ConnectionId, roomId);
+        await Clients.Caller.SendAsync("PegSolitaireSinglePlayerStarted", roomId);
+        await Clients.Caller.SendAsync("PegSolitaireUpdated", room);
+    }
+
+    public async Task LeavePegSolitaireRoom(string roomId)
+    {
+        var room = _lobby.GetPegSolitaireRoom(roomId);
+        if (room == null) return;
+        var player = room.Players.FirstOrDefault(p => p.ConnectionId == Context.ConnectionId);
+        await Groups.RemoveFromGroupAsync(Context.ConnectionId, roomId);
+
+        if (!room.Started)
+        {
+            if (player != null) room.Players.Remove(player);
+            if (room.Players.Count == 0 || Context.ConnectionId == room.HostConnectionId)
+            {
+                await Clients.Group(roomId).SendAsync("PegSolitaireRoomDissolved");
+                _lobby.RemovePegSolitaireRoom(roomId);
+            }
+            else
+            {
+                await Clients.Group(roomId).SendAsync("PegSolitaireRoomUpdated", room);
+            }
+            await BroadcastPegSolitaireRooms();
+            return;
+        }
+
+        if (player != null) player.Connected = false;
+        await Clients.Group(roomId).SendAsync("PlayerLeft", player?.Name ?? "Someone");
+        var connectedHumans = room.Players.Where(p => !p.IsBot && p.Connected).ToList();
+        if (connectedHumans.Count == 0)
+        {
+            _lobby.RemovePegSolitaireRoom(roomId);
+        }
+        else if (connectedHumans.Count == 1 && !room.IsSinglePlayer)
+        {
+            FinalizePegSolitairePlayer(room, connectedHumans[0]);
+            room.IsOver = true;
+            await Clients.Group(roomId).SendAsync("PegSolitaireUpdated", room);
+        }
+        else
+        {
+            await Clients.Group(roomId).SendAsync("PegSolitaireUpdated", room);
+            CheckPegSolitaireOver(room);
+        }
+
+        await BroadcastPegSolitaireRooms();
+    }
+
+    public async Task KickPegSolitairePlayer(string roomId, string playerName)
+    {
+        var room = _lobby.GetPegSolitaireRoom(roomId);
+        if (room == null || Context.ConnectionId != room.HostConnectionId) return;
+        var player = room.Players.FirstOrDefault(p => p.Name == playerName && p.ConnectionId != room.HostConnectionId);
+        if (player == null) return;
+        await Clients.Client(player.ConnectionId).SendAsync("KickedFromRoom");
+        await Groups.RemoveFromGroupAsync(player.ConnectionId, roomId);
+        room.Players.Remove(player);
+        await Clients.Group(roomId).SendAsync("PegSolitaireRoomUpdated", room);
+        await BroadcastPegSolitaireRooms();
+    }
+
+    public async Task MakePegSolitaireMove(string roomId, int from, int to)
+    {
+        var room = _lobby.GetPegSolitaireRoom(roomId);
+        if (room == null || !room.Started || room.IsOver) return;
+        var player = room.Players.FirstOrDefault(p => p.ConnectionId == Context.ConnectionId && !p.IsBot);
+        if (player == null || player.HasFinished) return;
+        if (player.Game.IsSetup) return;  // must remove first peg before jumping
+
+        if (!PegSolitaireEngine.TryMove(player.Game, from, to)) return;
+
+        player.Score += 1;
+        player.PegsLeft = PegSolitaireEngine.CountPegs(player.Game);
+        player.Rating = PegSolitaireEngine.RatingFor(player.PegsLeft);
+
+        if (!PegSolitaireEngine.HasAnyMoves(player.Game))
+        {
+            FinalizePegSolitairePlayer(room, player);
+            if (room.IsSinglePlayer) room.IsOver = true;
+        }
+
+        await Clients.Group(roomId).SendAsync("PegSolitaireUpdated", room);
+        if (!room.IsSinglePlayer) CheckPegSolitaireOver(room);
+    }
+
+    public async Task PegSolitaireSetStartEmpty(string roomId, int pegIndex)
+    {
+        var room = _lobby.GetPegSolitaireRoom(roomId);
+        if (room == null || !room.Started || room.IsOver) return;
+        var player = room.Players.FirstOrDefault(p => p.ConnectionId == Context.ConnectionId && !p.IsBot);
+        if (player == null || player.HasFinished || !player.Game.IsSetup) return;
+        if (pegIndex < 0 || pegIndex >= 15) return;
+
+        PegSolitaireEngine.SetStartEmpty(player.Game, pegIndex);
+        player.PegsLeft = PegSolitaireEngine.CountPegs(player.Game);
+        player.Rating = PegSolitaireEngine.RatingFor(player.PegsLeft);
+
+        await Clients.Group(roomId).SendAsync("PegSolitaireUpdated", room);
+    }
+
+    private static void ResetPegSolitairePlayerForNewGame(PegSolitaireRoom room, PegSolitairePlayer player, long startedAtMs)
+    {
+        player.Game = PegSolitaireEngine.CreateInitialState();
+        player.Score = 0;
+        player.PegsLeft = PegSolitaireEngine.CountPegs(player.Game);
+        player.Rating = PegSolitaireEngine.RatingFor(player.PegsLeft);
+        player.HasFinished = false;
+        player.FinishRank = 0;
+        player.StartedAtMs = startedAtMs;
+        player.FinishedAtMs = 0;
+        player.SessionSaved = false;
+    }
+
+    private void FinalizePegSolitairePlayer(PegSolitaireRoom room, PegSolitairePlayer player)
+    {
+        if (player.HasFinished) return;
+        player.HasFinished = true;
+        room.FinishCount++;
+        player.FinishRank = room.FinishCount;
+        player.FinishedAtMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+        player.PegsLeft = PegSolitaireEngine.CountPegs(player.Game);
+        player.Rating = PegSolitaireEngine.RatingFor(player.PegsLeft);
+        _ = SavePegSolitairePlayerSessionAsync(room, player);
+    }
+
+    private void CheckPegSolitaireOver(PegSolitaireRoom room)
+    {
+        if (room.IsOver) return;
+        bool allDone = room.Players.Where(p => !p.IsBot).All(p => p.HasFinished || !p.Connected);
+        if (allDone)
+        {
+            room.IsOver = true;
+            _ = _hubContext.Clients.Group(room.Id).SendAsync("PegSolitaireUpdated", room);
+        }
+    }
+
+    private IEnumerable<object> PegSolitaireRoomSummaries() =>
+        _lobby.GetOpenPegSolitaireRooms().Select(r => new
+        {
+            r.Id,
+            r.HostName,
+            RoomName = r.Settings.RoomName,
+            PlayerCount = r.Players.Count,
+            r.Settings.MaxPlayers,
+            IsFull = r.Players.Count >= r.Settings.MaxPlayers
+        });
+
+    private async Task BroadcastPegSolitaireRooms() =>
+        await Clients.All.SendAsync("PegSolitaireRoomList", PegSolitaireRoomSummaries());
+
+    /* ================================================================
        Session Persistence Helpers
        ================================================================ */
 
@@ -2540,6 +2822,31 @@ public partial class GameHub : Hub
                 Score = player.Score, Result = result,
                 TimePlayed = elapsed, PlayedAt = DateTime.UtcNow.ToString("o"),
                 Details = $"Rank:{player.FinishRank},Hints:{player.HintsUsed},GaveUp:{(player.GaveUp ? 1 : 0)}"
+            });
+        }
+        catch { }
+    }
+
+    private async Task SavePegSolitairePlayerSessionAsync(PegSolitaireRoom room, PegSolitairePlayer player)
+    {
+        if (player.SessionSaved) return;
+        player.SessionSaved = true;
+        try
+        {
+            var uid = await _users.GetIdByUsernameAsync(player.Name);
+            if (!uid.HasValue) return;
+            int elapsed = player.FinishedAtMs > player.StartedAtMs
+                ? (int)((player.FinishedAtMs - player.StartedAtMs) / 1000)
+                : 0;
+            await _sessions.SaveAsync(new GameSession
+            {
+                UserId = uid.Value,
+                GameType = "PegSolitaire",
+                Score = player.Score,
+                Result = player.Rating,
+                TimePlayed = elapsed,
+                PlayedAt = DateTime.UtcNow.ToString("o"),
+                Details = $"PegsLeft:{player.PegsLeft},Rank:{player.FinishRank}"
             });
         }
         catch { }

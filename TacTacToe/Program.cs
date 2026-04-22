@@ -257,6 +257,18 @@ app.MapGet("/solitaire-room", (HttpContext ctx) =>
     return Results.File("solitaire-room.html", "text/html");
 });
 
+app.MapGet("/peg-solitaire", (HttpContext ctx) =>
+{
+    if (ctx.User.Identity?.IsAuthenticated != true)
+        return Results.Redirect("/login");
+    return Results.File("pegsolitaire.html", "text/html");
+});
+
+app.MapGet("/peg-solitaire-room", (HttpContext ctx) =>
+{
+    if (ctx.User.Identity?.IsAuthenticated != true)
+        return Results.Redirect("/login");
+    return Results.File("pegsolitaire-room.html", "text/html");
 app.MapGet("/chinese-checkers", (HttpContext ctx) =>
 {
     if (ctx.User.Identity?.IsAuthenticated != true)

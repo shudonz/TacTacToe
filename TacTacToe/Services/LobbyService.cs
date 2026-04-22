@@ -10,6 +10,7 @@ public class LobbyService
     private readonly ConcurrentDictionary<string, TttRoom> _tttRooms = new();
     private readonly ConcurrentDictionary<string, SlotsRoom> _slotsRooms = new();
     private readonly ConcurrentDictionary<string, ConcentrationRoom> _concentrationRooms = new();
+    private readonly ConcurrentDictionary<string, PegSolitaireRoom> _pegSolitaireRooms = new();
     private readonly ConcurrentDictionary<string, ChineseCheckersRoom> _chineseCheckersRooms = new();
 
     public bool AddPlayer(string connectionId, string name, string email, string picture)
@@ -249,6 +250,12 @@ public class LobbyService
 
     public void RemoveSolitaireRoom(string id) => _solitaireRooms.TryRemove(id, out _);
 
+    // --- Peg Solitaire Rooms ---
+
+    public PegSolitaireRoom CreatePegSolitaireRoom(string id, string hostConnectionId)
+    {
+        var host = _players.GetValueOrDefault(hostConnectionId);
+        var room = new PegSolitaireRoom
     // --- Chinese Checkers Rooms ---
 
     public ChineseCheckersRoom CreateChineseCheckersRoom(string id, string hostConnectionId)
@@ -259,6 +266,28 @@ public class LobbyService
             Id = id,
             HostConnectionId = hostConnectionId,
             HostName = host?.Name ?? "Host",
+            Players = [new PegSolitairePlayer { ConnectionId = hostConnectionId, Name = host?.Name ?? "Host", Connected = true }]
+        };
+        _pegSolitaireRooms[id] = room;
+        return room;
+    }
+
+    public PegSolitaireRoom? GetPegSolitaireRoom(string id) { _pegSolitaireRooms.TryGetValue(id, out var r); return r; }
+    public void StorePegSolitaireRoom(string id, PegSolitaireRoom room) => _pegSolitaireRooms[id] = room;
+
+    public IEnumerable<PegSolitaireRoom> GetOpenPegSolitaireRooms() =>
+        _pegSolitaireRooms.Values.Where(r => !r.Started && !r.IsOver &&
+            IsOnlineConnection(r.HostConnectionId) &&
+            r.Players.Any(p => p.IsBot || IsOnlineConnection(p.ConnectionId)));
+
+    public IEnumerable<PegSolitaireRoom> GetPegSolitaireRoomsForConnection(string connectionId) =>
+        _pegSolitaireRooms.Values.Where(r => !r.Started && r.Players.Any(p => p.ConnectionId == connectionId));
+
+    public IEnumerable<PegSolitaireRoom> GetActivePegSolitaireRoomsForConnection(string connectionId) =>
+        _pegSolitaireRooms.Values.Where(r => r.Started && !r.IsOver &&
+            r.Players.Any(p => p.ConnectionId == connectionId && !p.IsBot));
+
+    public void RemovePegSolitaireRoom(string id) => _pegSolitaireRooms.TryRemove(id, out _);
             Players = [new ChineseCheckersPlayer { ConnectionId = hostConnectionId, Name = host?.Name ?? "Host", Connected = true }]
         };
         _chineseCheckersRooms[id] = room;
