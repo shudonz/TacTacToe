@@ -7,24 +7,145 @@
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link href="/css/style.css" rel="stylesheet">
     <style>
-        .pegsol-main { max-width: 1000px; margin: 0 auto; padding: 1rem; }
+        /* ── Layout ───────────────────────────────────────── */
+        .pegsol-main { max-width: 960px; margin: 0 auto; padding: .5rem 1rem 2rem; }
         .pegsol-wrap { display: grid; gap: 1rem; }
+
+        /* ── Race leaderboard ─────────────────────────────── */
         .pegsol-leaderboard { display: grid; gap: .55rem; }
         .pegsol-leaderboard .row { display: flex; align-items: center; gap: .55rem; background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.08); border-radius: 12px; padding: .45rem .7rem; }
         .pegsol-leaderboard .me { border-color: rgba(18,145,158,.5); }
-        .pegsol-board-card { background: linear-gradient(145deg, #6e4f31, #855d36 52%, #5a3f27); border-radius: 20px; border: 2px solid rgba(44,27,16,.55); box-shadow: inset 0 1px 0 rgba(255,255,255,.18), inset 0 -10px 22px rgba(0,0,0,.28), 0 12px 30px rgba(0,0,0,.35); padding: 1.2rem; }
-        .pegsol-board { display: grid; gap: .56rem; justify-content: center; }
+
+        /* ── Outer card – transparent, just a flex column ─── */
+        .pegsol-board-card { background: transparent; border: none; padding: 0; display: flex; flex-direction: column; align-items: center; }
+
+        /* ── Perspective scene ────────────────────────────── */
+        .pegsol-scene { display: flex; justify-content: center; padding-top: 1rem; padding-bottom: 3rem; overflow: visible; }
+
+        /* ── Tilted board container ───────────────────────── */
+        .pegsol-board-outer {
+            transform: perspective(720px) rotateX(28deg);
+            transform-origin: 50% 82%;
+            position: relative;
+            display: inline-block;
+            padding: 64px 52px 52px;
+            filter: drop-shadow(0 28px 20px rgba(0,0,0,.55));
+            animation: boardSlideIn .7s cubic-bezier(.2,.8,.4,1) both;
+        }
+
+        /* ── Triangular wood-grain background (::before) ──── */
+        .pegsol-board-outer::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background:
+                repeating-linear-gradient(88deg,
+                    transparent 0px, transparent 5px,
+                    rgba(0,0,0,.062) 5px, rgba(0,0,0,.062) 6px,
+                    transparent 6px, transparent 13px,
+                    rgba(0,0,0,.038) 13px, rgba(0,0,0,.038) 14px),
+                repeating-linear-gradient(86deg,
+                    transparent 0px, transparent 22px,
+                    rgba(255,200,100,.045) 22px, rgba(255,200,100,.045) 24px),
+                linear-gradient(168deg, #d4955a 4%, #b47038 28%, #8c5220 62%, #6a3c16);
+            clip-path: polygon(50% 0%, -8% 100%, 108% 100%);
+            z-index: 0;
+        }
+
+        /* ── Board grid ───────────────────────────────────── */
+        .pegsol-board { position: relative; z-index: 1; display: grid; gap: .56rem; justify-content: center; }
         .pegsol-row { display: flex; gap: .56rem; justify-content: center; }
-        .pegsol-hole { width: 54px; height: 54px; border-radius: 50%; border: none; position: relative; cursor: pointer; background: radial-gradient(circle at 30% 30%, rgba(24,15,9,.95), rgba(11,8,6,.98)); box-shadow: inset 0 2px 5px rgba(255,255,255,.1), inset 0 -3px 7px rgba(0,0,0,.65); }
-        .pegsol-hole.empty { outline: 2px dashed rgba(255,255,255,.35); outline-offset: -8px; background: radial-gradient(circle at 50% 50%, rgba(51,34,21,.85), rgba(26,18,12,.95)); }
-        .pegsol-hole.valid { box-shadow: 0 0 0 3px rgba(54,214,195,.55), inset 0 2px 5px rgba(255,255,255,.1), inset 0 -3px 7px rgba(0,0,0,.65); }
-        .pegsol-hole.selected { box-shadow: 0 0 0 3px rgba(251,191,36,.85), inset 0 2px 5px rgba(255,255,255,.1), inset 0 -3px 7px rgba(0,0,0,.65); }
-        .pegsol-peg { width: 72%; height: 72%; border-radius: 50%; position: absolute; top: 14%; left: 14%; box-shadow: inset 0 10px 13px rgba(255,255,255,.28), inset 0 -10px 13px rgba(0,0,0,.28), 0 3px 7px rgba(0,0,0,.35); }
-        .peg-c0{background:#d94841}.peg-c1{background:#f59e0b}.peg-c2{background:#eab308}.peg-c3{background:#10b981}.peg-c4{background:#06b6d4}
-        .peg-c5{background:#0ea5e9}.peg-c6{background:#3b82f6}.peg-c7{background:#6366f1}.peg-c8{background:#8b5cf6}.peg-c9{background:#a855f7}
-        .peg-c10{background:#d946ef}.peg-c11{background:#ec4899}.peg-c12{background:#f43f5e}.peg-c13{background:#14b8a6}.peg-c14{background:#84cc16}
-        .pegsol-stats { display:flex; gap:.8rem; flex-wrap:wrap; margin-top:.9rem; }
-        .pegsol-chip { background: rgba(0,0,0,.25); border: 1px solid rgba(255,255,255,.16); border-radius: 999px; padding:.35rem .75rem; font-size:.9rem; }
+
+        /* ── Holes ────────────────────────────────────────── */
+        .pegsol-hole {
+            width: 54px; height: 54px; border-radius: 50%; border: none; position: relative; cursor: pointer; overflow: visible;
+            background: radial-gradient(circle at 38% 32%, rgba(32,18,8,.92), rgba(8,4,2,.99));
+            box-shadow: inset 0 4px 10px rgba(0,0,0,.9), inset 0 0 14px rgba(0,0,0,.6), 0 1px 3px rgba(255,190,100,.06);
+            transition: box-shadow .15s;
+        }
+        .pegsol-hole.empty {
+            outline: 2px dashed rgba(255,255,255,.28); outline-offset: -9px;
+            background: radial-gradient(circle at 50% 50%, rgba(48,28,14,.8), rgba(14,7,3,.96));
+        }
+        .pegsol-hole.valid {
+            outline: 3px solid rgba(54,214,195,.75); outline-offset: -3px;
+            box-shadow: inset 0 4px 10px rgba(0,0,0,.8), 0 0 10px rgba(54,214,195,.4);
+        }
+        .pegsol-hole.selected {
+            outline: 3px solid rgba(251,191,36,.95); outline-offset: -3px;
+            box-shadow: inset 0 4px 10px rgba(0,0,0,.8), 0 0 12px rgba(251,191,36,.48);
+        }
+
+        /* ── Setup-phase: crosshair + hover glow ──────────── */
+        .pegsol-board.setup .pegsol-hole { cursor: crosshair; }
+        .pegsol-board.setup .pegsol-hole:hover { outline: 2px solid rgba(251,191,36,.5); outline-offset: -3px; }
+        .pegsol-board.setup .pegsol-hole:hover .pegsol-peg {
+            transform: translateY(-6px) scale(1.09);
+            box-shadow: 0 0 0 3px rgba(251,191,36,.9),
+                inset 0 5px 9px rgba(255,255,255,.36), inset 0 -5px 10px rgba(0,0,0,.48),
+                3px 14px 18px rgba(0,0,0,.6);
+        }
+
+        /* ── Pegs – dome shape, sticking out ─────────────── */
+        .pegsol-peg {
+            width: 70%; height: 112%;
+            border-radius: 50% 50% 38% 38% / 55% 55% 38% 38%;
+            position: absolute; top: -6%; left: 15%;
+            box-shadow: inset 0 5px 9px rgba(255,255,255,.34),
+                inset 0 -5px 10px rgba(0,0,0,.48),
+                2px 8px 14px rgba(0,0,0,.55);
+            transition: transform .12s, box-shadow .12s;
+            transform-origin: center bottom;
+        }
+        .pegsol-board:not(.setup) .pegsol-hole:hover .pegsol-peg { transform: translateY(-3px); }
+
+        /* ── Peg colours ──────────────────────────────────── */
+        .peg-c0{background:#e05048} .peg-c1{background:#f5a030} .peg-c2{background:#f0cc20} .peg-c3{background:#22c478}
+        .peg-c4{background:#12bce4} .peg-c5{background:#1ab4f4} .peg-c6{background:#4a90f0} .peg-c7{background:#6870f4}
+        .peg-c8{background:#9668f4} .peg-c9{background:#b464f8} .peg-c10{background:#de52f8} .peg-c11{background:#f44ca0}
+        .peg-c12{background:#f44060} .peg-c13{background:#20c0b8} .peg-c14{background:#90d420}
+
+        /* ── Stats strip ──────────────────────────────────── */
+        .pegsol-stats { display: flex; gap: .8rem; flex-wrap: wrap; margin-top: .6rem; padding: 0 .25rem; justify-content: center; }
+        .pegsol-chip { background: rgba(0,0,0,.25); border: 1px solid rgba(255,255,255,.16); border-radius: 999px; padding: .35rem .75rem; font-size: .9rem; }
+
+        /* ── Flying-peg element (JS spawned, position:fixed) ─ */
+        .peg-fly {
+            pointer-events: none;
+            box-shadow: inset 0 5px 9px rgba(255,255,255,.34),
+                inset 0 -5px 10px rgba(0,0,0,.48), 2px 8px 14px rgba(0,0,0,.55);
+            animation: pegFlyOff .65s cubic-bezier(.2,.8,.4,1) forwards;
+        }
+        @keyframes pegFlyOff {
+            0%   { opacity: 1; transform: translate(0,0) rotate(0deg) scale(1); }
+            100% { opacity: 0; transform: translate(var(--fx),var(--fy)) rotate(var(--fr)) scale(.2); }
+        }
+
+        /* ── Board slide-in on load ───────────────────────── */
+        @keyframes boardSlideIn {
+            from { transform: perspective(720px) rotateX(28deg) translateY(-55px); opacity: 0; }
+            to   { transform: perspective(720px) rotateX(28deg) translateY(0);     opacity: 1; }
+        }
+
+        /* ── Peg bounce-in (setup phase entrance) ─────────── */
+        @keyframes pegBounceIn {
+            0%   { transform: translateY(-30px) scale(.35); opacity: 0; }
+            60%  { transform: translateY(4px) scale(1.1);  opacity: 1; }
+            80%  { transform: translateY(-2px) scale(.97); }
+            100% { transform: translateY(0) scale(1); opacity: 1; }
+        }
+        .pegsol-peg.peg-enter { animation: pegBounceIn .4s cubic-bezier(.2,.8,.4,1) both; }
+
+        /* ── Confetti canvas ──────────────────────────────── */
+        .confetti-canvas { position: fixed; inset: 0; pointer-events: none; z-index: 8000; width: 100%; height: 100%; }
+
+        /* ── Mobile tweak ─────────────────────────────────── */
+        @media (max-width: 500px) {
+            .pegsol-board-outer { padding: 50px 38px 38px; }
+            .pegsol-hole { width: 46px; height: 46px; }
+            .pegsol-board { gap: .44rem; }
+            .pegsol-row { gap: .44rem; }
+        }
     </style>
 </head>
 <body>
@@ -49,11 +170,15 @@
             <div class="pegsol-wrap">
                 <div id="pegsolLeaderboard" class="pegsol-leaderboard glass-card" style="display:none"></div>
                 <div class="pegsol-board-card">
-                    <div id="pegsolBoard" class="pegsol-board"></div>
+                    <div class="pegsol-scene">
+                        <div class="pegsol-board-outer">
+                            <div id="pegsolBoard" class="pegsol-board"></div>
+                        </div>
+                    </div>
                     <div class="pegsol-stats">
                         <span class="pegsol-chip" id="pegsolScore">Score: 0</span>
-                        <span class="pegsol-chip" id="pegsolPegs">Pegs Left: 14</span>
-                        <span class="pegsol-chip" id="pegsolRating">Rating: Try Again</span>
+                        <span class="pegsol-chip" id="pegsolPegs">Pegs Left: 15</span>
+                        <span class="pegsol-chip" id="pegsolRating">Rating: —</span>
                         <span class="pegsol-chip" id="pegsolMoves">Moves: 0</span>
                     </div>
                 </div>
@@ -85,6 +210,8 @@
             <div class="chat-input-row"><input id="chatInput" class="chat-input" placeholder="Type a message…" maxlength="500"><button id="chatSend" class="chat-send">&#10148;</button></div>
         </div>
     </div>
+
+    <canvas id="confettiCanvas" class="confetti-canvas" style="display:none"></canvas>
 
     <script src="/js/signalr.min.js"></script>
     <script src="/js/avatarCache.js"></script>

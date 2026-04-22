@@ -28,7 +28,7 @@ public class PegSolitairePlayer
     public bool IsBot { get; set; }
     public PegSolitaireGameState Game { get; set; } = new();
     public int Score { get; set; }
-    public int PegsLeft { get; set; } = 14;
+    public int PegsLeft { get; set; } = 15;
     public string Rating { get; set; } = "Try Again";
     public bool HasFinished { get; set; }
     public int FinishRank { get; set; }
@@ -42,6 +42,7 @@ public class PegSolitaireGameState
     public bool[] Pegs { get; set; } = new bool[15];
     public int MoveCount { get; set; }
     public bool HasMoves { get; set; } = true;
+    public bool IsSetup { get; set; } = true;
 }
 
 public static class PegSolitaireEngine
@@ -53,13 +54,21 @@ public static class PegSolitaireEngine
 
     public static PegSolitaireGameState CreateInitialState(int emptyIndex = 0)
     {
-        emptyIndex = Math.Clamp(emptyIndex, 0, 14);
         var g = new PegSolitaireGameState();
         for (int i = 0; i < g.Pegs.Length; i++) g.Pegs[i] = true;
-        g.Pegs[emptyIndex] = false;
+        // All 15 pegs filled — player must click one to remove it before play begins
         g.MoveCount = 0;
-        g.HasMoves = HasAnyMoves(g);
+        g.IsSetup = true;
+        g.HasMoves = false;
         return g;
+    }
+
+    public static void SetStartEmpty(PegSolitaireGameState game, int index)
+    {
+        index = Math.Clamp(index, 0, 14);
+        game.Pegs[index] = false;
+        game.IsSetup = false;
+        game.HasMoves = HasAnyMoves(game);
     }
 
     public static bool TryMove(PegSolitaireGameState game, int from, int to)

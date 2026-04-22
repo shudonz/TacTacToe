@@ -2554,6 +2554,7 @@ public class GameHub : Hub
         if (room == null || !room.Started || room.IsOver) return;
         var player = room.Players.FirstOrDefault(p => p.ConnectionId == Context.ConnectionId && !p.IsBot);
         if (player == null || player.HasFinished) return;
+        if (player.Game.IsSetup) return;  // must remove first peg before jumping
 
         if (!PegSolitaireEngine.TryMove(player.Game, from, to)) return;
 
@@ -2571,9 +2572,24 @@ public class GameHub : Hub
         if (!room.IsSinglePlayer) CheckPegSolitaireOver(room);
     }
 
+    public async Task PegSolitaireSetStartEmpty(string roomId, int pegIndex)
+    {
+        var room = _lobby.GetPegSolitaireRoom(roomId);
+        if (room == null || !room.Started || room.IsOver) return;
+        var player = room.Players.FirstOrDefault(p => p.ConnectionId == Context.ConnectionId && !p.IsBot);
+        if (player == null || player.HasFinished || !player.Game.IsSetup) return;
+        if (pegIndex < 0 || pegIndex >= 15) return;
+
+        PegSolitaireEngine.SetStartEmpty(player.Game, pegIndex);
+        player.PegsLeft = PegSolitaireEngine.CountPegs(player.Game);
+        player.Rating = PegSolitaireEngine.RatingFor(player.PegsLeft);
+
+        await Clients.Group(roomId).SendAsync("PegSolitaireUpdated", room);
+    }
+
     private static void ResetPegSolitairePlayerForNewGame(PegSolitaireRoom room, PegSolitairePlayer player, long startedAtMs)
     {
-        player.Game = PegSolitaireEngine.CreateInitialState(room.Settings.EmptyStartIndex);
+        player.Game = PegSolitaireEngine.CreateInitialState();
         player.Score = 0;
         player.PegsLeft = PegSolitaireEngine.CountPegs(player.Game);
         player.Rating = PegSolitaireEngine.RatingFor(player.PegsLeft);
