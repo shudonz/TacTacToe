@@ -106,10 +106,9 @@ function animatePegFlyOff(holeIndex, colorIdx) {
     const fr = (Math.random() - 0.5) * 900;
     el.style.cssText = [
         'position:fixed',
-        'width:38px', 'height:43px',
-        'border-radius:50% 50% 38% 38%/55% 55% 38% 38%',
-        `left:${rect.left + rect.width / 2 - 19}px`,
-        `top:${rect.top + rect.height / 2 - 21}px`,
+        'width:40px', 'height:50px',
+        `left:${rect.left + rect.width / 2 - 20}px`,
+        `top:${rect.top - 4}px`,
         `--fx:${fx}px`, `--fy:${fy}px`, `--fr:${fr}deg`,
         'z-index:9999'
     ].join(';');
