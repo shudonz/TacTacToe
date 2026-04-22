@@ -29,11 +29,19 @@ function suit(card) { return Math.floor(card / 13); }
 function cardHtml(cardId, extraClass = '') {
     const r = rank(cardId), s = suit(cardId);
     const rc = SUIT_CLASS[s];
-    const centerHtml = buildCardCenter(r, RANKS[r], SUITS[s]);
+    const centerHtml = buildCardCenter(r, RANKS[r], SUITS[s], s);
     return `<div class="sol-card ${rc} ${extraClass}"><div class="sol-card-tl">${RANKS[r]}<br>${SUITS[s]}</div>${centerHtml}<div class="sol-card-br">${RANKS[r]}<br>${SUITS[s]}</div></div>`;
 }
 
-function buildCardCenter(rankIdx, rankText, suitText) {
+// Face-card emoji indexed by [rankOffset][suitIdx]
+// rankOffset: 0=Jack, 1=Queen, 2=King  |  suitIdx: 0=♠ 1=♥ 2=♦ 3=♣
+const FACE_EMOJI = [
+    ['\uD83C\uDC2B', '\uD83C\uDC3B', '\uD83C\uDC4B', '\uD83C\uDC5B'], // Jack
+    ['\uD83C\uDC2D', '\uD83C\uDC3D', '\uD83C\uDC4D', '\uD83C\uDC5D'], // Queen
+    ['\uD83C\uDC2E', '\uD83C\uDC3E', '\uD83C\uDC4E', '\uD83C\uDC5E']  // King
+];
+
+function buildCardCenter(rankIdx, rankText, suitText, suitIdx = 0) {
     const pipRows = {
         0: [1],
         1: [1, 1],
@@ -48,7 +56,9 @@ function buildCardCenter(rankIdx, rankText, suitText) {
     }[rankIdx];
 
     if (!pipRows) {
-        return `<div class="sol-card-center sol-card-face-rank"><div class="sol-card-face-letter">${rankText}</div><div class="sol-card-face-suit">${suitText}</div></div>`;
+        const faceOffset = rankIdx - 10; // 10=J, 11=Q, 12=K
+        const emoji = FACE_EMOJI[faceOffset]?.[suitIdx] ?? rankText;
+        return `<div class="sol-card-center sol-card-face-rank"><div class="sol-card-face-emoji">${emoji}</div></div>`;
     }
 
     const rowsHtml = pipRows.map(count => {

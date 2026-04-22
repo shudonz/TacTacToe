@@ -179,7 +179,8 @@ function buildCard(cardId, opts = {}) {
     const selClass = sel ? " sol-selected" : "";
     const grabClass = (source === "waste" || source === "tableau") ? " sol-draggable" : "";
     const dAttrs = `data-card="${cardId}" data-source="${source}" data-pile="${pileIdx}" data-fup="${faceUpIdx}"`;
-    const centerHtml = buildCardCenter(ri, r, s);
+    const si = cSuit(cardId);
+    const centerHtml = buildCardCenter(ri, r, s, si);
     return `<div class="sol-card ${color}${selClass}${grabClass}" ${dAttrs}>
         <div class="sol-card-tl">${r}<br>${s}</div>
         ${centerHtml}
@@ -187,7 +188,15 @@ function buildCard(cardId, opts = {}) {
     </div>`;
 }
 
-function buildCardCenter(rankIdx, rankText, suitText) {
+// Face-card emoji indexed by [rankOffset][suitIdx]
+// rankOffset: 0=Jack, 1=Queen, 2=King  |  suitIdx: 0=♠ 1=♥ 2=♦ 3=♣
+const FACE_EMOJI = [
+    ['\uD83C\uDC2B', '\uD83C\uDC3B', '\uD83C\uDC4B', '\uD83C\uDC5B'], // Jack
+    ['\uD83C\uDC2D', '\uD83C\uDC3D', '\uD83C\uDC4D', '\uD83C\uDC5D'], // Queen
+    ['\uD83C\uDC2E', '\uD83C\uDC3E', '\uD83C\uDC4E', '\uD83C\uDC5E']  // King
+];
+
+function buildCardCenter(rankIdx, rankText, suitText, suitIdx = 0) {
     const pipRows = {
         0: [1],
         1: [1, 1],
@@ -202,7 +211,9 @@ function buildCardCenter(rankIdx, rankText, suitText) {
     }[rankIdx];
 
     if (!pipRows) {
-        return `<div class="sol-card-center sol-card-face-rank"><div class="sol-card-face-letter">${rankText}</div><div class="sol-card-face-suit">${suitText}</div></div>`;
+        const faceOffset = rankIdx - 10; // 10=J, 11=Q, 12=K
+        const emoji = FACE_EMOJI[faceOffset]?.[suitIdx] ?? rankText;
+        return `<div class="sol-card-center sol-card-face-rank"><div class="sol-card-face-emoji">${emoji}</div></div>`;
     }
 
     const rowsHtml = pipRows.map(count => {
