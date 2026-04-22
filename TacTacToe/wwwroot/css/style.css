@@ -4643,8 +4643,7 @@ button.ce-pile {
     cursor: not-allowed;
 }
 
-.ce-pile-count,
-.ce-suit-text {
+.ce-pile-count {
     text-align: center;
     margin-top: 0.3rem;
     color: var(--text-dim);
@@ -4735,6 +4734,60 @@ button.ce-pile {
     background: rgba(196,231,233,0.09);
     border: 1px solid rgba(196,231,233,0.2);
     color: var(--text);
+    font-size: 1rem;
+    font-weight: 700;
+}
+
+.ce-suit-btn.red {
+    color: #f87171;
+    border-color: rgba(248,113,113,0.35);
+}
+
+.ce-suit-btn.black {
+    color: #e2e8f0;
+    border-color: rgba(226,232,240,0.25);
+}
+
+.ce-active-suit-wrap {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.ce-active-suit {
+    width: var(--sol-card-w);
+    height: var(--sol-card-h);
+    background: #fff;
+    border-radius: var(--sol-card-r);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.35);
+    gap: 0.1em;
+}
+
+.ce-active-suit-sym {
+    font-size: calc(var(--sol-card-w) * 0.52);
+    line-height: 1;
+    font-weight: 700;
+}
+
+.ce-active-suit-name {
+    font-size: calc(var(--sol-card-w) * 0.16);
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+}
+
+.ce-active-suit.red .ce-active-suit-sym,
+.ce-active-suit.red .ce-active-suit-name {
+    color: #dc2626;
+}
+
+.ce-active-suit.black .ce-active-suit-sym,
+.ce-active-suit.black .ce-active-suit-name {
+    color: #111827;
 }
 
 .ce-confetti {

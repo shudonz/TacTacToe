@@ -99,11 +99,17 @@ function renderPile() {
     const draw = document.getElementById('ceDrawPile');
     const drawCount = document.getElementById('ceDrawCount');
     const discard = document.getElementById('ceDiscard');
+    const activeSuit = document.getElementById('ceActiveSuit');
 
     draw.innerHTML = state.drawCount > 0 ? cardBackHtml() : '<div class="ce-empty">Empty</div>';
     drawCount.textContent = `${state.drawCount} left`;
     discard.innerHTML = state.topCard >= 0 ? cardHtml(state.topCard, 'ce-discard-card') : '<div class="ce-empty">—</div>';
-    document.getElementById('ceSuitText').textContent = `Active suit: ${SUIT_NAMES[state.activeSuit]} ${SUITS[state.activeSuit]}`;
+
+    const si = state.activeSuit;
+    if (si >= 0 && si < 4) {
+        activeSuit.className = `ce-active-suit ${SUIT_CLASS[si]}`;
+        activeSuit.innerHTML = `<div class="ce-active-suit-sym">${SUITS[si]}</div><div class="ce-active-suit-name">${SUIT_NAMES[si]}</div>`;
+    }
 }
 
 function renderHand() {
@@ -134,7 +140,8 @@ function renderActions() {
     if (!state) return;
     const myTurn = state.players[state.currentPlayerIndex]?.name === myName && !state.isOver;
     document.getElementById('ceDrawBtn').disabled = !(myTurn && state.canDraw);
-    document.getElementById('cePassBtn').disabled = !(myTurn && state.canPass);
+    const passBtn = document.getElementById('cePassBtn');
+    passBtn.style.display = (myTurn && state.canPass) ? '' : 'none';
     document.getElementById('ceHintBtn').disabled = !myTurn;
     document.getElementById('ceDrawPile').disabled = !(myTurn && state.canDraw);
 }
@@ -172,8 +179,8 @@ function chooseSuitAndPlay(cardId) {
     choices.innerHTML = '';
     SUITS.forEach((sym, idx) => {
         const btn = document.createElement('button');
-        btn.className = 'btn ce-suit-btn';
-        btn.textContent = `${SUIT_NAMES[idx]} ${sym}`;
+        btn.className = `btn ce-suit-btn ${SUIT_CLASS[idx]}`;
+        btn.textContent = `${sym} ${SUIT_NAMES[idx]}`;
         btn.onclick = () => {
             modal.style.display = 'none';
             sndPlay();
