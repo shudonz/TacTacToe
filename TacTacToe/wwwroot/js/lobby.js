@@ -19,6 +19,7 @@ const DASH_GAMES = [
     { key: "slots",         api: "Slots",          icon: "🎰",  label: "Slots"          },
     { key: "concentration", api: "Concentration",  icon: "🧩",  label: "Concentration"  },
     { key: "solitaire",     api: "Solitaire",      icon: "🂡",  label: "Solitaire"      },
+    { key: "pegsolitaire",  api: "PegSolitaire",   icon: "🟠",  label: "Peg Solitaire"  },
 ];
 
 async function loadDashboard(me) {
@@ -198,7 +199,8 @@ async function init() {
             yahtzee:       "yahtzeePanel",
             slots:         "slotsPanel",
             concentration: "concentrationPanel",
-            solitaire:     "solitairePanel"
+            solitaire:     "solitairePanel",
+            pegsolitaire:  "pegsolitairePanel"
         };
 
         // Leaderboard containers per game  [apiGameType, lbId, histId]
@@ -207,7 +209,8 @@ async function init() {
             yahtzee:       ["Yahtzee",        "ytz-lobby-lb", "ytz-lobby-hist"],
             slots:         ["Slots",          "slt-lobby-lb", "slt-lobby-hist"],
             concentration: ["Concentration",  "con-lobby-lb", "con-lobby-hist"],
-            solitaire:     ["Solitaire",      "sol-lobby-lb", "sol-lobby-hist"]
+            solitaire:     ["Solitaire",      "sol-lobby-lb", "sol-lobby-hist"],
+            pegsolitaire:  ["PegSolitaire",   "peg-lobby-lb", "peg-lobby-hist"]
         };
 
         // Show welcome state when no game is selected, otherwise hide it
@@ -217,7 +220,7 @@ async function init() {
         Object.entries(panels).forEach(([game, id]) => {
             document.getElementById(id).style.display = selectedGame === game ? "" : "none";
         });
-        ["ttt", "yahtzee", "slots", "concentration", "solitaire"].forEach(key => {
+        ["ttt", "yahtzee", "slots", "concentration", "solitaire", "pegsolitaire"].forEach(key => {
             const el = document.getElementById(key + "PlaySections");
             if (el) { el.style.display = "none"; el.classList.remove("is-visible"); }
         });
@@ -227,6 +230,7 @@ async function init() {
         else if (selectedGame === "slots")         connection.invoke("GetSlotsRooms");
         else if (selectedGame === "concentration") connection.invoke("GetConcentrationRooms");
         else if (selectedGame === "solitaire")     connection.invoke("GetSolitaireRooms");
+        else if (selectedGame === "pegsolitaire")  connection.invoke("GetPegSolitaireRooms");
         else if (selectedGame === "yahtzee")       connection.invoke("GetYahtzeeRooms");
 
         // Load leaderboard + personal history for the selected game
@@ -412,6 +416,49 @@ async function init() {
         window.location.href = "/solitaire";
     });
 
+    // Peg Solitaire room list
+    connection.on("PegSolitaireRoomList", rooms => {
+        const list = document.getElementById("pegSolitaireRoomList");
+        const noRooms = document.getElementById("noPegSolitaireRooms");
+        list.innerHTML = "";
+        const open = rooms.filter(r => !r.started);
+        if (open.length === 0) {
+            noRooms.style.display = "block";
+        } else {
+            noRooms.style.display = "none";
+            open.forEach(r => {
+                const isFull = r.isFull;
+                const card = document.createElement("div");
+                card.className = "player-card room-list-card" + (isFull ? " room-full" : "");
+                const badge = isFull ? '<span class="room-badge room-badge-full">Full</span>' : '<span class="room-badge room-badge-open">Open</span>';
+                card.innerHTML =
+                    '<span class="game-option-icon" style="font-size:1.4rem;">🟠</span>'
+                    + '<div class="room-card-info"><span class="name">' + escapeHtml(r.roomName) + '</span>'
+                    + '<span class="room-card-host">Hosted by ' + escapeHtml(r.hostName) + '</span></div>'
+                    + '<div class="room-card-right"><span class="room-player-count-badge">' + r.playerCount + '/' + r.maxPlayers + '</span>'
+                    + badge + (!isFull ? '<button class="btn btn-accept room-join-btn">Join &rarr;</button>' : '') + '</div>';
+                if (!isFull) {
+                    card.querySelector(".room-join-btn").addEventListener("click", e => { e.stopPropagation(); joinPegSolitaireRoom(r.id); });
+                    card.onclick = () => joinPegSolitaireRoom(r.id);
+                }
+                list.appendChild(card);
+            });
+        }
+    });
+
+    connection.on("PegSolitaireRoomCreated", roomId => {
+        sessionStorage.setItem("pegSolitaireRoomId", roomId);
+        sessionStorage.setItem("isSinglePlayer", "0");
+        window.location.href = "/peg-solitaire-room";
+    });
+
+    connection.on("PegSolitaireSinglePlayerStarted", roomId => {
+        sessionStorage.setItem("pegSolitaireRoomId", roomId);
+        sessionStorage.setItem("myName", me.name);
+        sessionStorage.setItem("isSinglePlayer", "1");
+        window.location.href = "/peg-solitaire";
+    });
+
     // Yahtzee room list
     connection.on("YahtzeeRoomList", rooms => {
         const list = document.getElementById("roomList");
@@ -495,6 +542,7 @@ async function init() {
         else if (gameParam === "slots") joinSlotsRoom(joinParam);
         else if (gameParam === "concentration") joinConcentrationRoom(joinParam);
         else if (gameParam === "solitaire") joinSolitaireRoom(joinParam);
+        else if (gameParam === "pegsolitaire") joinPegSolitaireRoom(joinParam);
         else joinYahtzeeRoom(joinParam);
     }
 
@@ -565,6 +613,31 @@ async function init() {
     document.getElementById("newSolitaireRoomName").addEventListener("keydown", e => {
         if (e.key === "Enter") document.getElementById("createSolitaireRoomConfirmBtn").click();
         if (e.key === "Escape") document.getElementById("createSolitaireRoomCancelBtn").click();
+    });
+
+    // Peg Solitaire single player
+    document.getElementById("pegSolitaireSpBtn").addEventListener("click", () => {
+        sessionStorage.setItem("myName", me.name);
+        connection.invoke("StartPegSolitaireSinglePlayer");
+    });
+
+    // Create Peg Solitaire room
+    document.getElementById("createPegSolitaireRoomBtn").addEventListener("click", () => {
+        document.getElementById("newPegSolitaireRoomName").value = "";
+        document.getElementById("createPegSolitaireRoomModal").style.display = "flex";
+        setTimeout(() => document.getElementById("newPegSolitaireRoomName").focus(), 50);
+    });
+    document.getElementById("createPegSolitaireRoomCancelBtn").addEventListener("click", () => {
+        document.getElementById("createPegSolitaireRoomModal").style.display = "none";
+    });
+    document.getElementById("createPegSolitaireRoomConfirmBtn").addEventListener("click", () => {
+        const name = document.getElementById("newPegSolitaireRoomName").value.trim() || "Peg Solitaire Room";
+        document.getElementById("createPegSolitaireRoomModal").style.display = "none";
+        connection.invoke("CreatePegSolitaireRoom", name);
+    });
+    document.getElementById("newPegSolitaireRoomName").addEventListener("keydown", e => {
+        if (e.key === "Enter") document.getElementById("createPegSolitaireRoomConfirmBtn").click();
+        if (e.key === "Escape") document.getElementById("createPegSolitaireRoomCancelBtn").click();
     });
 
     // Concentration single player
@@ -651,6 +724,14 @@ function joinSolitaireRoom(roomId) {
     connection.invoke("JoinSolitaireRoom", roomId).then(() => {
         sessionStorage.setItem("solitaireRoomId", roomId);
         window.location.href = "/solitaire-room";
+    });
+}
+
+function joinPegSolitaireRoom(roomId) {
+    sessionStorage.setItem("isSinglePlayer", "0");
+    connection.invoke("JoinPegSolitaireRoom", roomId).then(() => {
+        sessionStorage.setItem("pegSolitaireRoomId", roomId);
+        window.location.href = "/peg-solitaire-room";
     });
 }
 

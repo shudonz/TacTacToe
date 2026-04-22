@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>TacTacToe – Peg Solitaire</title>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="/css/style.css" rel="stylesheet">
+    <style>
+        .pegsol-main { max-width: 1000px; margin: 0 auto; padding: 1rem; }
+        .pegsol-wrap { display: grid; gap: 1rem; }
+        .pegsol-leaderboard { display: grid; gap: .55rem; }
+        .pegsol-leaderboard .row { display: flex; align-items: center; gap: .55rem; background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.08); border-radius: 12px; padding: .45rem .7rem; }
+        .pegsol-leaderboard .me { border-color: rgba(18,145,158,.5); }
+        .pegsol-board-card { background: linear-gradient(145deg, #6e4f31, #855d36 52%, #5a3f27); border-radius: 20px; border: 2px solid rgba(44,27,16,.55); box-shadow: inset 0 1px 0 rgba(255,255,255,.18), inset 0 -10px 22px rgba(0,0,0,.28), 0 12px 30px rgba(0,0,0,.35); padding: 1.2rem; }
+        .pegsol-board { display: grid; gap: .56rem; justify-content: center; }
+        .pegsol-row { display: flex; gap: .56rem; justify-content: center; }
+        .pegsol-hole { width: 54px; height: 54px; border-radius: 50%; border: none; position: relative; cursor: pointer; background: radial-gradient(circle at 30% 30%, rgba(24,15,9,.95), rgba(11,8,6,.98)); box-shadow: inset 0 2px 5px rgba(255,255,255,.1), inset 0 -3px 7px rgba(0,0,0,.65); }
+        .pegsol-hole.empty { outline: 2px dashed rgba(255,255,255,.35); outline-offset: -8px; background: radial-gradient(circle at 50% 50%, rgba(51,34,21,.85), rgba(26,18,12,.95)); }
+        .pegsol-hole.valid { box-shadow: 0 0 0 3px rgba(54,214,195,.55), inset 0 2px 5px rgba(255,255,255,.1), inset 0 -3px 7px rgba(0,0,0,.65); }
+        .pegsol-hole.selected { box-shadow: 0 0 0 3px rgba(251,191,36,.85), inset 0 2px 5px rgba(255,255,255,.1), inset 0 -3px 7px rgba(0,0,0,.65); }
+        .pegsol-peg { width: 72%; height: 72%; border-radius: 50%; position: absolute; top: 14%; left: 14%; box-shadow: inset 0 10px 13px rgba(255,255,255,.28), inset 0 -10px 13px rgba(0,0,0,.28), 0 3px 7px rgba(0,0,0,.35); }
+        .peg-c0{background:#d94841}.peg-c1{background:#f59e0b}.peg-c2{background:#eab308}.peg-c3{background:#10b981}.peg-c4{background:#06b6d4}
+        .peg-c5{background:#0ea5e9}.peg-c6{background:#3b82f6}.peg-c7{background:#6366f1}.peg-c8{background:#8b5cf6}.peg-c9{background:#a855f7}
+        .peg-c10{background:#d946ef}.peg-c11{background:#ec4899}.peg-c12{background:#f43f5e}.peg-c13{background:#14b8a6}.peg-c14{background:#84cc16}
+        .pegsol-stats { display:flex; gap:.8rem; flex-wrap:wrap; margin-top:.9rem; }
+        .pegsol-chip { background: rgba(0,0,0,.25); border: 1px solid rgba(255,255,255,.16); border-radius: 999px; padding:.35rem .75rem; font-size:.9rem; }
+    </style>
+</head>
+<body>
+    <div class="ambient"></div>
+    <div class="noise"></div>
+    <div class="page-content">
+        <nav class="navbar">
+            <button class="ham-btn" onclick="hamOpen()" aria-label="Open menu"><span></span><span></span><span></span></button>
+            <div class="logo-sm"><span class="logo-x">Tac</span><span class="logo-o">Tac</span><span class="logo-x">Toe</span></div>
+            <div class="nav-right-group">
+                <span id="pegsolStatus" class="turn-indicator">Loading…</span>
+                <a href="/profile" class="nav-profile-btn" title="Edit Profile">
+                    <span id="navbarAvatarEmoji" class="nav-profile-emoji" style="display:none"></span>
+                    <img id="navbarAvatarImg" class="nav-profile-img" src="" alt="Profile" style="display:none">
+                    <span id="navbarAvatarPlaceholder" class="nav-profile-placeholder">&#128100;</span>
+                    <span id="navbarUsername" class="nav-profile-username"></span>
+                </a>
+            </div>
+        </nav>
+
+        <main class="pegsol-main">
+            <div class="pegsol-wrap">
+                <div id="pegsolLeaderboard" class="pegsol-leaderboard glass-card" style="display:none"></div>
+                <div class="pegsol-board-card">
+                    <div id="pegsolBoard" class="pegsol-board"></div>
+                    <div class="pegsol-stats">
+                        <span class="pegsol-chip" id="pegsolScore">Score: 0</span>
+                        <span class="pegsol-chip" id="pegsolPegs">Pegs Left: 14</span>
+                        <span class="pegsol-chip" id="pegsolRating">Rating: Try Again</span>
+                        <span class="pegsol-chip" id="pegsolMoves">Moves: 0</span>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <div id="resultOverlay" class="result-overlay" style="display:none">
+        <div class="result-card">
+            <h2 id="resultText"></h2>
+            <div id="resultStats"></div>
+            <button id="backToLobby" class="btn btn-outline" style="margin-top:1rem;">Back to Lobby</button>
+            <div class="leaderboard-panel" style="margin-top:1rem;">
+                <div class="leaderboard-panel-tabs">
+                    <button class="lb-tab active" onclick="showLbTab(this,'pegsol-lb')">&#127942; Top Scores</button>
+                    <button class="lb-tab" onclick="showLbTab(this,'pegsol-hist')">&#128196; My History</button>
+                </div>
+                <div class="lb-body" id="pegsol-lb"></div>
+                <div class="lb-body" id="pegsol-hist" style="display:none"></div>
+            </div>
+        </div>
+    </div>
+
+    <div id="chatWidget" class="chat-widget" style="display:none">
+        <button id="chatToggle" class="chat-toggle">&#128172; <span id="chatBadge" class="chat-badge" style="display:none">0</span></button>
+        <div id="chatPanel" class="chat-panel" style="display:none">
+            <div class="chat-header"><span>Game Chat</span><button id="chatClose" class="chat-close">&#x2715;</button></div>
+            <div id="chatMessages" class="chat-messages"></div>
+            <div class="chat-input-row"><input id="chatInput" class="chat-input" placeholder="Type a message…" maxlength="500"><button id="chatSend" class="chat-send">&#10148;</button></div>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/8.0.0/signalr.min.js"></script>
+    <script src="/js/avatarCache.js"></script>
+    <script src="/js/leaderboard.js"></script>
+    <script src="/js/pegsolitaire.js"></script>
+    <script>
+        function showLbTab(btn, id) {
+            btn.closest('.leaderboard-panel').querySelectorAll('.lb-tab').forEach(t => t.classList.remove('active'));
+            btn.classList.add('active');
+            btn.closest('.leaderboard-panel').querySelectorAll('.lb-body').forEach(b => b.style.display = 'none');
+            document.getElementById(id).style.display = '';
+        }
+        document.addEventListener('gameOver', () => {
+            setTimeout(() => {
+                loadLeaderboard('PegSolitaire', document.getElementById('pegsol-lb'));
+                loadPersonalHistory('PegSolitaire', document.getElementById('pegsol-hist'));
+            }, 1500);
+        });
+    </script>
+    <div class="ham-overlay" onclick="hamClose()"></div>
+    <nav class="ham-drawer" aria-label="Navigation menu">
+        <div class="ham-drawer-header">
+            <div class="ham-drawer-logo"><span class="logo-x">Tac</span><span class="logo-o">Tac</span><span class="logo-x">Toe</span></div>
+            <button class="ham-close" onclick="hamClose()" aria-label="Close menu">&#10005;</button>
+        </div>
+        <div class="ham-menu">
+            <button id="backBtn" class="ham-item">&#8592; Back to Lobby</button>
+        </div>
+    </nav>
+    <script src="/js/hamburger.js"></script>
+</body>
+</html>
