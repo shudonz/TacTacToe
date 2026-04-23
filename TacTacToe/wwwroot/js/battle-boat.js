@@ -136,7 +136,6 @@ function startPlacement(playerIndex) {
 
     const name = playerIndex === 0 ? state.players[0].name : state.players[1].name;
     document.getElementById('placementBar').classList.add('visible');
-    document.getElementById('placementBarTitle').textContent = `${name} — place your fleet`;
     document.getElementById('status').textContent = `${name}: click your grid to position each ship.`;
     document.getElementById('orientBtn').textContent = '↔ Horizontal';
     document.getElementById('confirmPlaceBtn').disabled = true;
@@ -160,6 +159,17 @@ function renderPlacementQueue() {
         else if (i === p.shipIndex) cls += ' active';
         return `<span class="${cls}">${s.name} (${s.size})</span>`;
     }).join('');
+
+    // Update placement bar title to show which ship is next
+    if (p.shipIndex < SHIPS.length) {
+        const next = SHIPS[p.shipIndex];
+        const orient = p.horizontal ? 'horizontal' : 'vertical';
+        document.getElementById('placementBarTitle').textContent =
+            `${state.players[state.placingPlayer].name} — place your ${next.name} (${next.size} cells, ${orient})`;
+    } else {
+        document.getElementById('placementBarTitle').textContent =
+            `${state.players[state.placingPlayer].name} — all ships placed!`;
+    }
 }
 
 function renderPlacementBoard() {
@@ -171,10 +181,10 @@ function renderPlacementBoard() {
         for (let c = 0; c < SIZE; c++) {
             const cell = document.createElement('button');
             cell.className = 'bb-cell';
+            cell.disabled = false;          // always interactive during placement
             const key = p.board[r][c];
             if (key) cell.classList.add('ship');
 
-            // Hover preview handled via mouseover on grid
             cell.addEventListener('mouseover', () => onPlacementHover(r, c));
             cell.addEventListener('click',     () => onPlacementClick(r, c));
             el.appendChild(cell);
@@ -243,7 +253,12 @@ function onPlacementClick(r, c) {
 
     if (p.shipIndex >= SHIPS.length) {
         document.getElementById('confirmPlaceBtn').disabled = false;
-        document.getElementById('status').textContent = 'All ships placed! Confirm your fleet or randomize again.';
+        document.getElementById('status').textContent =
+            'All ships placed! Confirm your fleet, or Randomize / Reset to redo.';
+    } else {
+        const next = SHIPS[p.shipIndex];
+        document.getElementById('status').textContent =
+            `${ship.name} placed ✓  Next: ${next.name} (${next.size} cells)`;
     }
 }
 
@@ -377,7 +392,16 @@ function render() {
     document.getElementById('status').textContent = status;
 
     renderOwnBoard();
-    renderTargetBoard(active, opponent);
+
+    // In solo mode the board is always shown from the human's (player 0) point of
+    // view – even while the bot is taking its turn.  Switching to the bot's
+    // perspective caused the "bouncing / flickering" that was reported.
+    if (mode === 'solo') {
+        renderTargetBoard(0, 1);
+    } else {
+        renderTargetBoard(active, opponent);
+    }
+
     renderFleet('p0Fleet', state.players[0]);
     renderFleet('p1Fleet', state.players[1]);
 }
@@ -423,7 +447,10 @@ function renderTargetBoard(shooterIndex, targetIndex) {
     const el       = document.getElementById('p1Target');
     el.innerHTML   = '';
     document.getElementById('p1Title').textContent = target.name;
-    const canShoot = !state.gameOver;
+    // In solo mode only allow the human (index 0) to fire; while the bot is
+    // taking its turn the grid must be locked so that stray clicks don't
+    // register as bot shots or cause turn-order corruption.
+    const canShoot = !state.gameOver && (mode === 'solo' ? state.current === 0 : true);
 
     for (let r = 0; r < SIZE; r++) {
         for (let c = 0; c < SIZE; c++) {
@@ -618,8 +645,10 @@ document.getElementById('orientBtn').addEventListener('click', () => {
     document.getElementById('orientBtn').textContent =
         state.placement.horizontal ? '↔ Horizontal' : '↕ Vertical';
     // Clear any preview highlights
-    document.querySelectorAll('.bb-cell').forEach(c =>
+    document.querySelectorAll('#p0Own .bb-cell').forEach(c =>
         c.classList.remove('preview', 'preview-bad'));
+    // Refresh the title so the orientation label stays in sync
+    renderPlacementQueue();
 });
 
 document.getElementById('randomBtn').addEventListener('click', doRandomize);
