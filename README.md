@@ -1,6 +1,6 @@
 ﻿# TacTacToeHub
 
-A real-time multiplayer game hub with Google login, a shared lobby, and live gameplay via SignalR. Currently features: **Tic Tac Toe**, **Yahtzee**, **Slots**, **Concentration Madness**, **Puzzle Time**, **Solitaire**, **Peg Solitaire (Triangular)**, **Chinese Checkers**, and **Crazy Eights**.
+A real-time multiplayer game hub with Google login, a shared lobby, and live gameplay via SignalR. Currently features: **Tic Tac Toe**, **Yahtzee**, **Slots**, **Concentration Madness**, **Puzzle Time**, **Solitaire**, **Peg Solitaire (Triangular)**, **Chinese Checkers**, **Crazy Eights**, and **Battle Boat**.
 
 ## Games
 
@@ -13,6 +13,7 @@ A real-time multiplayer game hub with Google login, a shared lobby, and live gam
 - **Peg Solitaire (Triangular)** — Remove pegs by jumping over adjacent pegs on a 15-hole triangle board; solo or 2–4 player race mode with points for each peg removed.
 - **Chinese Checkers** — Strategy race mode with solo (vs 6 bots) and multiplayer options.
 - **Crazy Eights** — Classic shedding card game with solo (vs up to 3 bots) and multiplayer (up to 4 players), hinting, move highlights, sounds, and win celebration effects.
+- **Battle Boat** — Battleship-style naval duel with peg markers, multiple ship classes, solo mode vs computer, local 2-player mode, sink animations, and confetti celebration.
 
 
 ## Tech Stack

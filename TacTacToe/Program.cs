@@ -313,6 +313,13 @@ app.MapGet("/puzzle-time-room", (HttpContext ctx) =>
     return Results.File("puzzle-time-room.html", "text/html");
 });
 
+app.MapGet("/battle-boat", (HttpContext ctx) =>
+{
+    if (ctx.User.Identity?.IsAuthenticated != true)
+        return Results.Redirect("/login");
+    return Results.File("battle-boat.html", "text/html");
+});
+
 app.MapGet("/api/me", async (HttpContext ctx) =>
 {
     if (ctx.User.Identity?.IsAuthenticated != true)

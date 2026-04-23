@@ -112,6 +112,15 @@
                         <span class="game-list-arrow">&#8250;</span>
                     </button>
 
+                    <button class="game-option game-list-item" data-game="battle-boat" aria-label="Battle Boat">
+                        <span class="game-list-icon">🚢</span>
+                        <div class="game-list-info">
+                            <span class="game-list-name">Battle Boat</span>
+                            <span class="game-list-sub">1–2 players &middot; Naval Combat</span>
+                        </div>
+                        <span class="game-list-arrow">&#8250;</span>
+                    </button>
+
                 </nav>
             </aside>
 
@@ -588,6 +597,44 @@
                         <button id="createCrazyEightsRoomBtn" class="btn btn-accept detail-create-btn">&#43; Create Room</button>
                         <div id="crazyEightsRoomList" class="player-list"></div>
                         <p id="noCrazyEightsRooms" class="lobby-hint lobby-no-rooms" style="display:none;">No open rooms right now — create one to get started!</p>
+                    </div>
+                    </div>
+                </div>
+
+                <!-- ── Battle Boat Panel ── -->
+                <div id="battleBoatPanel" class="game-detail-panel" style="display:none">
+                    <div class="game-detail-header">
+                        <span class="game-detail-icon">🚢</span>
+                        <div class="game-detail-header-body">
+                            <div class="game-title-row">
+                                <h2 class="game-detail-title">Battle Boat</h2>
+                                <button class="btn-play" onclick="showPlaySections('battleBoat')">&#9654; Play</button>
+                            </div>
+                            <p class="game-detail-desc">A Battleship-style showdown with pegs, fleet hunting, splashy sink animations, and big win effects.</p>
+                        </div>
+                    </div>
+
+                    <div id="battleBoatPlaySections" class="game-play-sections" style="display:none">
+                    <div class="detail-section">
+                        <h3 class="detail-section-title">&#129302; Single Player</h3>
+                        <p class="lobby-hint">Play against the computer fleet.</p>
+                        <div class="sp-section">
+                            <span class="sp-label">vs Computer</span>
+                            <div class="sp-btns">
+                                <button id="battleBoatSoloBtn" class="btn btn-sp">🚢 Play Solo</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="detail-section">
+                        <h3 class="detail-section-title">&#127760; 2 Player</h3>
+                        <p class="lobby-hint">Play local hot-seat multiplayer for two captains.</p>
+                        <div class="sp-section">
+                            <span class="sp-label">Player vs Player</span>
+                            <div class="sp-btns">
+                                <button id="battleBoatDuelBtn" class="btn btn-accept">⚓ Start 2-Player Match</button>
+                            </div>
+                        </div>
                     </div>
                     </div>
                 </div>

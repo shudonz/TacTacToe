@@ -23,6 +23,7 @@ const DASH_GAMES = [
     { key: "pegsolitaire",  api: "PegSolitaire",   icon: "🟠",  label: "Peg Solitaire"  },
     { key: "chinese-checkers", api: "ChineseCheckers", icon: "🎮", label: "Chinese Checkers" },
     { key: "crazy-eights",  api: "CrazyEights",    icon: "🃏",  label: "Crazy Eights"   },
+    { key: "battle-boat",   api: "BattleBoat",     icon: "🚢",  label: "Battle Boat"    },
 ];
 
 async function loadDashboard(me) {
@@ -206,7 +207,8 @@ async function init() {
             solitaire:     "solitairePanel",
             pegsolitaire:  "pegsolitairePanel",
             "chinese-checkers": "chineseCheckersPanel",
-            "crazy-eights": "crazyEightsPanel"
+            "crazy-eights": "crazyEightsPanel",
+            "battle-boat": "battleBoatPanel"
         };
 
         // Leaderboard containers per game  [apiGameType, lbId, histId]
@@ -866,6 +868,13 @@ async function init() {
         const imageKey = document.getElementById("puzzleTimeSpImageSelect").value;
         const pieceCount = parseInt(document.getElementById("puzzleTimeSpPieceCountSelect").value, 10) || 25;
         connection.invoke("StartPuzzleTimeSinglePlayer", imageKey, pieceCount);
+    });
+
+    document.getElementById("battleBoatSoloBtn").addEventListener("click", () => {
+        window.location.href = "/battle-boat?mode=solo";
+    });
+    document.getElementById("battleBoatDuelBtn").addEventListener("click", () => {
+        window.location.href = "/battle-boat?mode=duel";
     });
 
     // Create Puzzle Time room
