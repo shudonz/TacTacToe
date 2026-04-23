@@ -326,6 +326,7 @@ function beginBattle() {
     state.phase   = 'battle';
     state.current = 0;
     state.gameOver = false;
+    state.battleStartedAt = Date.now();
 
     // Clear placement UI
     document.getElementById('placementBar').classList.remove('visible');
@@ -609,6 +610,20 @@ function endGame(winnerName) {
     document.getElementById('winOverlay').style.display = 'flex';
     logMsg(`⚓ ${winnerName} sank the final ship and won the battle!`);
     render();
+
+    // Persist result for the logged-in player
+    const meName = sessionStorage.getItem('userName');
+    if (meName) {
+        const elapsed = state.battleStartedAt ? Math.round((Date.now() - state.battleStartedAt) / 1000) : 0;
+        const isWin   = winnerName === meName;
+        const result  = isWin ? 'Win' : 'Loss';
+        const score   = isWin ? Math.max(1, state.players[0].fleet.filter(s => !s.sunk).length * 10) : 0;
+        fetch('/api/me/session', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ gameType: 'BattleBoat', result, score, timePlayed: elapsed, details: mode === 'solo' ? 'vs Computer' : 'vs Player' })
+        }).catch(() => {});
+    }
 }
 
 // ── Misc ──────────────────────────────────────────────────────────────────────

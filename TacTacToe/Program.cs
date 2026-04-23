@@ -554,6 +554,31 @@ app.MapPost("/api/forgot-password", async (HttpContext ctx) =>
     return ok ? Results.Ok() : Results.BadRequest(new { error = "Username or security answer is incorrect." });
 });
 
+// POST save a client-side game session (e.g. Battle Boat)
+app.MapPost("/api/me/session", async (HttpContext ctx) =>
+{
+    if (ctx.User.Identity?.IsAuthenticated != true)
+        return Results.Unauthorized();
+    if (!int.TryParse(ctx.User.FindFirst(ClaimTypes.NameIdentifier)?.Value, out var uid))
+        return Results.Unauthorized();
+    var body = await ctx.Request.ReadFromJsonAsync<SaveSessionDto>();
+    if (body == null || string.IsNullOrWhiteSpace(body.GameType) || string.IsNullOrWhiteSpace(body.Result))
+        return Results.BadRequest(new { error = "Missing fields." });
+    var allowed = new[] { "Win", "Loss", "Draw", "Completed", "GiveUp" };
+    if (!allowed.Contains(body.Result))
+        return Results.BadRequest(new { error = "Invalid result." });
+    await sessionRepo.SaveAsync(new TacTacToe.Models.GameSession
+    {
+        UserId     = uid,
+        GameType   = body.GameType.Length > 50 ? body.GameType[..50] : body.GameType,
+        Score      = Math.Max(0, body.Score),
+        Result     = body.Result,
+        TimePlayed = Math.Max(0, body.TimePlayed),
+        Details    = body.Details?.Length > 200 ? body.Details[..200] : body.Details
+    });
+    return Results.Ok();
+});
+
 app.MapGet("/forgot-password", () => Results.File("forgot-password.html", "text/html"));
 
 app.MapPost("/logout", async (HttpContext ctx) =>
@@ -573,3 +598,4 @@ record ChangePasswordDto(string OldPassword, string NewPassword);
 record UpdateAvatarDto(string Avatar);
 record SecurityAnswerDto(string Answer);
 record ForgotPasswordDto(string Username, string Answer, string NewPassword);
+record SaveSessionDto(string GameType, string Result, int Score, int TimePlayed, string? Details);
