@@ -35,10 +35,11 @@ function cardHtml(cardId, extraClass = '') {
 
 // Face-card emoji indexed by [rankOffset][suitIdx]
 // rankOffset: 0=Jack, 1=Queen, 2=King  |  suitIdx: 0=♠ 1=♥ 2=♦ 3=♣
+// Unicode Playing Cards block U+1F0A0–U+1F0FF
 const FACE_EMOJI = [
-    ['\uD83C\uDC2B', '\uD83C\uDC3B', '\uD83C\uDC4B', '\uD83C\uDC5B'], // Jack
-    ['\uD83C\uDC2D', '\uD83C\uDC3D', '\uD83C\uDC4D', '\uD83C\uDC5D'], // Queen
-    ['\uD83C\uDC2E', '\uD83C\uDC3E', '\uD83C\uDC4E', '\uD83C\uDC5E']  // King
+    ['\u{1F0AB}', '\u{1F0BB}', '\u{1F0CB}', '\u{1F0DB}'], // Jack  ♠♥♦♣
+    ['\u{1F0AD}', '\u{1F0BD}', '\u{1F0CD}', '\u{1F0DD}'], // Queen ♠♥♦♣
+    ['\u{1F0AE}', '\u{1F0BE}', '\u{1F0CE}', '\u{1F0DE}']  // King  ♠♥♦♣
 ];
 
 function buildCardCenter(rankIdx, rankText, suitText, suitIdx = 0) {
