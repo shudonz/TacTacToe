@@ -139,15 +139,17 @@ function renderBoard() {
         board.appendChild(btn);
     }
 
-    const selected = selectedTileId ? tileById(selectedTileId) : null;
-    if (!selected || !isMine(selected)) selectedTileId = null;
-
     document.getElementById("rotateLeftBtn").disabled = !selectedTileId || state.isOver;
     document.getElementById("rotateRightBtn").disabled = !selectedTileId || state.isOver;
     document.getElementById("unlockTileBtn").disabled = !selectedTileId || state.isOver;
     document.getElementById("puzzleLockHint").textContent = selectedTileId
         ? "Tile locked by you. Click any board cell to move it."
         : "Select a tile to lock it, then place or rotate it.";
+}
+
+function syncSelectedTile() {
+    const selected = selectedTileId ? tileById(selectedTileId) : null;
+    if (!selected || !isMine(selected)) selectedTileId = null;
 }
 
 function onTileClick(tile, targetIndex) {
@@ -202,6 +204,7 @@ function sideEffects(oldState, next) {
 function render() {
     if (!state) return;
 
+    syncSelectedTile();
     renderPlayers();
     renderPreview();
     renderBoard();

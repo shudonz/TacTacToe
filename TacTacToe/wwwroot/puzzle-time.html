@@ -60,8 +60,8 @@
             <button id="backToLobby" class="btn btn-outline">Back to Lobby</button>
             <div class="leaderboard-panel" style="margin-top:1rem;">
                 <div class="leaderboard-panel-tabs">
-                    <button class="lb-tab active" onclick="showLbTab(this,'pt-lb')">&#127942; Top Scores</button>
-                    <button class="lb-tab" onclick="showLbTab(this,'pt-hist')">&#128196; My History</button>
+                    <button class="lb-tab active" onclick="showLbTab(this,'pt-lb')" aria-label="Show top scores">&#127942; Top Scores</button>
+                    <button class="lb-tab" onclick="showLbTab(this,'pt-hist')" aria-label="Show my history">&#128196; My History</button>
                 </div>
                 <div class="lb-body" id="pt-lb"></div>
                 <div class="lb-body" id="pt-hist" style="display:none"></div>
@@ -78,7 +78,7 @@
         </div>
     </div>
 
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/8.0.0/signalr.min.js"></script>
+    <script src="/js/signalr.min.js"></script>
     <script src="/js/avatarCache.js"></script>
     <script src="/js/leaderboard.js"></script>
     <script src="/js/puzzle-time.js"></script>

@@ -229,9 +229,9 @@ async function init() {
         Object.entries(panels).forEach(([game, id]) => {
             document.getElementById(id).style.display = selectedGame === game ? "" : "none";
         });
-        ["ttt", "yahtzee", "slots", "concentration", "puzzleTime", "solitaire", "pegsolitaire", "chineseCheckers", "crazyEights"].forEach(key => {
-            const el = document.getElementById(key + "PlaySections");
-            if (el) { el.style.display = "none"; el.classList.remove("is-visible"); }
+        document.querySelectorAll(".game-play-sections").forEach(el => {
+            el.style.display = "none";
+            el.classList.remove("is-visible");
         });
 
         // Only request room lists for the selected game

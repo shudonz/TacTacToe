@@ -49,7 +49,7 @@ public static class PuzzleTimeEngine
 
     private static readonly Dictionary<string, string[]> PatternSets = new(StringComparer.OrdinalIgnoreCase)
     {
-        ["emoji-garden"] = ["🌸", "🌼", "🌺", "🌻", "🌷", "🪻", "🍀", "🍃", "��", "🐝", "🌈", "☀️"],
+        ["emoji-garden"] = ["🌸", "🌼", "🌺", "🌻", "🌷", "🌹", "🍀", "🍃", "🦋", "🐝", "🌈", "☀️"],
         ["emoji-space"] = ["🌙", "⭐", "✨", "☄️", "🪐", "🌌", "🚀", "🛰️", "👨‍🚀", "🌠", "🔭", "🛸"],
         ["emoji-ocean"] = ["🌊", "🐠", "🐟", "🐡", "🐬", "🐳", "🪸", "🫧", "🦀", "🐙", "🐚", "🦑"],
         ["emoji-snacks"] = ["🍕", "🍔", "🌮", "🍣", "🍜", "🍩", "🍪", "🍉", "🍓", "🍇", "🥨", "🍿"]
@@ -105,6 +105,7 @@ public static class PuzzleTimeEngine
             });
         }
 
+        // Guarantee a non-solved opening board so every game requires at least one move.
         if (tiles.All(t => t.CorrectIndex == t.CurrentIndex && t.Rotation == 0) && tiles.Count > 1)
             (tiles[0].CurrentIndex, tiles[1].CurrentIndex) = (tiles[1].CurrentIndex, tiles[0].CurrentIndex);
 

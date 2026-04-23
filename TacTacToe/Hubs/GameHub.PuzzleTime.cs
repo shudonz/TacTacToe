@@ -7,6 +7,9 @@ namespace TacTacToe.Hubs;
 
 public partial class GameHub
 {
+    private const int PuzzleTimePointsPerPiece = 8;
+    private const int PuzzleTimeMinScore = 10;
+
     public async Task CreatePuzzleTimeRoom(string? roomName = null, string? imageKey = null, int pieceCount = 25, int maxPlayers = 4)
     {
         var roomId = Guid.NewGuid().ToString("N");
@@ -334,7 +337,9 @@ public partial class GameHub
             var now = DateTime.UtcNow.ToString("o");
             int elapsed = (int)((DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() - room.StartedAtMs) / 1000);
             int pieceCount = PuzzleTimeEngine.NormalizePieceCount(room.Settings.PieceCount);
-            int baseScore = room.IsOver ? Math.Max(10, pieceCount * 8 - elapsed) : 0;
+            int baseScore = room.IsOver
+                ? Math.Max(PuzzleTimeMinScore, pieceCount * PuzzleTimePointsPerPiece - elapsed)
+                : 0;
 
             foreach (var p in room.Players.Where(p => !p.IsBot))
             {
