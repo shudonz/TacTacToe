@@ -25,35 +25,47 @@
         </nav>
 
         <main class="puzzle-time-container">
+            <!-- Head bar -->
             <div class="puzzle-time-head glass-card">
                 <div>
-                    <h2 class="lobby-title" style="margin-bottom:0.25rem;">Puzzle Time</h2>
+                    <h2 class="lobby-title" style="margin-bottom:0.2rem;">Puzzle Time</h2>
                     <div id="puzzleStatusText" class="turn-indicator" style="margin:0;">Loading puzzle&#8230;</div>
                 </div>
-                <div class="puzzle-time-controls">
-                    <button id="rotateLeftBtn" class="btn btn-outline">↺ Rotate</button>
-                    <button id="rotateRightBtn" class="btn btn-outline">↻ Rotate</button>
-                    <button id="unlockTileBtn" class="btn btn-outline">Unlock</button>
+                <div class="pt-head-controls">
+                    <label class="pt-toggle-label">
+                        <input type="checkbox" id="showHintsChk" checked>
+                        <span>Hints</span>
+                    </label>
                 </div>
             </div>
 
-            <div id="puzzlePlayers" class="player-bar"></div>
+            <!-- Player bar -->
+            <div id="puzzlePlayers" class="player-bar" style="margin-bottom:0.55rem;"></div>
 
-            <div class="puzzle-time-layout">
-                <section class="puzzle-preview glass-card">
-                    <h3 class="room-section-title" style="margin-bottom:0.55rem;">Preview</h3>
-                    <div id="puzzlePreviewGrid" class="puzzle-grid"></div>
-                </section>
+            <!-- Main layout: sidebar + board -->
+            <div class="pt-layout">
+                <!-- Sidebar: preview -->
+                <aside class="pt-sidebar">
+                    <section class="pt-preview-card glass-card">
+                        <p class="room-section-title" style="margin:0 0 0.45rem;">Preview</p>
+                        <div id="ptPreviewGrid" class="pt-preview-grid"></div>
+                    </section>
+                    <p class="lobby-hint pt-progress-text" id="ptProgressText"></p>
+                </aside>
 
-                <section class="puzzle-board-wrap glass-card">
-                    <h3 class="room-section-title" style="margin-bottom:0.55rem;">Board</h3>
-                    <div id="puzzleBoardGrid" class="puzzle-grid"></div>
-                    <p id="puzzleLockHint" class="lobby-hint" style="margin-top:0.6rem;">Select a tile to lock it, then place or rotate it.</p>
+                <!-- Board -->
+                <section class="pt-board-section">
+                    <div id="pt-board" class="pt-board">
+                        <!-- Ghost slot SVG is injected here by JS -->
+                        <!-- Piece SVG elements are positioned here by JS -->
+                    </div>
+                    <p id="puzzleLockHint" class="lobby-hint pt-board-hint">Drag pieces to assemble the puzzle.</p>
                 </section>
             </div>
         </main>
     </div>
 
+    <!-- Result overlay -->
     <div id="resultOverlay" class="result-overlay" style="display:none">
         <div class="result-card">
             <h2 id="resultText"></h2>
@@ -69,12 +81,16 @@
         </div>
     </div>
 
+    <!-- Chat widget (multiplayer only) -->
     <div id="chatWidget" class="chat-widget">
         <button id="chatToggle" class="chat-toggle">&#128172; <span id="chatBadge" class="chat-badge" style="display:none">0</span></button>
         <div id="chatPanel" class="chat-panel" style="display:none">
             <div class="chat-header"><span>Game Chat</span><button id="chatClose" class="chat-close">&#x2715;</button></div>
             <div id="chatMessages" class="chat-messages"></div>
-            <div class="chat-input-row"><input id="chatInput" class="chat-input" placeholder="Type a message&#8230;" maxlength="500"><button id="chatSend" class="chat-send">&#10148;</button></div>
+            <div class="chat-input-row">
+                <input id="chatInput" class="chat-input" placeholder="Type a message&#8230;" maxlength="500">
+                <button id="chatSend" class="chat-send">&#10148;</button>
+            </div>
         </div>
     </div>
 

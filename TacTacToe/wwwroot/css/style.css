@@ -4889,87 +4889,157 @@ button.ce-pile {
 }
 
 /* ============================================================
-   PUZZLE TIME
+   PUZZLE TIME  –  jigsaw free-drag edition
    ============================================================ */
 .puzzle-time-container {
-    max-width: 1100px;
+    max-width: 1280px;
     margin: 0 auto;
-    padding: 0 1rem 1.5rem;
+    padding: 0 0.85rem 1.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.55rem;
 }
 .puzzle-time-head {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    gap: 1rem;
-    padding: 1rem 1.2rem;
-    margin-bottom: 0.85rem;
+    gap: 0.8rem;
+    padding: 0.75rem 1.1rem;
 }
-.puzzle-time-controls {
+.pt-head-controls {
     display: flex;
-    gap: 0.5rem;
-    flex-wrap: wrap;
+    gap: 0.6rem;
+    align-items: center;
+    flex-shrink: 0;
 }
-.puzzle-time-layout {
+.pt-toggle-label {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-size: 0.82rem;
+    color: var(--text-muted);
+    cursor: pointer;
+    user-select: none;
+}
+.pt-toggle-label input { accent-color: var(--accent); cursor: pointer; }
+
+/* ---- Layout: sidebar + board ---- */
+.pt-layout {
     display: grid;
-    grid-template-columns: minmax(190px, 280px) 1fr;
-    gap: 0.9rem;
+    grid-template-columns: minmax(130px, 200px) 1fr;
+    gap: 0.7rem;
+    align-items: start;
 }
-.puzzle-preview,
-.puzzle-board-wrap {
-    padding: 0.9rem;
+.pt-sidebar {
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
 }
-.puzzle-grid {
+.pt-preview-card {
+    padding: 0.65rem 0.75rem;
+}
+.pt-preview-grid {
     display: grid;
-    gap: 0.38rem;
+    gap: 2px;
 }
-.puzzle-cell {
-    border: 1px solid var(--glass-border);
-    border-radius: 9px;
-    min-height: 40px;
+.pt-preview-cell {
+    aspect-ratio: 1;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: clamp(0.95rem, 1.8vw, 1.35rem);
-    background: rgba(196, 231, 233, 0.06);
+    font-size: clamp(0.55rem, 1.6vw, 1rem);
+    border-radius: 4px;
+    background: rgba(255,255,255,0.05);
+    border: 1px solid rgba(255,255,255,0.06);
+    transition: background 0.3s, border-color 0.3s;
 }
-.puzzle-preview-cell {
-    opacity: 0.82;
+.pt-preview-cell--placed {
+    background: rgba(54, 214, 195, 0.14);
+    border-color: rgba(54, 214, 195, 0.35);
 }
-.puzzle-tile {
+.pt-progress-text {
+    text-align: center;
+    margin: 0;
+    font-size: 0.78rem;
+}
+
+/* ---- Board ---- */
+.pt-board-section {
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+}
+.pt-board {
     position: relative;
-    cursor: pointer;
-    transition: transform var(--transition), box-shadow var(--transition), border-color var(--transition);
-    background: linear-gradient(145deg, rgba(18,145,158,0.12), rgba(124,106,255,0.08));
+    width: 100%;
+    max-height: 72vh;
+    background: radial-gradient(ellipse at center, rgba(18,145,158,0.07) 0%, rgba(0,0,0,0) 70%),
+                rgba(10, 18, 26, 0.55);
+    border: 1px solid var(--glass-border);
+    border-radius: 14px;
+    overflow: hidden;
+    touch-action: none;    /* prevent scroll while dragging */
 }
-.puzzle-tile:hover {
-    border-color: rgba(18, 145, 158, 0.45);
-    box-shadow: 0 0 10px rgba(18, 145, 158, 0.25);
-}
-.puzzle-tile.selected,
-.puzzle-tile.locked-me {
-    border-color: rgba(54, 214, 195, 0.7);
-    box-shadow: 0 0 14px rgba(54, 214, 195, 0.45);
-}
-.puzzle-tile.locked-other {
-    border-color: rgba(122, 64, 72, 0.45);
-    opacity: 0.72;
-}
-.puzzle-face {
+.pt-ghost-svg {
+    position: absolute;
+    left: 0;
+    top: 0;
     pointer-events: none;
 }
-.puzzle-lock-badge {
-    position: absolute;
-    bottom: 3px;
-    right: 4px;
-    padding: 1px 6px;
-    border-radius: 9px;
-    font-size: 0.58rem;
-    font-weight: 700;
-    letter-spacing: 0.02em;
-    color: var(--text);
-    background: rgba(11, 37, 51, 0.86);
-    border: 1px solid var(--glass-border);
+.pt-board-hint {
+    margin: 0;
+    font-size: 0.78rem;
+    text-align: center;
 }
+
+/* ---- Piece SVG elements ---- */
+.pt-piece {
+    position: absolute;
+    will-change: transform;
+    transition: filter 0.12s;
+    touch-action: none;
+}
+.pt-piece-bg {
+    fill: linear-gradient(135deg, rgba(18,145,158,0.22), rgba(124,106,255,0.15));
+    fill: rgba(22, 48, 64, 0.82);      /* fallback solid for SVG fill */
+}
+.pt-piece-border {
+    stroke: rgba(120, 170, 185, 0.42);
+    stroke-width: 1.5;
+}
+.pt-piece-face {
+    pointer-events: none;
+    user-select: none;
+    font-family: "Segoe UI Emoji", "Apple Color Emoji", "Noto Color Emoji", sans-serif;
+}
+.pt-piece-lock {
+    fill: rgba(255, 120, 120, 0.9);
+    font-weight: 700;
+    pointer-events: none;
+    font-family: var(--font);
+}
+
+/* State variants */
+.pt-piece--mine .pt-piece-border {
+    stroke: rgba(54, 214, 195, 0.85);
+    stroke-width: 2.2;
+}
+.pt-piece--mine .pt-piece-bg {
+    fill: rgba(18, 100, 120, 0.88);
+}
+.pt-piece--locked-other {
+    opacity: 0.62;
+}
+.pt-piece--locked-other .pt-piece-border {
+    stroke: rgba(220, 80, 80, 0.55);
+}
+.pt-piece--placed {
+    pointer-events: none;
+    opacity: 0;          /* ghost slot shows the placed piece, SVG fades out */
+    transition: opacity 0.35s;
+}
+
+/* ---- Confetti ---- */
 .pt-confetti {
     position: fixed;
     top: -10px;
@@ -4981,10 +5051,24 @@ button.ce-pile {
     animation: ptConfFall linear forwards;
 }
 @keyframes ptConfFall {
-    0% { transform: translateY(0) rotate(0deg); opacity: 1; }
+    0%   { transform: translateY(0) rotate(0deg);   opacity: 1; }
     100% { transform: translateY(115vh) rotate(640deg); opacity: 0; }
 }
 
-@media (max-width: 860px) {
-    .puzzle-time-layout { grid-template-columns: 1fr; }
+/* ---- Responsive ---- */
+@media (max-width: 720px) {
+    .pt-layout {
+        grid-template-columns: 1fr;
+    }
+    .pt-sidebar {
+        flex-direction: row;
+        flex-wrap: wrap;
+    }
+    .pt-preview-card {
+        flex: 1;
+        min-width: 120px;
+    }
+    .pt-board {
+        max-height: 60vw;
+    }
 }

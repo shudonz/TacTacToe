@@ -8,17 +8,21 @@ namespace TacTacToe.Hubs;
 public partial class GameHub
 {
     private const int PuzzleTimePointsPerPiece = 8;
-    private const int PuzzleTimeMinScore = 10;
+    private const int PuzzleTimeMinScore       = 10;
+
+    // -----------------------------------------------------------------------
+    // Room lifecycle
+    // -----------------------------------------------------------------------
 
     public async Task CreatePuzzleTimeRoom(string? roomName = null, string? imageKey = null, int pieceCount = 25, int maxPlayers = 4)
     {
         var roomId = Guid.NewGuid().ToString("N");
-        var room = _lobby.CreatePuzzleTimeRoom(roomId, Context.ConnectionId);
+        var room   = _lobby.CreatePuzzleTimeRoom(roomId, Context.ConnectionId);
 
-        room.Settings.RoomName = string.IsNullOrWhiteSpace(roomName)
+        room.Settings.RoomName   = string.IsNullOrWhiteSpace(roomName)
             ? "Puzzle Time Room"
             : roomName.Trim()[..Math.Min(roomName.Trim().Length, RoomNameMaxLength)];
-        room.Settings.ImageKey = PuzzleTimeEngine.NormalizeImageKey(imageKey);
+        room.Settings.ImageKey   = PuzzleTimeEngine.NormalizeImageKey(imageKey);
         room.Settings.PieceCount = PuzzleTimeEngine.NormalizePieceCount(pieceCount);
         room.Settings.MaxPlayers = Math.Clamp(maxPlayers, 2, 4);
 
@@ -51,13 +55,13 @@ public partial class GameHub
         var room = _lobby.GetPuzzleTimeRoom(roomId);
         if (room == null) return;
 
-        var name = Context.User?.FindFirst(ClaimTypes.Name)?.Value ?? "Unknown";
+        var name   = Context.User?.FindFirst(ClaimTypes.Name)?.Value ?? "Unknown";
         var player = room.Players.FirstOrDefault(p => p.Name == name && !p.IsBot);
         if (player == null) return;
 
         var oldConnectionId = player.ConnectionId;
         player.ConnectionId = Context.ConnectionId;
-        player.Connected = true;
+        player.Connected    = true;
         if (room.HostName == name) room.HostConnectionId = Context.ConnectionId;
 
         if (!string.IsNullOrWhiteSpace(oldConnectionId) && oldConnectionId != Context.ConnectionId)
@@ -83,15 +87,15 @@ public partial class GameHub
         if (Context.ConnectionId != room.HostConnectionId) return;
         if (room.Players.Count < 2) return;
 
-        room.Started = true;
-        room.IsOver = false;
-        room.WinnerName = null;
+        room.Started       = true;
+        room.IsOver        = false;
+        room.WinnerName    = null;
         room.SessionsSaved = false;
-        room.Settings.MaxPlayers = Math.Clamp(room.Settings.MaxPlayers, 2, 4);
-        room.Settings.PieceCount = PuzzleTimeEngine.NormalizePieceCount(room.Settings.PieceCount);
-        room.Settings.ImageKey = PuzzleTimeEngine.NormalizeImageKey(room.Settings.ImageKey);
-        room.StartedAtMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
-        room.Tiles = PuzzleTimeEngine.CreateTiles(room.Settings.PieceCount, room.Settings.ImageKey);
+        room.Settings.MaxPlayers  = Math.Clamp(room.Settings.MaxPlayers, 2, 4);
+        room.Settings.PieceCount  = PuzzleTimeEngine.NormalizePieceCount(room.Settings.PieceCount);
+        room.Settings.ImageKey    = PuzzleTimeEngine.NormalizeImageKey(room.Settings.ImageKey);
+        room.StartedAtMs          = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+        room.Tiles                = PuzzleTimeEngine.CreateTiles(room.Settings.PieceCount, room.Settings.ImageKey);
 
         foreach (var p in room.Players.Where(x => !x.IsBot))
             _lobby.SetInGame(p.ConnectionId, true);
@@ -104,28 +108,27 @@ public partial class GameHub
 
     public async Task StartPuzzleTimeSinglePlayer(string? imageKey = null, int pieceCount = 25)
     {
-        var name = Context.User?.FindFirst(ClaimTypes.Name)?.Value ?? "Unknown";
+        var name   = Context.User?.FindFirst(ClaimTypes.Name)?.Value ?? "Unknown";
         var roomId = Guid.NewGuid().ToString("N");
 
         var room = new PuzzleTimeRoom
         {
-            Id = roomId,
+            Id               = roomId,
             HostConnectionId = Context.ConnectionId,
-            HostName = name,
-            IsSinglePlayer = true,
-            Started = true,
-            IsOver = false,
+            HostName         = name,
+            IsSinglePlayer   = true,
+            Started          = true,
+            IsOver           = false,
             Settings = new PuzzleTimeSettings
             {
-                RoomName = "Puzzle Time Solo",
+                RoomName   = "Puzzle Time Solo",
                 MaxPlayers = 1,
                 PieceCount = PuzzleTimeEngine.NormalizePieceCount(pieceCount),
-                ImageKey = PuzzleTimeEngine.NormalizeImageKey(imageKey)
+                ImageKey   = PuzzleTimeEngine.NormalizeImageKey(imageKey)
             },
-            Players = [new PuzzleTimePlayer { ConnectionId = Context.ConnectionId, Name = name, Connected = true }],
-            StartedAtMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()
+            Players       = [new PuzzleTimePlayer { ConnectionId = Context.ConnectionId, Name = name, Connected = true }],
+            StartedAtMs   = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()
         };
-
         room.Tiles = PuzzleTimeEngine.CreateTiles(room.Settings.PieceCount, room.Settings.ImageKey);
 
         _lobby.StorePuzzleTimeRoom(roomId, room);
@@ -136,6 +139,10 @@ public partial class GameHub
         await Clients.Caller.SendAsync("PuzzleTimeUpdated", BuildPuzzleTimeState(room));
     }
 
+    // -----------------------------------------------------------------------
+    // Tile locking
+    // -----------------------------------------------------------------------
+
     public async Task AcquirePuzzleTileLock(string roomId, string tileId)
     {
         var room = _lobby.GetPuzzleTimeRoom(roomId);
@@ -144,8 +151,7 @@ public partial class GameHub
         var player = room.Players.FirstOrDefault(p => p.ConnectionId == Context.ConnectionId && p.Connected && !p.IsBot);
         if (player == null) return;
 
-        bool locked = PuzzleTimeEngine.TryLockTile(room, tileId, Context.ConnectionId, player.Name);
-        if (!locked)
+        if (!PuzzleTimeEngine.TryLockTile(room, tileId, Context.ConnectionId, player.Name))
         {
             await Clients.Caller.SendAsync("PuzzleTileLockRejected", tileId);
             return;
@@ -163,49 +169,36 @@ public partial class GameHub
         await Clients.Group(roomId).SendAsync("PuzzleTimeUpdated", BuildPuzzleTimeState(room));
     }
 
-    public async Task MovePuzzleTile(string roomId, string tileId, int targetIndex)
+    // -----------------------------------------------------------------------
+    // Free-position move (replaces the old index-based MovePuzzleTile)
+    // -----------------------------------------------------------------------
+
+    public async Task SetPuzzleTilePosition(string roomId, string tileId, double x, double y)
     {
         var room = _lobby.GetPuzzleTimeRoom(roomId);
         if (room == null || !room.Started || room.IsOver) return;
 
-        if (!PuzzleTimeEngine.TryMoveTile(room, tileId, targetIndex, Context.ConnectionId)) return;
+        if (!PuzzleTimeEngine.TrySetTilePosition(room, tileId, x, y, Context.ConnectionId)) return;
 
-        await FinalizePuzzleMoveIfSolved(room);
-        await Clients.Group(roomId).SendAsync("PuzzleTimeUpdated", BuildPuzzleTimeState(room));
-    }
-
-    public async Task RotatePuzzleTile(string roomId, string tileId, bool clockwise = true)
-    {
-        var room = _lobby.GetPuzzleTimeRoom(roomId);
-        if (room == null || !room.Started || room.IsOver) return;
-
-        if (!PuzzleTimeEngine.TryRotateTile(room, tileId, clockwise, Context.ConnectionId)) return;
-
-        await FinalizePuzzleMoveIfSolved(room);
-        await Clients.Group(roomId).SendAsync("PuzzleTimeUpdated", BuildPuzzleTimeState(room));
-    }
-
-    private async Task FinalizePuzzleMoveIfSolved(PuzzleTimeRoom room)
-    {
-        if (room.IsOver || !PuzzleTimeEngine.IsSolved(room)) return;
-
-        room.IsOver = true;
-        var me = room.Players.FirstOrDefault(p => p.ConnectionId == Context.ConnectionId);
-        room.WinnerName = me?.Name ?? room.HostName;
-        room.SessionsSaved = false;
-
-        foreach (var tile in room.Tiles)
+        // Automatically release lock once the piece is placed so other players can use it
+        var tile = room.Tiles.FirstOrDefault(t => t.Id == tileId);
+        if (tile is { IsPlaced: true })
         {
             tile.LockedByConnectionId = null;
             tile.LockedByName = null;
         }
 
-        await SavePuzzleTimeSessionsAsync(room);
+        await CheckPuzzleSolved(room);
+        await Clients.Group(roomId).SendAsync("PuzzleTimeUpdated", BuildPuzzleTimeState(room));
     }
+
+    // -----------------------------------------------------------------------
+    // Leave / kick
+    // -----------------------------------------------------------------------
 
     public async Task LeavePuzzleTimeRoom(string roomId)
     {
-        var room = _lobby.GetPuzzleTimeRoom(roomId);
+        var room   = _lobby.GetPuzzleTimeRoom(roomId);
         if (room == null) return;
 
         var player = room.Players.FirstOrDefault(p => p.ConnectionId == Context.ConnectionId);
@@ -271,9 +264,32 @@ public partial class GameHub
         await BroadcastPuzzleTimeRooms();
     }
 
+    // -----------------------------------------------------------------------
+    // Private helpers
+    // -----------------------------------------------------------------------
+
+    private async Task CheckPuzzleSolved(PuzzleTimeRoom room)
+    {
+        if (room.IsOver || !PuzzleTimeEngine.IsSolved(room)) return;
+
+        room.IsOver = true;
+        var me      = room.Players.FirstOrDefault(p => p.ConnectionId == Context.ConnectionId);
+        room.WinnerName    = me?.Name ?? room.HostName;
+        room.SessionsSaved = false;
+
+        // Release all locks on completion
+        foreach (var tile in room.Tiles)
+        {
+            tile.LockedByConnectionId = null;
+            tile.LockedByName = null;
+        }
+
+        await SavePuzzleTimeSessionsAsync(room);
+    }
+
     private object BuildPuzzleTimeState(PuzzleTimeRoom room)
     {
-        var sortedTiles = room.Tiles.OrderBy(t => t.CurrentIndex).ToList();
+        var (rows, cols) = PuzzleTimeEngine.GridFor(room.Settings.PieceCount);
         return new
         {
             room.Id,
@@ -287,25 +303,23 @@ public partial class GameHub
                 room.Settings.MaxPlayers,
                 room.Settings.PieceCount,
                 room.Settings.ImageKey,
-                Grid = PuzzleTimeEngine.GridFor(room.Settings.PieceCount)
+                Grid = new { Rows = rows, Cols = cols }
             },
-            Players = room.Players.Select(p => new
-            {
-                p.Name,
-                p.Connected,
-                p.IsBot
-            }),
-            Catalog = PuzzleTimeEngine.Catalog,
+            Players = room.Players.Select(p => new { p.Name, p.Connected, p.IsBot }),
+            Catalog  = PuzzleTimeEngine.Catalog,
             PreviewFaces = PuzzleTimeEngine.BuildPreviewFaces(room.Settings.PieceCount, room.Settings.ImageKey),
-            Tiles = sortedTiles.Select(t => new
+            Tiles = room.Tiles.Select(t => new
             {
                 t.Id,
                 t.CorrectIndex,
-                t.CurrentIndex,
-                t.Rotation,
+                t.X,
+                t.Y,
+                t.IsPlaced,
                 t.Face,
-                LockedByName = t.LockedByName,
-                IsLocked = t.LockedByConnectionId != null
+                t.Connectors,
+                t.LockedByName,
+                IsLocked     = t.LockedByConnectionId != null,
+                IsLockedByMe = t.LockedByConnectionId == Context.ConnectionId
             })
         };
     }
@@ -315,12 +329,12 @@ public partial class GameHub
         {
             r.Id,
             r.HostName,
-            RoomName = r.Settings.RoomName,
+            RoomName    = r.Settings.RoomName,
             PlayerCount = r.Players.Count,
             r.Settings.MaxPlayers,
             r.Settings.PieceCount,
             r.Settings.ImageKey,
-            IsFull = r.Players.Count >= r.Settings.MaxPlayers,
+            IsFull      = r.Players.Count >= r.Settings.MaxPlayers,
             r.Started
         });
 
@@ -334,10 +348,10 @@ public partial class GameHub
 
         try
         {
-            var now = DateTime.UtcNow.ToString("o");
-            int elapsed = (int)((DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() - room.StartedAtMs) / 1000);
+            var now       = DateTime.UtcNow.ToString("o");
+            int elapsed   = (int)((DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() - room.StartedAtMs) / 1000);
             int pieceCount = PuzzleTimeEngine.NormalizePieceCount(room.Settings.PieceCount);
-            int baseScore = room.IsOver
+            int baseScore  = room.IsOver
                 ? Math.Max(PuzzleTimeMinScore, pieceCount * PuzzleTimePointsPerPiece - elapsed)
                 : 0;
 
@@ -346,16 +360,15 @@ public partial class GameHub
                 var uid = await _users.GetIdByUsernameAsync(p.Name);
                 if (!uid.HasValue) continue;
 
-                var result = room.IsOver ? "Win" : "Completed";
                 await _sessions.SaveAsync(new GameSession
                 {
-                    UserId = uid.Value,
-                    GameType = "PuzzleTime",
-                    Score = baseScore,
-                    Result = result,
+                    UserId     = uid.Value,
+                    GameType   = "PuzzleTime",
+                    Score      = baseScore,
+                    Result     = room.IsOver ? "Win" : "Completed",
                     TimePlayed = elapsed,
-                    PlayedAt = now,
-                    Details = $"Pieces:{pieceCount},Image:{room.Settings.ImageKey},Players:{room.Players.Count}"
+                    PlayedAt   = now,
+                    Details    = $"Pieces:{pieceCount},Image:{room.Settings.ImageKey},Players:{room.Players.Count}"
                 });
             }
         }
