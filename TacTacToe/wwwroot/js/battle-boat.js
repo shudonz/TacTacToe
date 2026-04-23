@@ -1,11 +1,11 @@
 // ── Constants ────────────────────────────────────────────────────────────────
 const SIZE = 10;
 const SHIPS = [
-    { key: 'carrier',    name: 'Carrier',    size: 5 },
-    { key: 'battleship', name: 'Battleship', size: 4 },
-    { key: 'cruiser',    name: 'Cruiser',    size: 3 },
-    { key: 'submarine',  name: 'Submarine',  size: 3 },
-    { key: 'destroyer',  name: 'Destroyer',  size: 2 }
+    { key: 'boaty',      name: 'Boaty McBoatface', size: 5 },
+    { key: 'partybarge', name: 'Party Barge',       size: 4 },
+    { key: 'pontoon',    name: 'Pontoon',            size: 3 },
+    { key: 'kayak',      name: 'Kayak',              size: 3 },
+    { key: 'ducky',      name: 'Rubber Ducky',       size: 2 }
 ];
 
 const mode = new URLSearchParams(window.location.search).get('mode') === 'duel' ? 'duel' : 'solo';
@@ -638,7 +638,7 @@ document.getElementById('newMatchBtn').addEventListener('click', startGame);
 document.getElementById('playAgainBtn').addEventListener('click', startGame);
 document.getElementById('backBtn').addEventListener('click', goBack);
 document.getElementById('overlayBackBtn').addEventListener('click', goBack);
-document.getElementById('hamBackBtn').addEventListener('click', goBack);
+document.getElementById('hamBackBtn')?.addEventListener('click', goBack);
 
 document.getElementById('orientBtn').addEventListener('click', () => {
     state.placement.horizontal = !state.placement.horizontal;
