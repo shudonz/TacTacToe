@@ -329,12 +329,18 @@ function boardMetrics() {
     const ps    = Math.min(bw / cols, bh / rows);
     const pd    = ps * 0.28;           // must be ≥ tH (= ps*0.22)
     const svgSz = ps + 2 * pd;
-    return { bw, bh, rows, cols, ps, pd, svgSz };
+    // Centre the puzzle grid inside the board when one axis is letterboxed
+    const offX  = (bw - ps * cols) / 2;
+    const offY  = (bh - ps * rows) / 2;
+    return { bw, bh, rows, cols, ps, pd, svgSz, offX, offY };
 }
 
 // SVG element top-left from normalised piece center
 function piecePixelPos(nx, ny, m) {
-    return { left: nx * m.bw - m.svgSz / 2, top: ny * m.bh - m.svgSz / 2 };
+    return {
+        left: m.offX + nx * (m.ps * m.cols) - m.svgSz / 2,
+        top:  m.offY + ny * (m.ps * m.rows) - m.svgSz / 2
+    };
 }
 
 // ----------------------------------------------------------------
@@ -616,8 +622,8 @@ function makeDraggable(el, tileId) {
             const m = boardMetrics();
             const pxLeft = parseFloat(el.style.left);
             const pyTop  = parseFloat(el.style.top);
-            const nx = Math.max(0.01, Math.min(0.99, (pxLeft + m.svgSz / 2) / m.bw));
-            const ny = Math.max(0.01, Math.min(0.99, (pyTop  + m.svgSz / 2) / m.bh));
+            const nx = Math.max(0.01, Math.min(0.99, (pxLeft + m.svgSz / 2 - m.offX) / (m.ps * m.cols)));
+            const ny = Math.max(0.01, Math.min(0.99, (pyTop  + m.svgSz / 2 - m.offY) / (m.ps * m.rows)));
             connection.invoke("SetPuzzleTilePosition", roomId, tileId, nx, ny).catch(()=>{});
             sndDrop();
         }
