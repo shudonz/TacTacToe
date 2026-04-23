@@ -4996,47 +4996,61 @@ button.ce-pile {
 .pt-piece {
     position: absolute;
     will-change: transform;
-    transition: filter 0.12s;
     touch-action: none;
+    transition: box-shadow 0.12s;
 }
 .pt-piece-bg {
-    fill: linear-gradient(135deg, rgba(18,145,158,0.22), rgba(124,106,255,0.15));
-    fill: rgba(22, 48, 64, 0.82);      /* fallback solid for SVG fill */
+    fill: rgba(16, 36, 52, 0.80);
+}
+.pt-piece-img {
+    /* image element – no extra CSS needed, clip-path applied inline */
 }
 .pt-piece-border {
-    stroke: rgba(120, 170, 185, 0.42);
+    stroke: rgba(110, 160, 175, 0.38);
     stroke-width: 1.5;
 }
-.pt-piece-face {
+.pt-piece-hl {
+    fill: transparent;
+    stroke: transparent;
+    stroke-width: 2.8;
     pointer-events: none;
-    user-select: none;
-    font-family: "Segoe UI Emoji", "Apple Color Emoji", "Noto Color Emoji", sans-serif;
+    transition: fill 0.13s, stroke 0.13s;
 }
 .pt-piece-lock {
-    fill: rgba(255, 120, 120, 0.9);
+    fill: rgba(255, 110, 110, 0.92);
     font-weight: 700;
     pointer-events: none;
     font-family: var(--font);
 }
 
-/* State variants */
-.pt-piece--mine .pt-piece-border {
-    stroke: rgba(54, 214, 195, 0.85);
-    stroke-width: 2.2;
+/* ---- State variants ---- */
+
+/* Selected by this player */
+.pt-piece--selected .pt-piece-border {
+    stroke: rgba(54, 214, 195, 0.90);
+    stroke-width: 2.6;
 }
-.pt-piece--mine .pt-piece-bg {
-    fill: rgba(18, 100, 120, 0.88);
+.pt-piece--selected .pt-piece-hl {
+    fill: rgba(54, 214, 195, 0.12);
+    stroke: rgba(54, 214, 195, 0.55);
 }
+
+/* Locked by another player */
 .pt-piece--locked-other {
-    opacity: 0.62;
+    opacity: 0.60;
 }
 .pt-piece--locked-other .pt-piece-border {
-    stroke: rgba(220, 80, 80, 0.55);
+    stroke: rgba(220, 80, 80, 0.60);
+    stroke-width: 1.8;
 }
+
+/* Placed (solved) – stays visible, no longer interactive */
 .pt-piece--placed {
     pointer-events: none;
-    opacity: 0;          /* ghost slot shows the placed piece, SVG fades out */
-    transition: opacity 0.35s;
+}
+.pt-piece--placed .pt-piece-border {
+    stroke: rgba(54, 214, 195, 0.45);
+    stroke-width: 1.2;
 }
 
 /* ---- Confetti ---- */

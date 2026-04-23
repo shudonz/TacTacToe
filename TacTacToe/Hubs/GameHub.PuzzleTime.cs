@@ -193,6 +193,20 @@ public partial class GameHub
     }
 
     // -----------------------------------------------------------------------
+    // Rotate a tile 90° CW
+    // -----------------------------------------------------------------------
+
+    public async Task RotatePuzzleTile(string roomId, string tileId)
+    {
+        var room = _lobby.GetPuzzleTimeRoom(roomId);
+        if (room == null || !room.Started || room.IsOver) return;
+
+        if (!PuzzleTimeEngine.TryRotateTile(room, tileId, Context.ConnectionId)) return;
+
+        await Clients.Group(roomId).SendAsync("PuzzleTimeUpdated", BuildPuzzleTimeState(room));
+    }
+
+    // -----------------------------------------------------------------------
     // Leave / kick
     // -----------------------------------------------------------------------
 
@@ -315,6 +329,7 @@ public partial class GameHub
                 t.X,
                 t.Y,
                 t.IsPlaced,
+                t.Rotation,
                 t.Face,
                 t.Connectors,
                 t.LockedByName,

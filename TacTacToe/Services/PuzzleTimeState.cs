@@ -36,6 +36,7 @@ public class PuzzleTimePlayer
 /// Represents one jigsaw puzzle tile.
 /// X/Y are normalized (0-1) coordinates of the piece's center on the play canvas.
 /// Connectors is [top, right, bottom, left]: 1 = tab (protrusion), -1 = blank (notch), 0 = flat (border edge).
+/// Rotation is 0-3 (multiples of 90°). Piece is correctly oriented only when Rotation == 0.
 /// </summary>
 public class PuzzleTile
 {
@@ -46,9 +47,11 @@ public class PuzzleTile
     public double X { get; set; }
     /// <summary>Normalized (0-1) vertical center of this piece on the canvas.</summary>
     public double Y { get; set; }
-    /// <summary>True when piece has been snapped to its correct position.</summary>
+    /// <summary>True when piece has been snapped to its correct position with correct rotation.</summary>
     public bool IsPlaced { get; set; }
-    /// <summary>Emoji face assigned to this piece.</summary>
+    /// <summary>Current rotation in 90° steps (0 = correct orientation, 1-3 = rotated).</summary>
+    public int Rotation { get; set; }
+    /// <summary>Emoji face assigned to this piece (used for preview only).</summary>
     public string Face { get; set; } = "";
     public string? LockedByConnectionId { get; set; }
     public string? LockedByName { get; set; }
@@ -141,7 +144,7 @@ public static class PuzzleTimeEngine
         return tiles;
     }
 
-    /// <summary>Spread tiles randomly across the canvas at start-of-game.</summary>
+    /// <summary>Spread tiles randomly across the canvas at start-of-game with random rotation.</summary>
     private static void ScatterTiles(List<PuzzleTile> tiles, int rows, int cols)
     {
         // Use a shuffled grid layout with jitter so pieces are spread out and distinguishable.
@@ -157,8 +160,10 @@ public static class PuzzleTimeEngine
             double jitter = 0.35;
             double jx = (Random.Shared.NextDouble() * 2 - 1) * jitter / cols;
             double jy = (Random.Shared.NextDouble() * 2 - 1) * jitter / rows;
-            tiles[i].X = Math.Clamp(baseX + jx, 0.04, 0.96);
-            tiles[i].Y = Math.Clamp(baseY + jy, 0.04, 0.96);
+            tiles[i].X        = Math.Clamp(baseX + jx, 0.04, 0.96);
+            tiles[i].Y        = Math.Clamp(baseY + jy, 0.04, 0.96);
+            // Random initial rotation: 0–3 (multiples of 90°), ensuring at least some are rotated
+            tiles[i].Rotation = Random.Shared.Next(4);
         }
     }
 
@@ -182,11 +187,11 @@ public static class PuzzleTimeEngine
         double correctX = (col + 0.5) / cols;
         double correctY = (row + 0.5) / rows;
 
-        // Snap if within ~65 % of one cell's half-width
+        // Snap only if within ~65 % of one cell's half-width AND rotation is correct
         double snapThreshold = 0.65 / Math.Max(rows, cols);
         double dist = Math.Sqrt(Math.Pow(x - correctX, 2) + Math.Pow(y - correctY, 2));
 
-        if (dist <= snapThreshold)
+        if (dist <= snapThreshold && tile.Rotation == 0)
         {
             tile.X        = correctX;
             tile.Y        = correctY;
@@ -234,6 +239,20 @@ public static class PuzzleTimeEngine
             tile.LockedByConnectionId = null;
             tile.LockedByName = null;
         }
+    }
+
+    // ---------------------------------------------------------------
+    // Rotation
+    // ---------------------------------------------------------------
+
+    /// <summary>Rotate a tile 90° clockwise. Returns false if not locked by this connection or already placed.</summary>
+    public static bool TryRotateTile(PuzzleTimeRoom room, string tileId, string connectionId)
+    {
+        var tile = room.Tiles.FirstOrDefault(t => t.Id == tileId);
+        if (tile == null || tile.IsPlaced) return false;
+        if (tile.LockedByConnectionId != connectionId) return false;
+        tile.Rotation = (tile.Rotation + 1) % 4;
+        return true;
     }
 
     // ---------------------------------------------------------------
