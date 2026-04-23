@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>TacTacToe – Battle Boat</title>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="/css/style.css" rel="stylesheet">
+    <style>
+        .bb-wrap { max-width: 1200px; margin: 0 auto; padding: 1rem 1rem 2rem; }
+        .bb-top { display:flex; flex-wrap:wrap; gap:.75rem; align-items:center; justify-content:space-between; margin-bottom:.8rem; }
+        .bb-title { font-size:1.45rem; font-weight:800; color:var(--text); margin:0; display:flex; align-items:center; gap:.45rem; }
+        .bb-sub { color:var(--muted); font-size:.92rem; }
+        .bb-actions { display:flex; gap:.5rem; flex-wrap:wrap; }
+        .bb-status { margin:.6rem 0 1rem; padding:.8rem 1rem; border-radius:14px; background:rgba(255,255,255,.05); border:1px solid rgba(255,255,255,.08); color:var(--text); font-weight:700; }
+        .bb-layout { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:1rem; }
+        .bb-panel { background:rgba(12,17,34,.68); border:1px solid rgba(255,255,255,.09); border-radius:16px; padding:.9rem; box-shadow:0 10px 25px rgba(0,0,0,.25); }
+        .bb-panel h3 { margin:.1rem 0 .55rem; font-size:1rem; color:var(--text); display:flex; justify-content:space-between; gap:.6rem; align-items:center; }
+        .bb-grid { --cell: clamp(24px, 3vw, 34px); display:grid; grid-template-columns:repeat(10,var(--cell)); grid-template-rows:repeat(10,var(--cell)); gap:3px; justify-content:center; }
+        .bb-cell { border:1px solid rgba(255,255,255,.14); border-radius:5px; background:linear-gradient(170deg,#12496d,#0e2c45); cursor:pointer; color:#d6f1ff; font-size:.9rem; font-weight:700; display:flex; align-items:center; justify-content:center; user-select:none; transition:transform .12s ease, filter .16s ease; }
+        .bb-cell:hover { transform:translateY(-1px); filter:brightness(1.1); }
+        .bb-cell.ship { background:linear-gradient(165deg,#35616f,#29424f); }
+        .bb-cell.preview { background:linear-gradient(165deg,#2a7a4a,#1d5434) !important; border-color:rgba(80,255,130,.45) !important; }
+        .bb-cell.preview-bad { background:linear-gradient(165deg,#7a2a2a,#5c1a1a) !important; border-color:rgba(255,80,80,.45) !important; }
+        .bb-cell.hit { background:radial-gradient(circle at 40% 40%, #ff9b9b, #9f1414 68%); color:#fff; }
+        .bb-cell.miss { background:radial-gradient(circle at 50% 45%, #e9f6ff, #9ec7de 65%); color:#0d3751; }
+        .bb-cell.sunk { animation: bbOverboard .8s ease; background:linear-gradient(180deg,#ff8a4f,#ff3b67); }
+        .bb-cell.disabled { opacity:.55; pointer-events:none; }
+        .bb-placement { display:none; margin-bottom:.9rem; background:rgba(12,17,34,.68); border:1px solid rgba(255,255,255,.09); border-radius:16px; padding:.85rem 1rem; }
+        .bb-placement.visible { display:block; }
+        .bb-placement-title { font-weight:700; color:var(--text); font-size:.97rem; margin-bottom:.65rem; }
+        .bb-placement-ships { display:flex; flex-wrap:wrap; gap:.45rem; margin-bottom:.8rem; }
+        .bb-ship-tag { padding:.28rem .65rem; border-radius:8px; font-size:.83rem; font-weight:600; background:rgba(255,255,255,.06); border:1px solid rgba(255,255,255,.1); color:var(--muted); }
+        .bb-ship-tag.active { background:rgba(100,200,255,.18); border-color:rgba(100,200,255,.5); color:#a8e6ff; }
+        .bb-ship-tag.placed { background:rgba(60,200,110,.14); border-color:rgba(60,200,110,.35); color:#7de8a8; text-decoration:line-through; }
+        .bb-placement-controls { display:flex; flex-wrap:wrap; gap:.5rem; align-items:center; }
+        .bb-fleet { margin-top:.7rem; font-size:.86rem; color:var(--muted); display:grid; gap:.3rem; }
+        .bb-fleet-item { display:flex; justify-content:space-between; gap:.6rem; padding:.35rem .5rem; border-radius:10px; background:rgba(255,255,255,.04); }
+        .bb-fleet-item.sunk { color:#ffb6c5; text-decoration:line-through; }
+        .bb-log { margin-top:.9rem; min-height:1.35rem; color:#ffd8a7; font-weight:600; }
+        .bb-overlay { position:fixed; inset:0; background:rgba(6,12,22,.78); display:none; align-items:center; justify-content:center; z-index:1500; }
+        .bb-card { background:linear-gradient(180deg,#1a2444,#121a34); border:1px solid rgba(255,255,255,.15); border-radius:18px; padding:1.4rem 1rem; width:min(460px,94vw); text-align:center; }
+        .bb-card h2 { margin:.1rem 0 .8rem; color:#fff; }
+        .bb-card p  { color:var(--muted); font-size:.93rem; margin-bottom:1rem; }
+        .bb-splash { position:fixed; font-size:2.1rem; pointer-events:none; z-index:1200; animation: bbSplash 1s ease forwards; }
+        @keyframes bbOverboard { 0% { transform:translateY(0) rotate(0); } 35% { transform:translateY(-7px) rotate(-8deg);} 100% { transform:translateY(0) rotate(6deg);} }
+        @keyframes bbSplash { 0% { opacity:0; transform:translate(-50%,0) scale(.6);} 20% {opacity:1;} 100% { opacity:0; transform:translate(-50%,-80px) scale(1.4);} }
+        @media (max-width: 900px) { .bb-layout { grid-template-columns:1fr; } }
+    </style>
+</head>
+<body>
+    <div class="ambient"></div>
+    <div class="noise"></div>
+    <div class="page-content">
+        <nav class="navbar">
+            <button class="ham-btn" onclick="hamOpen()" aria-label="Open menu"><span></span><span></span><span></span></button>
+            <div class="logo-sm"><span class="logo-x">Tac</span><span class="logo-o">Tac</span><span class="logo-x">Toe</span></div>
+            <a href="/profile" class="nav-profile-btn" title="Edit Profile">
+                <span id="navbarAvatarEmoji" class="nav-profile-emoji" style="display:none"></span>
+                <img id="navbarAvatarImg" class="nav-profile-img" src="" alt="Profile" style="display:none">
+                <span id="navbarAvatarPlaceholder" class="nav-profile-placeholder">👤</span>
+                <span id="navbarUsername" class="nav-profile-username"></span>
+            </a>
+        </nav>
+
+        <main class="bb-wrap">
+            <div class="bb-top">
+                <div>
+                    <h1 class="bb-title">🚢 Battle Boat</h1>
+                    <div id="modeText" class="bb-sub">Multiplayer Battle</div>
+                </div>
+                <div class="bb-actions">
+                    <button id="backBtn" class="btn btn-outline">Back to Lobby</button>
+                </div>
+            </div>
+
+            <div id="status" class="bb-status"></div>
+
+            <div id="placementBar" class="bb-placement">
+                <div class="bb-placement-title" id="placementBarTitle">Place your fleet</div>
+                <div id="placementShipQueue" class="bb-placement-ships"></div>
+                <div class="bb-placement-controls">
+                    <button id="orientBtn"  class="btn btn-outline" style="font-size:.84rem;">↔ Horizontal</button>
+                    <button id="randomBtn"  class="btn btn-outline" style="font-size:.84rem;">🎲 Randomize</button>
+                    <button id="resetPlaceBtn" class="btn btn-outline" style="font-size:.84rem;">🔄 Reset</button>
+                    <button id="confirmPlaceBtn" class="btn btn-accept" style="font-size:.84rem;" disabled>⚓ Confirm Fleet</button>
+                </div>
+            </div>
+
+            <div class="bb-layout">
+                <section class="bb-panel">
+                    <h3><span id="p0Title"></span><span>Own Waters</span></h3>
+                    <div id="p0Own" class="bb-grid"></div>
+                    <div id="p0Fleet" class="bb-fleet"></div>
+                </section>
+                <section class="bb-panel">
+                    <h3><span id="p1Title"></span><span>Target Grid</span></h3>
+                    <div id="p1Target" class="bb-grid"></div>
+                    <div id="p1Fleet" class="bb-fleet"></div>
+                </section>
+            </div>
+            <div id="bbLog" class="bb-log"></div>
+        </main>
+
+        <div id="winOverlay" class="bb-overlay">
+            <div class="bb-card">
+                <h2 id="winText"></h2>
+                <button id="overlayBackBtn" class="btn btn-outline">Back to Lobby</button>
+            </div>
+        </div>
+
+        <div id="waitingOverlay" class="bb-overlay">
+            <div class="bb-card">
+                <h2>⌛ Waiting for opponent</h2>
+                <p id="waitMsg">Waiting for your opponent to finish placing their fleet...</p>
+            </div>
+        </div>
+
+        <div id="chatWidget" class="chat-widget">
+            <button id="chatToggle" class="chat-toggle">&#128172; <span id="chatBadge" class="chat-badge" style="display:none">0</span></button>
+            <div id="chatPanel" class="chat-panel" style="display:none">
+                <div class="chat-header"><span>Game Chat</span><button id="chatClose" class="chat-close">&#x2715;</button></div>
+                <div id="chatMessages" class="chat-messages"></div>
+                <div class="chat-input-row"><input id="chatInput" class="chat-input" placeholder="Type a message&#8230;" maxlength="500"><button id="chatSend" class="chat-send">&#10148;</button></div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/8.0.0/signalr.min.js"></script>
+    <script src="/js/avatarCache.js"></script>
+    <script src="/js/chat.js"></script>
+    <script src="/js/battle-boat-game.js"></script>
+    <div class="ham-overlay" onclick="hamClose()"></div>
+    <nav class="ham-drawer" aria-label="Navigation menu">
+        <div class="ham-drawer-header">
+            <div class="ham-drawer-logo"><span class="logo-x">Tac</span><span class="logo-o">Tac</span><span class="logo-x">Toe</span></div>
+            <button class="ham-close" onclick="hamClose()" aria-label="Close menu">✕</button>
+        </div>
+        <div class="ham-menu">
+            <button id="hamBackBtn" class="ham-item">← Back to Lobby</button>
+        </div>
+    </nav>
+    <script src="/js/hamburger.js"></script>
+</body>
+</html>

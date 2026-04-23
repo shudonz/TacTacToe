@@ -246,6 +246,7 @@ async function init() {
         else if (selectedGame === "pegsolitaire")  connection.invoke("GetPegSolitaireRooms");
         else if (selectedGame === "chinese-checkers") connection.invoke("GetChineseCheckersRooms");
         else if (selectedGame === "crazy-eights")  connection.invoke("GetCrazyEightsRooms");
+        else if (selectedGame === "battle-boat")   connection.invoke("GetBattleBoatRooms");
         else if (selectedGame === "yahtzee")       connection.invoke("GetYahtzeeRooms");
 
         // Load leaderboard + personal history for the selected game
@@ -386,6 +387,41 @@ async function init() {
         sessionStorage.setItem("myName", me.name);
         sessionStorage.setItem("isSinglePlayer", "1");
         window.location.href = "/concentration";
+    });
+
+    // Battle Boat room list
+    connection.on("BattleBoatRoomList", rooms => {
+        const list = document.getElementById("battleBoatRoomList");
+        const noRooms = document.getElementById("noBattleBoatRooms");
+        list.innerHTML = "";
+        const open = rooms.filter(r => !r.started);
+        if (open.length === 0) {
+            noRooms.style.display = "block";
+        } else {
+            noRooms.style.display = "none";
+            open.forEach(r => {
+                const isFull = r.isFull;
+                const card = document.createElement("div");
+                card.className = "player-card room-list-card" + (isFull ? " room-full" : "");
+                const badge = isFull ? '<span class="room-badge room-badge-full">Full</span>' : '<span class="room-badge room-badge-open">Open</span>';
+                card.innerHTML =
+                    '<span class="game-option-icon" style="font-size:1.4rem;">🚢</span>'
+                    + '<div class="room-card-info"><span class="name">' + escapeHtml(r.roomName) + '</span>'
+                    + '<span class="room-card-host">Hosted by ' + escapeHtml(r.hostName) + '</span></div>'
+                    + '<div class="room-card-right"><span class="room-player-count-badge">' + r.playerCount + '/' + r.maxPlayers + '</span>'
+                    + badge + (!isFull ? '<button class="btn btn-accept room-join-btn">Join &rarr;</button>' : '') + '</div>';
+                if (!isFull) {
+                    card.querySelector(".room-join-btn").addEventListener("click", e => { e.stopPropagation(); joinBattleBoatRoom(r.id); });
+                    card.onclick = () => joinBattleBoatRoom(r.id);
+                }
+                list.appendChild(card);
+            });
+        }
+    });
+
+    connection.on("BattleBoatRoomCreated", roomId => {
+        sessionStorage.setItem("battleBoatRoomId", roomId);
+        window.location.href = "/battle-boat-room";
     });
 
     // Puzzle Time room list
@@ -690,6 +726,7 @@ async function init() {
         else if (gameParam === "pegsolitaire") joinPegSolitaireRoom(joinParam);
         else if (gameParam === "chinese-checkers") joinChineseCheckersRoom(joinParam);
         else if (gameParam === "crazy-eights") joinCrazyEightsRoom(joinParam);
+        else if (gameParam === "battle-boat") joinBattleBoatRoom(joinParam);
         else joinYahtzeeRoom(joinParam);
     }
 
@@ -874,8 +911,24 @@ async function init() {
     document.getElementById("battleBoatSoloBtn").addEventListener("click", () => {
         window.location.href = "/battle-boat?mode=solo";
     });
-    document.getElementById("battleBoatDuelBtn").addEventListener("click", () => {
-        window.location.href = "/battle-boat?mode=duel";
+
+    // Create Battle Boat room
+    document.getElementById("createBattleBoatRoomBtn").addEventListener("click", () => {
+        document.getElementById("newBattleBoatRoomName").value = "";
+        document.getElementById("createBattleBoatRoomModal").style.display = "flex";
+        setTimeout(() => document.getElementById("newBattleBoatRoomName").focus(), 50);
+    });
+    document.getElementById("createBattleBoatRoomCancelBtn").addEventListener("click", () => {
+        document.getElementById("createBattleBoatRoomModal").style.display = "none";
+    });
+    document.getElementById("createBattleBoatRoomConfirmBtn").addEventListener("click", () => {
+        const name = document.getElementById("newBattleBoatRoomName").value.trim() || "Battle Boat Match";
+        document.getElementById("createBattleBoatRoomModal").style.display = "none";
+        connection.invoke("CreateBattleBoatRoom", name);
+    });
+    document.getElementById("newBattleBoatRoomName").addEventListener("keydown", e => {
+        if (e.key === "Enter") document.getElementById("createBattleBoatRoomConfirmBtn").click();
+        if (e.key === "Escape") document.getElementById("createBattleBoatRoomCancelBtn").click();
     });
 
     // Create Puzzle Time room
@@ -996,6 +1049,12 @@ function joinCrazyEightsRoom(roomId) {
     });
 }
 
+function joinBattleBoatRoom(roomId) {
+    connection.invoke("JoinBattleBoatRoom", roomId).then(() => {
+        sessionStorage.setItem("battleBoatRoomId", roomId);
+        window.location.href = "/battle-boat-room";
+    });
+}
 // Ensures the connection is live before invoking a hub method
 function spInvoke(method, difficulty) {
     const btn = document.getElementById(

@@ -15,6 +15,7 @@ public class LobbyService
     private readonly ConcurrentDictionary<string, ChineseCheckersRoom> _chineseCheckersRooms = new();
     private readonly ConcurrentDictionary<string, CrazyEightsRoom> _crazyEightsRooms = new();
     private readonly ConcurrentDictionary<string, PuzzleTimeRoom> _puzzleTimeRooms = new();
+    private readonly ConcurrentDictionary<string, BattleBoatRoom> _battleBoatRooms = new();
 
     public bool AddPlayer(string connectionId, string name, string email, string picture)
     {
@@ -382,6 +383,39 @@ public class LobbyService
             r.Players.Any(p => p.ConnectionId == connectionId && !p.IsBot));
 
     public void RemovePuzzleTimeRoom(string id) => _puzzleTimeRooms.TryRemove(id, out _);
+
+    // --- Battle Boat Rooms ---
+
+    public BattleBoatRoom CreateBattleBoatRoom(string id, string hostConnectionId)
+    {
+        var host = _players.GetValueOrDefault(hostConnectionId);
+        var room = new BattleBoatRoom
+        {
+            Id = id,
+            HostConnectionId = hostConnectionId,
+            HostName = host?.Name ?? "Host",
+            Players = [new BattleBoatPlayer { ConnectionId = hostConnectionId, Name = host?.Name ?? "Host", Connected = true }]
+        };
+        _battleBoatRooms[id] = room;
+        return room;
+    }
+
+    public BattleBoatRoom? GetBattleBoatRoom(string id) { _battleBoatRooms.TryGetValue(id, out var r); return r; }
+    public void StoreBattleBoatRoom(string id, BattleBoatRoom room) => _battleBoatRooms[id] = room;
+
+    public IEnumerable<BattleBoatRoom> GetOpenBattleBoatRooms() =>
+        _battleBoatRooms.Values.Where(r => !r.Started && !r.IsOver &&
+            IsOnlineConnection(r.HostConnectionId) &&
+            r.Players.Any(p => IsOnlineConnection(p.ConnectionId)));
+
+    public IEnumerable<BattleBoatRoom> GetBattleBoatRoomsForConnection(string connectionId) =>
+        _battleBoatRooms.Values.Where(r => !r.Started && r.Players.Any(p => p.ConnectionId == connectionId));
+
+    public IEnumerable<BattleBoatRoom> GetActiveBattleBoatRoomsForConnection(string connectionId) =>
+        _battleBoatRooms.Values.Where(r => r.Started && !r.IsOver &&
+            r.Players.Any(p => p.ConnectionId == connectionId));
+
+    public void RemoveBattleBoatRoom(string id) => _battleBoatRooms.TryRemove(id, out _);
 }
 
 public class LobbyPlayer

@@ -638,14 +638,11 @@
                     </div>
 
                     <div class="detail-section">
-                        <h3 class="detail-section-title">&#127760; 2 Player</h3>
-                        <p class="lobby-hint">Play local hot-seat multiplayer for two captains.</p>
-                        <div class="sp-section">
-                            <span class="sp-label">Player vs Player</span>
-                            <div class="sp-btns">
-                                <button id="battleBoatDuelBtn" class="btn btn-accept">⚓ Start 2-Player Match</button>
-                            </div>
-                        </div>
+                        <h3 class="detail-section-title">&#127760; Multiplayer</h3>
+                        <p class="lobby-hint">Create a room or join an open one for 2-player battles.</p>
+                        <button id="createBattleBoatRoomBtn" class="btn btn-accept detail-create-btn">&#43; Create Room</button>
+                        <div id="battleBoatRoomList" class="player-list"></div>
+                        <p id="noBattleBoatRooms" class="lobby-hint lobby-no-rooms" style="display:none;">No open rooms right now — create one to get started!</p>
                     </div>
                     </div>
                 </div>
@@ -695,6 +692,17 @@
                 <div class="modal-actions">
                     <button id="createConcentrationRoomConfirmBtn" class="btn btn-accept">Create Room</button>
                     <button id="createConcentrationRoomCancelBtn" class="btn btn-decline">Cancel</button>
+                </div>
+            </div>
+        </div>
+        <div id="createBattleBoatRoomModal" class="modal" style="display:none">
+            <div class="modal-content">
+                <h3>🚢 Create Battle Boat Room</h3>
+                <p>Give your room a name so friends can find it.</p>
+                <input id="newBattleBoatRoomName" class="guest-input" type="text" placeholder="e.g. Naval Battle" maxlength="30" style="margin-top:1.25rem;width:100%;">
+                <div class="modal-actions">
+                    <button id="createBattleBoatRoomConfirmBtn" class="btn btn-accept">Create Room</button>
+                    <button id="createBattleBoatRoomCancelBtn" class="btn btn-decline">Cancel</button>
                 </div>
             </div>
         </div>
