@@ -611,6 +611,17 @@
                                 <button class="btn-play" onclick="showPlaySections('battleBoat')">&#9654; Play</button>
                             </div>
                             <p class="game-detail-desc">A Battleship-style showdown with pegs, fleet hunting, splashy sink animations, and big win effects.</p>
+                            <div class="lobby-lb-inline">
+                                <div class="lobby-lb-inline-tabs">
+                                    <span class="lobby-lb-title">&#127942; High Scores</span>
+                                    <button class="lb-tab active" onclick="lobbyLbTab(this,'bb-lobby-lb','bb-lobby-hist')">Top 5</button>
+                                    <button class="lb-tab" onclick="lobbyLbTab(this,'bb-lobby-hist','bb-lobby-lb')">My Scores</button>
+                                </div>
+                                <div class="lobby-lb-scroll">
+                                    <div class="lb-body" id="bb-lobby-lb"></div>
+                                    <div class="lb-body" id="bb-lobby-hist" style="display:none"></div>
+                                </div>
+                            </div>
                         </div>
                     </div>
 

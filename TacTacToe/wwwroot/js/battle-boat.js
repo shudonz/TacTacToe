@@ -351,13 +351,24 @@ function beginBattle() {
 }
 
 // ── New match entry point ─────────────────────────────────────────────────────
-function startGame() {
+async function startGame() {
     state.phase    = 'placement';
     state.current  = 0;
     state.gameOver = false;
     state.placingPlayer = 0;
 
-    const meName = sessionStorage.getItem('userName') || 'Player 1';
+    // Fetch the current user to ensure we have the correct name
+    let meName = 'Player 1';
+    try {
+        const me = await fetch('/api/me').then(r => r.ok ? r.json() : null);
+        if (me && me.name) {
+            meName = me.name;
+            sessionStorage.setItem('userName', meName);
+        }
+    } catch {
+        // Fallback to sessionStorage if fetch fails
+        meName = sessionStorage.getItem('userName') || 'Player 1';
+    }
 
     if (mode === 'solo') {
         // Pre-build both players; computer fleet is random (invisible to human)
@@ -370,8 +381,9 @@ function startGame() {
         document.getElementById('modeText').textContent =
             'Solo mode: place your fleet, then sink the computer before it sinks you.';
     } else {
+        // In duel mode, use the logged-in player's name for Player 1
         state.players = [
-            { name: 'Player 1', board: emptyBoard(), shots: new Set(), fleet: [] },
+            { name: meName, board: emptyBoard(), shots: new Set(), fleet: [] },
             { name: 'Player 2', board: emptyBoard(), shots: new Set(), fleet: [] }
         ];
         document.getElementById('modeText').textContent =
@@ -602,7 +614,7 @@ function splashEmoji(icon, r, c) {
 }
 
 // ── End game ──────────────────────────────────────────────────────────────────
-function endGame(winnerName) {
+async function endGame(winnerName) {
     state.gameOver = true;
     sfx.win();
     launchConfetti();
@@ -611,18 +623,32 @@ function endGame(winnerName) {
     logMsg(`⚓ ${winnerName} sank the final ship and won the battle!`);
     render();
 
-    // Persist result for the logged-in player
-    const meName = sessionStorage.getItem('userName');
-    if (meName) {
+    // Persist result for the logged-in player - fetch username to ensure accuracy
+    try {
+        const me = await fetch('/api/me').then(r => r.ok ? r.json() : null);
+        if (!me || !me.name) return;
+
+        const meName = me.name;
         const elapsed = state.battleStartedAt ? Math.round((Date.now() - state.battleStartedAt) / 1000) : 0;
         const isWin   = winnerName === meName;
         const result  = isWin ? 'Win' : 'Loss';
-        const score   = isWin ? Math.max(1, state.players[0].fleet.filter(s => !s.sunk).length * 10) : 0;
-        fetch('/api/me/session', {
+
+        // Calculate score based on winner's remaining ships
+        let score = 0;
+        if (isWin) {
+            const winnerPlayer = state.players.find(p => p.name === winnerName);
+            if (winnerPlayer) {
+                score = Math.max(1, winnerPlayer.fleet.filter(s => !s.sunk).length * 10);
+            }
+        }
+
+        await fetch('/api/me/session', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ gameType: 'BattleBoat', result, score, timePlayed: elapsed, details: mode === 'solo' ? 'vs Computer' : 'vs Player' })
-        }).catch(() => {});
+        });
+    } catch (err) {
+        console.error('Failed to save game session:', err);
     }
 }
 

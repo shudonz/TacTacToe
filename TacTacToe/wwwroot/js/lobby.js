@@ -221,7 +221,8 @@ async function init() {
             solitaire:     ["Solitaire",      "sol-lobby-lb", "sol-lobby-hist"],
             pegsolitaire:  ["PegSolitaire",   "peg-lobby-lb", "peg-lobby-hist"],
             "chinese-checkers": ["ChineseCheckers", "cc-lobby-lb", "cc-lobby-hist"],
-            "crazy-eights": ["CrazyEights", "ce-lobby-lb", "ce-lobby-hist"]
+            "crazy-eights": ["CrazyEights", "ce-lobby-lb", "ce-lobby-hist"],
+            "battle-boat": ["BattleBoat", "bb-lobby-lb", "bb-lobby-hist"]
         };
 
         // Show welcome state when no game is selected, otherwise hide it
