@@ -14,6 +14,7 @@ public class LobbyService
     private readonly ConcurrentDictionary<string, PegSolitaireRoom> _pegSolitaireRooms = new();
     private readonly ConcurrentDictionary<string, ChineseCheckersRoom> _chineseCheckersRooms = new();
     private readonly ConcurrentDictionary<string, CrazyEightsRoom> _crazyEightsRooms = new();
+    private readonly ConcurrentDictionary<string, PuzzleTimeRoom> _puzzleTimeRooms = new();
 
     public bool AddPlayer(string connectionId, string name, string email, string picture)
     {
@@ -348,6 +349,39 @@ public class LobbyService
             r.Players.Any(p => p.ConnectionId == connectionId && !p.IsBot));
 
     public void RemoveCrazyEightsRoom(string id) => _crazyEightsRooms.TryRemove(id, out _);
+
+    // --- Puzzle Time Rooms ---
+
+    public PuzzleTimeRoom CreatePuzzleTimeRoom(string id, string hostConnectionId)
+    {
+        var host = _players.GetValueOrDefault(hostConnectionId);
+        var room = new PuzzleTimeRoom
+        {
+            Id = id,
+            HostConnectionId = hostConnectionId,
+            HostName = host?.Name ?? "Host",
+            Players = [new PuzzleTimePlayer { ConnectionId = hostConnectionId, Name = host?.Name ?? "Host", Connected = true }]
+        };
+        _puzzleTimeRooms[id] = room;
+        return room;
+    }
+
+    public PuzzleTimeRoom? GetPuzzleTimeRoom(string id) { _puzzleTimeRooms.TryGetValue(id, out var r); return r; }
+    public void StorePuzzleTimeRoom(string id, PuzzleTimeRoom room) => _puzzleTimeRooms[id] = room;
+
+    public IEnumerable<PuzzleTimeRoom> GetOpenPuzzleTimeRooms() =>
+        _puzzleTimeRooms.Values.Where(r => !r.Started && !r.IsOver &&
+            IsOnlineConnection(r.HostConnectionId) &&
+            r.Players.Any(p => p.IsBot || IsOnlineConnection(p.ConnectionId)));
+
+    public IEnumerable<PuzzleTimeRoom> GetPuzzleTimeRoomsForConnection(string connectionId) =>
+        _puzzleTimeRooms.Values.Where(r => !r.Started && r.Players.Any(p => p.ConnectionId == connectionId));
+
+    public IEnumerable<PuzzleTimeRoom> GetActivePuzzleTimeRoomsForConnection(string connectionId) =>
+        _puzzleTimeRooms.Values.Where(r => r.Started && !r.IsOver &&
+            r.Players.Any(p => p.ConnectionId == connectionId && !p.IsBot));
+
+    public void RemovePuzzleTimeRoom(string id) => _puzzleTimeRooms.TryRemove(id, out _);
 }
 
 public class LobbyPlayer

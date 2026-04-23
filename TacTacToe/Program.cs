@@ -299,6 +299,20 @@ app.MapGet("/crazy-eights-room", (HttpContext ctx) =>
     return Results.File("crazy-eights-room.html", "text/html");
 });
 
+app.MapGet("/puzzle-time", (HttpContext ctx) =>
+{
+    if (ctx.User.Identity?.IsAuthenticated != true)
+        return Results.Redirect("/login");
+    return Results.File("puzzle-time.html", "text/html");
+});
+
+app.MapGet("/puzzle-time-room", (HttpContext ctx) =>
+{
+    if (ctx.User.Identity?.IsAuthenticated != true)
+        return Results.Redirect("/login");
+    return Results.File("puzzle-time-room.html", "text/html");
+});
+
 app.MapGet("/api/me", async (HttpContext ctx) =>
 {
     if (ctx.User.Identity?.IsAuthenticated != true)

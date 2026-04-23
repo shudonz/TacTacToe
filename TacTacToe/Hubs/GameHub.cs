@@ -474,6 +474,72 @@ public partial class GameHub : Hub
             });
         }
 
+        // Defer Puzzle Time waiting-room cleanup
+        var puzzleWaitSnapshot = _lobby.GetPuzzleTimeRoomsForConnection(disconnectedConnectionId).ToList();
+        if (puzzleWaitSnapshot.Count > 0)
+        {
+            _ = Task.Run(async () =>
+            {
+                await Task.Delay(TimeSpan.FromSeconds(DefaultRejoinGracePeriodSeconds));
+                bool changed = false;
+                foreach (var snap in puzzleWaitSnapshot)
+                {
+                    var room = _lobby.GetPuzzleTimeRoom(snap.Id);
+                    if (room == null || room.Started) continue;
+                    var player = room.Players.FirstOrDefault(p => p.Name == name);
+                    if (player == null || player.ConnectionId != disconnectedConnectionId) continue;
+                    room.Players.Remove(player);
+                    changed = true;
+                    if (room.Players.Count == 0 || room.HostName == name)
+                    {
+                        await _hubContext.Clients.Group(room.Id).SendAsync("PuzzleTimeRoomDissolved");
+                        _lobby.RemovePuzzleTimeRoom(room.Id);
+                    }
+                    else
+                    {
+                        await _hubContext.Clients.Group(room.Id).SendAsync("PuzzleTimeRoomUpdated", room);
+                    }
+                }
+                if (changed) await _hubContext.Clients.All.SendAsync("PuzzleTimeRoomList", PuzzleTimeRoomSummaries());
+            });
+        }
+
+        // Defer Puzzle Time active-game disconnect handling
+        var puzzleGameSnapshot = _lobby.GetActivePuzzleTimeRoomsForConnection(disconnectedConnectionId).ToList();
+        if (puzzleGameSnapshot.Count > 0)
+        {
+            _ = Task.Run(async () =>
+            {
+                await Task.Delay(TimeSpan.FromSeconds(DefaultRejoinGracePeriodSeconds));
+                foreach (var snap in puzzleGameSnapshot)
+                {
+                    var room = _lobby.GetPuzzleTimeRoom(snap.Id);
+                    if (room == null || room.IsOver) continue;
+                    var player = room.Players.FirstOrDefault(p => p.Name == name && !p.IsBot);
+                    if (player == null || player.ConnectionId != disconnectedConnectionId) continue;
+
+                    player.Connected = false;
+                    PuzzleTimeEngine.ReleaseLocksForConnection(room, disconnectedConnectionId);
+                    await _hubContext.Clients.Group(room.Id).SendAsync("PlayerLeft", name);
+
+                    if (room.IsSinglePlayer)
+                    {
+                        _lobby.RemovePuzzleTimeRoom(room.Id);
+                        continue;
+                    }
+
+                    var connectedHumans = room.Players.Where(p => !p.IsBot && p.Connected).ToList();
+                    if (connectedHumans.Count == 0)
+                    {
+                        _lobby.RemovePuzzleTimeRoom(room.Id);
+                        continue;
+                    }
+
+                    await _hubContext.Clients.Group(room.Id).SendAsync("PuzzleTimeUpdated", BuildPuzzleTimeState(room));
+                }
+            });
+        }
+
         // Defer TTT room cleanup — the same grace period used for Yahtzee is needed here
         // because creating/joining a room causes a page navigation which disconnects the
         // lobby connection before RejoinTttRoom can update the player's ConnectionId.
@@ -1629,6 +1695,7 @@ public partial class GameHub : Hub
         await BroadcastYahtzeeRooms();
         await BroadcastChineseCheckersRooms();
         await BroadcastCrazyEightsRooms();
+        await BroadcastPuzzleTimeRooms();
     }
 
     private static bool CheckWin(string[] board, string mark)
