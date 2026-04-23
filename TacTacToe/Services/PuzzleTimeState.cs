@@ -177,8 +177,10 @@ public static class PuzzleTimeEngine
         if (tile == null) return false;
         if (tile.LockedByConnectionId != connectionId) return false;
 
-        x = Math.Clamp(x, 0.0, 1.0);
-        y = Math.Clamp(y, 0.0, 1.0);
+        // Allow pieces to be positioned outside the board (free-drag anywhere on the page).
+        // Clamp to a large range to prevent absurd values while still allowing off-board placement.
+        x = Math.Clamp(x, -5.0, 6.0);
+        y = Math.Clamp(y, -5.0, 6.0);
 
         var (rows, cols) = GridFor(room.Settings.PieceCount);
         int row = tile.CorrectIndex / cols;

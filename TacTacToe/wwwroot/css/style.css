@@ -4983,7 +4983,7 @@ button.ce-pile {
                 rgba(10, 18, 26, 0.55);
     border: 1px solid var(--glass-border);
     border-radius: 14px;
-    overflow: hidden;
+    overflow: visible;
     touch-action: none;    /* prevent scroll while dragging */
 }
 .pt-ghost-svg {

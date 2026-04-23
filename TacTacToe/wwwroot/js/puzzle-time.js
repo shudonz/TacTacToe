@@ -579,12 +579,14 @@ function makeDraggable(el, tileId) {
             sndSelect();
         }
 
-        const b   = board();
-        const br  = b.getBoundingClientRect();
+        const b  = board();
+        const br = b.getBoundingClientRect();
+        // Current board-relative position of the piece
         const startLeft = parseFloat(el.style.left) || 0;
         const startTop  = parseFloat(el.style.top)  || 0;
-        const offsetX   = e.clientX - br.left - startLeft;
-        const offsetY   = e.clientY - br.top  - startTop;
+        // Where on the piece the pointer landed (in viewport coords)
+        const offsetX = e.clientX - (br.left + startLeft);
+        const offsetY = e.clientY - (br.top  + startTop);
 
         let dragged = false;
 
@@ -594,13 +596,20 @@ function makeDraggable(el, tileId) {
                 if (Math.hypot(ddx, ddy) < 5) return;   // minimum drag threshold
                 dragged = true;
                 _draggingTileId = tileId;
-                el.style.zIndex = "200";
+
+                // Reparent to body with fixed positioning so it can move freely across the page
+                const rect = el.getBoundingClientRect();
+                b.removeChild(el);
+                el.style.position = "fixed";
+                el.style.left = rect.left + "px";
+                el.style.top  = rect.top  + "px";
+                el.style.zIndex = "9999";
                 el.style.cursor = "grabbing";
+                document.body.appendChild(el);
             }
             me.preventDefault();
-            const br2 = b.getBoundingClientRect();
-            el.style.left = (me.clientX - br2.left - offsetX) + "px";
-            el.style.top  = (me.clientY - br2.top  - offsetY) + "px";
+            el.style.left = (me.clientX - offsetX) + "px";
+            el.style.top  = (me.clientY - offsetY) + "px";
         }
 
         function onUp(ue) {
@@ -620,12 +629,24 @@ function makeDraggable(el, tileId) {
                 return;
             }
 
-            // Dropped after drag → send new position
-            const m = boardMetrics();
-            const pxLeft = parseFloat(el.style.left);
-            const pyTop  = parseFloat(el.style.top);
-            const nx = Math.max(0.01, Math.min(0.99, (pxLeft + m.svgSz / 2) / m.bw));
-            const ny = Math.max(0.01, Math.min(0.99, (pyTop  + m.svgSz / 2) / m.bh));
+            // Move piece back into board with absolute positioning
+            const br2    = b.getBoundingClientRect();
+            const fixedL = parseFloat(el.style.left);
+            const fixedT = parseFloat(el.style.top);
+            document.body.removeChild(el);
+            el.style.position = "absolute";
+            el.style.left = (fixedL - br2.left) + "px";
+            el.style.top  = (fixedT - br2.top)  + "px";
+            el.style.zIndex = "10";
+            el.style.cursor = "grab";
+            b.appendChild(el);
+
+            // Send normalized position (may be outside [0,1] if dropped outside the board)
+            const m   = boardMetrics();
+            const px  = parseFloat(el.style.left);
+            const py  = parseFloat(el.style.top);
+            const nx  = (px + m.svgSz / 2) / m.bw;
+            const ny  = (py + m.svgSz / 2) / m.bh;
             connection.invoke("SetPuzzleTilePosition", roomId, tileId, nx, ny).catch(()=>{});
             sndDrop();
         }
