@@ -67,6 +67,15 @@
                         <span class="game-list-arrow">&#8250;</span>
                     </button>
 
+                    <button class="game-option game-list-item" data-game="puzzle-time" aria-label="Puzzle Time">
+                        <span class="game-list-icon">🧠</span>
+                        <div class="game-list-info">
+                            <span class="game-list-name">Puzzle Time</span>
+                            <span class="game-list-sub">1–4 players &middot; Tile Puzzle</span>
+                        </div>
+                        <span class="game-list-arrow">&#8250;</span>
+                    </button>
+
                     <button class="game-option game-list-item" data-game="solitaire" aria-label="Solitaire">
                         <span class="game-list-icon">&#127137;</span>
                         <div class="game-list-info">
@@ -328,6 +337,66 @@
                 </div>
 
                 <!-- ── Solitaire Panel ── -->
+                <div id="puzzleTimePanel" class="game-detail-panel" style="display:none">
+                    <div class="game-detail-header">
+                        <span class="game-detail-icon">🧠</span>
+                        <div class="game-detail-header-body">
+                            <div class="game-title-row">
+                                <h2 class="game-detail-title">Puzzle Time</h2>
+                                <button class="btn-play" onclick="showPlaySections('puzzleTime')">&#9654; Play</button>
+                            </div>
+                            <p class="game-detail-desc">Assemble the image by moving and rotating puzzle tiles. Choose a design and puzzle size, then solve it solo or with friends.</p>
+                            <div class="lobby-lb-inline">
+                                <div class="lobby-lb-inline-tabs">
+                                    <span class="lobby-lb-title">&#127942; High Scores</span>
+                                    <button class="lb-tab active" onclick="lobbyLbTab(this,'pt-lobby-lb','pt-lobby-hist')">Top 5</button>
+                                    <button class="lb-tab" onclick="lobbyLbTab(this,'pt-lobby-hist','pt-lobby-lb')">My Scores</button>
+                                </div>
+                                <div class="lobby-lb-scroll">
+                                    <div class="lb-body" id="pt-lobby-lb"></div>
+                                    <div class="lb-body" id="pt-lobby-hist" style="display:none"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="puzzleTimePlaySections" class="game-play-sections" style="display:none">
+                    <div class="detail-section">
+                        <h3 class="detail-section-title">&#129302; Single Player</h3>
+                        <p class="lobby-hint">Pick a pre-designed image and piece count (5 / 25 / 50 / 100).</p>
+                        <div class="sp-section" style="flex-direction:column;align-items:flex-start;gap:0.55rem;">
+                            <label style="display:flex;align-items:center;gap:0.75rem;color:var(--text);font-size:0.93rem;font-weight:500;">
+                                Design:
+                                <select id="puzzleTimeSpImageSelect" class="guest-input" style="width:auto;padding:0.22rem 0.55rem;font-size:0.93rem;">
+                                    <option value="emoji-garden">Emoji Garden</option>
+                                    <option value="emoji-space">Space Quest</option>
+                                    <option value="emoji-ocean">Ocean Life</option>
+                                    <option value="emoji-snacks">Snack Party</option>
+                                </select>
+                            </label>
+                            <label style="display:flex;align-items:center;gap:0.75rem;color:var(--text);font-size:0.93rem;font-weight:500;">
+                                Pieces:
+                                <select id="puzzleTimeSpPieceCountSelect" class="guest-input" style="width:auto;padding:0.22rem 0.55rem;font-size:0.93rem;">
+                                    <option value="5">5</option>
+                                    <option value="25" selected>25</option>
+                                    <option value="50">50</option>
+                                    <option value="100">100</option>
+                                </select>
+                            </label>
+                            <button id="puzzleTimeSpBtn" class="btn btn-sp">🧩 Play Solo</button>
+                        </div>
+                    </div>
+
+                    <div class="detail-section">
+                        <h3 class="detail-section-title">&#127760; Multiplayer</h3>
+                        <p class="lobby-hint">Create a room for 2–4 players and solve the puzzle together in real-time.</p>
+                        <button id="createPuzzleTimeRoomBtn" class="btn btn-accept detail-create-btn">&#43; Create Room</button>
+                        <div id="puzzleTimeRoomList" class="player-list"></div>
+                        <p id="noPuzzleTimeRooms" class="lobby-hint lobby-no-rooms" style="display:none;">No open rooms right now — create one to get started!</p>
+                    </div>
+                    </div>
+                </div>
+
                 <div id="solitairePanel" class="game-detail-panel" style="display:none">
                     <div class="game-detail-header">
                         <span class="game-detail-icon">&#127137;</span>
@@ -568,6 +637,31 @@
                 <div class="modal-actions">
                     <button id="createConcentrationRoomConfirmBtn" class="btn btn-accept">Create Room</button>
                     <button id="createConcentrationRoomCancelBtn" class="btn btn-decline">Cancel</button>
+                </div>
+            </div>
+        </div>
+        <div id="createPuzzleTimeRoomModal" class="modal" style="display:none">
+            <div class="modal-content">
+                <h3>🧠 Create Puzzle Time Room</h3>
+                <p>Set the room name, design, and puzzle size.</p>
+                <input id="newPuzzleTimeRoomName" class="guest-input" type="text" placeholder="e.g. Puzzle Crew" maxlength="30" style="margin-top:1rem;width:100%;">
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.75rem;margin-top:0.85rem;">
+                    <select id="newPuzzleTimeImageKey" class="guest-input">
+                        <option value="emoji-garden">Emoji Garden</option>
+                        <option value="emoji-space">Space Quest</option>
+                        <option value="emoji-ocean">Ocean Life</option>
+                        <option value="emoji-snacks">Snack Party</option>
+                    </select>
+                    <select id="newPuzzleTimePieceCount" class="guest-input">
+                        <option value="5">5 Pieces</option>
+                        <option value="25" selected>25 Pieces</option>
+                        <option value="50">50 Pieces</option>
+                        <option value="100">100 Pieces</option>
+                    </select>
+                </div>
+                <div class="modal-actions">
+                    <button id="createPuzzleTimeRoomConfirmBtn" class="btn btn-accept">Create Room</button>
+                    <button id="createPuzzleTimeRoomCancelBtn" class="btn btn-decline">Cancel</button>
                 </div>
             </div>
         </div>

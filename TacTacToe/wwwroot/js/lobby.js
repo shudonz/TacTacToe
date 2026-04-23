@@ -18,6 +18,7 @@ const DASH_GAMES = [
     { key: "yahtzee",       api: "Yahtzee",        icon: "🎲",  label: "Yahtzee"        },
     { key: "slots",         api: "Slots",          icon: "🎰",  label: "Slots"          },
     { key: "concentration", api: "Concentration",  icon: "🧩",  label: "Concentration"  },
+    { key: "puzzle-time",   api: "PuzzleTime",     icon: "🧠",  label: "Puzzle Time"    },
     { key: "solitaire",     api: "Solitaire",      icon: "🂡",  label: "Solitaire"      },
     { key: "pegsolitaire",  api: "PegSolitaire",   icon: "🟠",  label: "Peg Solitaire"  },
     { key: "chinese-checkers", api: "ChineseCheckers", icon: "🎮", label: "Chinese Checkers" },
@@ -201,6 +202,7 @@ async function init() {
             yahtzee:       "yahtzeePanel",
             slots:         "slotsPanel",
             concentration: "concentrationPanel",
+            "puzzle-time": "puzzleTimePanel",
             solitaire:     "solitairePanel",
             pegsolitaire:  "pegsolitairePanel",
             "chinese-checkers": "chineseCheckersPanel",
@@ -213,6 +215,7 @@ async function init() {
             yahtzee:       ["Yahtzee",        "ytz-lobby-lb", "ytz-lobby-hist"],
             slots:         ["Slots",          "slt-lobby-lb", "slt-lobby-hist"],
             concentration: ["Concentration",  "con-lobby-lb", "con-lobby-hist"],
+            "puzzle-time": ["PuzzleTime",     "pt-lobby-lb", "pt-lobby-hist"],
             solitaire:     ["Solitaire",      "sol-lobby-lb", "sol-lobby-hist"],
             pegsolitaire:  ["PegSolitaire",   "peg-lobby-lb", "peg-lobby-hist"],
             "chinese-checkers": ["ChineseCheckers", "cc-lobby-lb", "cc-lobby-hist"],
@@ -226,7 +229,7 @@ async function init() {
         Object.entries(panels).forEach(([game, id]) => {
             document.getElementById(id).style.display = selectedGame === game ? "" : "none";
         });
-        ["ttt", "yahtzee", "slots", "concentration", "solitaire", "pegsolitaire", "chineseCheckers", "crazyEights"].forEach(key => {
+        ["ttt", "yahtzee", "slots", "concentration", "puzzleTime", "solitaire", "pegsolitaire", "chineseCheckers", "crazyEights"].forEach(key => {
             const el = document.getElementById(key + "PlaySections");
             if (el) { el.style.display = "none"; el.classList.remove("is-visible"); }
         });
@@ -235,6 +238,7 @@ async function init() {
         if (selectedGame === "tictactoe")         connection.invoke("GetTttRooms");
         else if (selectedGame === "slots")         connection.invoke("GetSlotsRooms");
         else if (selectedGame === "concentration") connection.invoke("GetConcentrationRooms");
+        else if (selectedGame === "puzzle-time")   connection.invoke("GetPuzzleTimeRooms");
         else if (selectedGame === "solitaire")     connection.invoke("GetSolitaireRooms");
         else if (selectedGame === "pegsolitaire")  connection.invoke("GetPegSolitaireRooms");
         else if (selectedGame === "chinese-checkers") connection.invoke("GetChineseCheckersRooms");
@@ -379,6 +383,49 @@ async function init() {
         sessionStorage.setItem("myName", me.name);
         sessionStorage.setItem("isSinglePlayer", "1");
         window.location.href = "/concentration";
+    });
+
+    // Puzzle Time room list
+    connection.on("PuzzleTimeRoomList", rooms => {
+        const list = document.getElementById("puzzleTimeRoomList");
+        const noRooms = document.getElementById("noPuzzleTimeRooms");
+        list.innerHTML = "";
+        const open = rooms.filter(r => !r.started);
+        if (open.length === 0) {
+            noRooms.style.display = "block";
+        } else {
+            noRooms.style.display = "none";
+            open.forEach(r => {
+                const isFull = r.isFull;
+                const card = document.createElement("div");
+                card.className = "player-card room-list-card" + (isFull ? " room-full" : "");
+                const badge = isFull ? '<span class="room-badge room-badge-full">Full</span>' : '<span class="room-badge room-badge-open">Open</span>';
+                card.innerHTML =
+                    '<span class="game-option-icon" style="font-size:1.4rem;">🧠</span>'
+                    + '<div class="room-card-info"><span class="name">' + escapeHtml(r.roomName) + ' · ' + r.pieceCount + ' pcs</span>'
+                    + '<span class="room-card-host">Hosted by ' + escapeHtml(r.hostName) + '</span></div>'
+                    + '<div class="room-card-right"><span class="room-player-count-badge">' + r.playerCount + '/' + r.maxPlayers + '</span>'
+                    + badge + (!isFull ? '<button class="btn btn-accept room-join-btn">Join &rarr;</button>' : '') + '</div>';
+                if (!isFull) {
+                    card.querySelector(".room-join-btn").addEventListener("click", e => { e.stopPropagation(); joinPuzzleTimeRoom(r.id); });
+                    card.onclick = () => joinPuzzleTimeRoom(r.id);
+                }
+                list.appendChild(card);
+            });
+        }
+    });
+
+    connection.on("PuzzleTimeRoomCreated", roomId => {
+        sessionStorage.setItem("puzzleTimeRoomId", roomId);
+        sessionStorage.setItem("isSinglePlayer", "0");
+        window.location.href = "/puzzle-time-room";
+    });
+
+    connection.on("PuzzleTimeSinglePlayerStarted", roomId => {
+        sessionStorage.setItem("puzzleTimeRoomId", roomId);
+        sessionStorage.setItem("myName", me.name);
+        sessionStorage.setItem("isSinglePlayer", "1");
+        window.location.href = "/puzzle-time";
     });
 
     // Solitaire room list
@@ -635,6 +682,7 @@ async function init() {
         if (gameParam === "ttt") joinTttRoom(joinParam);
         else if (gameParam === "slots") joinSlotsRoom(joinParam);
         else if (gameParam === "concentration") joinConcentrationRoom(joinParam);
+        else if (gameParam === "puzzle-time") joinPuzzleTimeRoom(joinParam);
         else if (gameParam === "solitaire") joinSolitaireRoom(joinParam);
         else if (gameParam === "pegsolitaire") joinPegSolitaireRoom(joinParam);
         else if (gameParam === "chinese-checkers") joinChineseCheckersRoom(joinParam);
@@ -812,6 +860,37 @@ async function init() {
         if (e.key === "Escape") document.getElementById("createConcentrationRoomCancelBtn").click();
     });
 
+    // Puzzle Time single player
+    document.getElementById("puzzleTimeSpBtn").addEventListener("click", () => {
+        sessionStorage.setItem("myName", me.name);
+        const imageKey = document.getElementById("puzzleTimeSpImageSelect").value;
+        const pieceCount = parseInt(document.getElementById("puzzleTimeSpPieceCountSelect").value, 10) || 25;
+        connection.invoke("StartPuzzleTimeSinglePlayer", imageKey, pieceCount);
+    });
+
+    // Create Puzzle Time room
+    document.getElementById("createPuzzleTimeRoomBtn").addEventListener("click", () => {
+        document.getElementById("newPuzzleTimeRoomName").value = "";
+        document.getElementById("newPuzzleTimeImageKey").value = "emoji-garden";
+        document.getElementById("newPuzzleTimePieceCount").value = "25";
+        document.getElementById("createPuzzleTimeRoomModal").style.display = "flex";
+        setTimeout(() => document.getElementById("newPuzzleTimeRoomName").focus(), 50);
+    });
+    document.getElementById("createPuzzleTimeRoomCancelBtn").addEventListener("click", () => {
+        document.getElementById("createPuzzleTimeRoomModal").style.display = "none";
+    });
+    document.getElementById("createPuzzleTimeRoomConfirmBtn").addEventListener("click", () => {
+        const name = document.getElementById("newPuzzleTimeRoomName").value.trim() || "Puzzle Time Room";
+        const imageKey = document.getElementById("newPuzzleTimeImageKey").value;
+        const pieceCount = parseInt(document.getElementById("newPuzzleTimePieceCount").value, 10) || 25;
+        document.getElementById("createPuzzleTimeRoomModal").style.display = "none";
+        connection.invoke("CreatePuzzleTimeRoom", name, imageKey, pieceCount, 4);
+    });
+    document.getElementById("newPuzzleTimeRoomName").addEventListener("keydown", e => {
+        if (e.key === "Enter") document.getElementById("createPuzzleTimeRoomConfirmBtn").click();
+        if (e.key === "Escape") document.getElementById("createPuzzleTimeRoomCancelBtn").click();
+    });
+
     // Create Yahtzee room
     document.getElementById("createRoomBtn").addEventListener("click", () => {
         document.getElementById("newRoomName").value = "";
@@ -864,6 +943,14 @@ function joinConcentrationRoom(roomId) {
     connection.invoke("JoinConcentrationRoom", roomId).then(() => {
         sessionStorage.setItem("concentrationRoomId", roomId);
         window.location.href = "/concentration-room";
+    });
+}
+
+function joinPuzzleTimeRoom(roomId) {
+    sessionStorage.setItem("isSinglePlayer", "0");
+    connection.invoke("JoinPuzzleTimeRoom", roomId).then(() => {
+        sessionStorage.setItem("puzzleTimeRoomId", roomId);
+        window.location.href = "/puzzle-time-room";
     });
 }
 

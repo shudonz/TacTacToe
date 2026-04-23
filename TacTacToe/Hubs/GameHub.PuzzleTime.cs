@@ -302,7 +302,6 @@ public partial class GameHub
                 t.Rotation,
                 t.Face,
                 LockedByName = t.LockedByName,
-                IsLockedByMe = t.LockedByConnectionId == Context.ConnectionId,
                 IsLocked = t.LockedByConnectionId != null
             })
         };

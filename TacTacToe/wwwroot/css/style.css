@@ -4887,3 +4887,104 @@ button.ce-pile {
         flex: 1 1 calc(50% - 0.5rem);
     }
 }
+
+/* ============================================================
+   PUZZLE TIME
+   ============================================================ */
+.puzzle-time-container {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 0 1rem 1.5rem;
+}
+.puzzle-time-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 1rem;
+    padding: 1rem 1.2rem;
+    margin-bottom: 0.85rem;
+}
+.puzzle-time-controls {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}
+.puzzle-time-layout {
+    display: grid;
+    grid-template-columns: minmax(190px, 280px) 1fr;
+    gap: 0.9rem;
+}
+.puzzle-preview,
+.puzzle-board-wrap {
+    padding: 0.9rem;
+}
+.puzzle-grid {
+    display: grid;
+    gap: 0.38rem;
+}
+.puzzle-cell {
+    border: 1px solid var(--glass-border);
+    border-radius: 9px;
+    min-height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: clamp(0.95rem, 1.8vw, 1.35rem);
+    background: rgba(196, 231, 233, 0.06);
+}
+.puzzle-preview-cell {
+    opacity: 0.82;
+}
+.puzzle-tile {
+    position: relative;
+    cursor: pointer;
+    transition: transform var(--transition), box-shadow var(--transition), border-color var(--transition);
+    background: linear-gradient(145deg, rgba(18,145,158,0.12), rgba(124,106,255,0.08));
+}
+.puzzle-tile:hover {
+    border-color: rgba(18, 145, 158, 0.45);
+    box-shadow: 0 0 10px rgba(18, 145, 158, 0.25);
+}
+.puzzle-tile.selected,
+.puzzle-tile.locked-me {
+    border-color: rgba(54, 214, 195, 0.7);
+    box-shadow: 0 0 14px rgba(54, 214, 195, 0.45);
+}
+.puzzle-tile.locked-other {
+    border-color: rgba(122, 64, 72, 0.45);
+    opacity: 0.72;
+}
+.puzzle-face {
+    pointer-events: none;
+}
+.puzzle-lock-badge {
+    position: absolute;
+    bottom: 3px;
+    right: 4px;
+    padding: 1px 6px;
+    border-radius: 9px;
+    font-size: 0.58rem;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    color: var(--text);
+    background: rgba(11, 37, 51, 0.86);
+    border: 1px solid var(--glass-border);
+}
+.pt-confetti {
+    position: fixed;
+    top: -10px;
+    width: 9px;
+    height: 14px;
+    border-radius: 3px;
+    z-index: 9998;
+    pointer-events: none;
+    animation: ptConfFall linear forwards;
+}
+@keyframes ptConfFall {
+    0% { transform: translateY(0) rotate(0deg); opacity: 1; }
+    100% { transform: translateY(115vh) rotate(640deg); opacity: 0; }
+}
+
+@media (max-width: 860px) {
+    .puzzle-time-layout { grid-template-columns: 1fr; }
+}
