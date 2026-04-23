@@ -261,13 +261,6 @@ public static class PuzzleTimeEngine
 
     public static bool IsSolved(PuzzleTimeRoom room) => room.Tiles.All(t => t.IsPlaced);
 
-    // ---------------------------------------------------------------
-    // Preview helper
-    // ---------------------------------------------------------------
-
-    public static List<string> BuildPreviewFaces(int pieceCount, string imageKey) =>
-        BuildFaces(NormalizePieceCount(pieceCount), NormalizeImageKey(imageKey));
-
     private static List<string> BuildFaces(int pieceCount, string imageKey)
     {
         var palette = PatternSets[NormalizeImageKey(imageKey)];

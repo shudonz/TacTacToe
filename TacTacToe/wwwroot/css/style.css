@@ -4938,6 +4938,12 @@ button.ce-pile {
 .pt-preview-card {
     padding: 0.65rem 0.75rem;
 }
+.pt-preview-canvas {
+    display: block;
+    width: 100%;
+    border-radius: 6px;
+    border: 1px solid rgba(255,255,255,0.07);
+}
 .pt-preview-grid {
     display: grid;
     gap: 2px;

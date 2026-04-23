@@ -633,17 +633,49 @@ function makeDraggable(el, tileId) {
 // ----------------------------------------------------------------
 function renderPreview() {
     if (!state) return;
-    const grid = document.getElementById("ptPreviewGrid");
-    const { cols } = getGrid();
-    grid.style.gridTemplateColumns = `repeat(${cols}, 1fr)`;
-    grid.innerHTML = "";
-    state.previewFaces.forEach((face, i) => {
-        const cell = document.createElement("div");
-        cell.className = "pt-preview-cell";
-        const tile = state.tiles.find(t => t.correctIndex === i);
-        if (tile?.isPlaced) cell.classList.add("pt-preview-cell--placed");
-        cell.textContent = face;
-        grid.appendChild(cell);
+    const canvas = document.getElementById("ptPreviewCanvas");
+    if (!canvas) return;
+    const { rows, cols } = getGrid();
+
+    // Size canvas to fill the card width, preserving puzzle aspect ratio
+    const cardW  = Math.max((canvas.parentElement?.clientWidth || 160) - 24, 80);
+    const cellPx = Math.max(Math.floor(cardW / cols), 4);
+    const W = cellPx * cols;
+    const H = cellPx * rows;
+    canvas.width  = W;
+    canvas.height = H;
+
+    const ctx = canvas.getContext("2d");
+
+    // Draw the same scene used by the puzzle pieces
+    const drawers = {
+        'emoji-garden': drawGarden,
+        'emoji-space':  drawSpace,
+        'emoji-ocean':  drawOcean,
+        'emoji-snacks': drawSunset
+    };
+    (drawers[state.settings.imageKey] || drawGarden)(ctx, W, H);
+
+    // Subtle grid lines
+    ctx.strokeStyle = "rgba(0,0,0,0.35)";
+    ctx.lineWidth = 1;
+    for (let c = 1; c < cols; c++) {
+        ctx.beginPath(); ctx.moveTo(c * cellPx, 0); ctx.lineTo(c * cellPx, H); ctx.stroke();
+    }
+    for (let r = 1; r < rows; r++) {
+        ctx.beginPath(); ctx.moveTo(0, r * cellPx); ctx.lineTo(W, r * cellPx); ctx.stroke();
+    }
+
+    // Teal overlay on placed cells
+    state.tiles.forEach(t => {
+        if (!t.isPlaced) return;
+        const row = Math.floor(t.correctIndex / cols);
+        const col = t.correctIndex % cols;
+        ctx.fillStyle   = "rgba(54,214,195,0.38)";
+        ctx.strokeStyle = "rgba(54,214,195,0.70)";
+        ctx.lineWidth   = 1.5;
+        ctx.fillRect  (col * cellPx,        row * cellPx,        cellPx,        cellPx);
+        ctx.strokeRect(col * cellPx + 0.75, row * cellPx + 0.75, cellPx - 1.5, cellPx - 1.5);
     });
 }
 

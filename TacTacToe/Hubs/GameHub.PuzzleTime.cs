@@ -321,7 +321,6 @@ public partial class GameHub
             },
             Players = room.Players.Select(p => new { p.Name, p.Connected, p.IsBot }),
             Catalog  = PuzzleTimeEngine.Catalog,
-            PreviewFaces = PuzzleTimeEngine.BuildPreviewFaces(room.Settings.PieceCount, room.Settings.ImageKey),
             Tiles = room.Tiles.Select(t => new
             {
                 t.Id,
