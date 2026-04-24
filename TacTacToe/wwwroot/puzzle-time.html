@@ -25,11 +25,15 @@
         </nav>
 
         <main class="puzzle-time-container">
-            <!-- Head bar -->
+            <!-- Head bar (title + inline preview + controls) -->
             <div class="puzzle-time-head glass-card">
-                <div>
+                <div class="pt-head-title">
                     <h2 class="lobby-title" style="margin-bottom:0.2rem;">Puzzle Time</h2>
                     <div id="puzzleStatusText" class="turn-indicator" style="margin:0;">Loading puzzle&#8230;</div>
+                </div>
+                <div class="pt-head-preview">
+                    <canvas id="ptPreviewCanvas" class="pt-preview-canvas"></canvas>
+                    <p class="lobby-hint pt-progress-text" id="ptProgressText"></p>
                 </div>
                 <div class="pt-head-controls">
                     <label class="pt-toggle-label">
@@ -42,26 +46,15 @@
             <!-- Player bar -->
             <div id="puzzlePlayers" class="player-bar" style="margin-bottom:0.55rem;"></div>
 
-            <!-- Main layout: sidebar + board -->
-            <div class="pt-layout">
-                <!-- Sidebar: preview -->
-                <aside class="pt-sidebar">
-                    <section class="pt-preview-card glass-card">
-                        <p class="room-section-title" style="margin:0 0 0.45rem;">Preview</p>
-                        <canvas id="ptPreviewCanvas" class="pt-preview-canvas"></canvas>
-                    </section>
-                    <p class="lobby-hint pt-progress-text" id="ptProgressText"></p>
-                </aside>
-
-                <!-- Board -->
-                <section class="pt-board-section">
-                    <div id="pt-board" class="pt-board">
-                        <!-- Ghost slot SVG is injected here by JS -->
-                        <!-- Piece SVG elements are positioned here by JS -->
-                    </div>
-                    <p id="puzzleLockHint" class="lobby-hint pt-board-hint">Click a piece to select it &mdash; click again to rotate. Drag to move.</p>
-                </section>
-            </div>
+            <!-- Board (full width — tray zone is rendered inside the board by JS) -->
+            <section class="pt-board-section">
+                <div id="pt-board" class="pt-board">
+                    <!-- Ghost slot SVG injected by JS -->
+                    <!-- Tray background div injected by JS -->
+                    <!-- Piece SVG elements positioned by JS -->
+                </div>
+                <p id="puzzleLockHint" class="lobby-hint pt-board-hint">Click a piece to select it &mdash; click again to rotate. Drag to move.</p>
+            </section>
         </main>
     </div>
 

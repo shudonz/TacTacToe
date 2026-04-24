@@ -25,6 +25,9 @@ let _prevIsOver     = false;
 
 if (isSinglePlayer) document.getElementById("chatWidget").style.display = "none";
 
+// Extra columns to the right of the puzzle grid used as a piece tray (normalised: 1.0 = one puzzle width)
+const TRAY_COLS = 0.65;
+
 // ----------------------------------------------------------------
 // Helpers
 // ----------------------------------------------------------------
@@ -322,25 +325,31 @@ function puzzlePiecePath(ps, pd, conn) {
 // ----------------------------------------------------------------
 function boardMetrics() {
     const b  = board();
-    // Reset any previously-pinned width so we read the natural container width
-    b.style.width = '';
-    const bw = b.clientWidth  || 500;
-    const bh = b.clientHeight || 500;
+    b.style.width  = '';
+    b.style.height = '';
+    const containerW = b.clientWidth || 500;
     const { rows, cols } = getGrid();
-    // Use exact cell size so placed pieces touch with zero gap
-    const ps    = Math.min(bw / cols, bh / rows);
-    const pd    = ps * 0.28;           // must be ≥ tH (= ps*0.22)
+    // Total board = puzzle grid + right tray.
+    // Derive ps so the WHOLE board (puzzle + tray) fits within containerW
+    // AND the puzzle grid fits within 70 % of viewport height.
+    const totalCols  = cols + cols * TRAY_COLS;   // effective column count across full board
+    const maxByWidth = containerW / totalCols;
+    const maxByHeight = (window.innerHeight * 0.70) / rows;
+    const ps    = Math.min(maxByWidth, maxByHeight);
+    const pd    = ps * 0.28;
     const svgSz = ps + 2 * pd;
-    // Pin the board element to the exact puzzle footprint so the background
-    // never shows on the left/right (CSS aspect-ratio + max-height can leave
-    // extra horizontal space in some browsers).
-    const effW = ps * cols;
-    const effH = ps * rows;
-    b.style.width = effW + 'px';
-    return { bw: effW, bh: effH, rows, cols, ps, pd, svgSz };
+    const puzzleW = ps * cols;
+    const puzzleH = ps * rows;
+    const trayW   = ps * cols * TRAY_COLS;
+    const totalW  = puzzleW + trayW;
+    b.style.width  = totalW  + 'px';
+    b.style.height = puzzleH + 'px';
+    return { bw: puzzleW, bh: puzzleH, puzzleW, puzzleH, trayW, totalW, rows, cols, ps, pd, svgSz };
 }
 
-// SVG element top-left from normalised piece center
+// SVG element top-left from normalised piece center.
+// nx is relative to puzzle width (bw); ny is relative to puzzle height (bh).
+// nx > 1 places the piece in the right-side tray.
 function piecePixelPos(nx, ny, m) {
     return { left: nx * m.bw - m.svgSz / 2, top: ny * m.bh - m.svgSz / 2 };
 }
@@ -350,6 +359,20 @@ function piecePixelPos(nx, ny, m) {
 // ----------------------------------------------------------------
 function renderGhosts(showHints, m) {
     const b = board();
+
+    // Tray background strip
+    let tray = document.getElementById("pt-tray");
+    if (!tray) {
+        tray = document.createElement("div");
+        tray.id = "pt-tray";
+        tray.className = "pt-tray";
+        b.appendChild(tray);
+    }
+    tray.style.top    = '0';
+    tray.style.height = m.puzzleH + 'px';
+    tray.style.left   = m.puzzleW + 'px';
+    tray.style.width  = m.trayW   + 'px';
+
     let svg = document.getElementById("pt-ghost-svg");
     if (!svg) {
         svg = document.createElementNS("http://www.w3.org/2000/svg","svg");
@@ -570,23 +593,30 @@ function makeDraggable(el, tileId) {
         e.stopPropagation();
         el.setPointerCapture(e.pointerId);
 
-        // Remember whether this piece was already selected BEFORE this click
-        const wasAlreadySelected = (_selectedTileId === tileId);
+        // A piece is "already selected" if it was locally tracked as selected OR
+        // is already server-locked to this player (covers the case where _selectedTileId
+        // was cleared by a lock-rejected response between two clicks).
+        const alreadyMine = isMine(tile);
+        const wasAlreadySelected = (_selectedTileId === tileId) || alreadyMine;
 
         // Select the piece (releases old selection if different)
         if (!wasAlreadySelected) {
             selectTile(tileId);
             sndSelect();
+        } else if (_selectedTileId !== tileId) {
+            // Piece is server-locked to us but _selectedTileId drifted — re-sync it
+            _selectedTileId = tileId;
         }
 
         const b  = board();
         const br = b.getBoundingClientRect();
-        // Current board-relative position of the piece
+        // Piece is always position:absolute inside the board.
+        // Track the pointer offset relative to the board origin so movement
+        // stays in the same coordinate space on every device/screen size.
         const startLeft = parseFloat(el.style.left) || 0;
         const startTop  = parseFloat(el.style.top)  || 0;
-        // Where on the piece the pointer landed (in viewport coords)
-        const offsetX = e.clientX - (br.left + startLeft);
-        const offsetY = e.clientY - (br.top  + startTop);
+        const offsetX   = e.clientX - br.left - startLeft;
+        const offsetY   = e.clientY - br.top  - startTop;
 
         let dragged = false;
 
@@ -596,20 +626,15 @@ function makeDraggable(el, tileId) {
                 if (Math.hypot(ddx, ddy) < 5) return;   // minimum drag threshold
                 dragged = true;
                 _draggingTileId = tileId;
-
-                // Reparent to body with fixed positioning so it can move freely across the page
-                const rect = el.getBoundingClientRect();
-                b.removeChild(el);
-                el.style.position = "fixed";
-                el.style.left = rect.left + "px";
-                el.style.top  = rect.top  + "px";
                 el.style.zIndex = "9999";
                 el.style.cursor = "grabbing";
-                document.body.appendChild(el);
             }
             me.preventDefault();
-            el.style.left = (me.clientX - offsetX) + "px";
-            el.style.top  = (me.clientY - offsetY) + "px";
+            // Keep piece position:absolute inside the board — overflow:visible lets it
+            // render outside the board boundary while coordinates stay board-relative.
+            const br2 = b.getBoundingClientRect();
+            el.style.left = (me.clientX - br2.left - offsetX) + "px";
+            el.style.top  = (me.clientY - br2.top  - offsetY) + "px";
         }
 
         function onUp(ue) {
@@ -629,24 +654,13 @@ function makeDraggable(el, tileId) {
                 return;
             }
 
-            // Move piece back into board with absolute positioning
-            const br2    = b.getBoundingClientRect();
-            const fixedL = parseFloat(el.style.left);
-            const fixedT = parseFloat(el.style.top);
-            document.body.removeChild(el);
-            el.style.position = "absolute";
-            el.style.left = (fixedL - br2.left) + "px";
-            el.style.top  = (fixedT - br2.top)  + "px";
-            el.style.zIndex = "10";
-            el.style.cursor = "grab";
-            b.appendChild(el);
-
-            // Send normalized position (may be outside [0,1] if dropped outside the board)
-            const m   = boardMetrics();
-            const px  = parseFloat(el.style.left);
-            const py  = parseFloat(el.style.top);
-            const nx  = (px + m.svgSz / 2) / m.bw;
-            const ny  = (py + m.svgSz / 2) / m.bh;
+            // Normalize position relative to puzzle board dimensions.
+            // ny > 1 means the piece is in the tray below the grid, which is valid.
+            const m  = boardMetrics();
+            const px = parseFloat(el.style.left);
+            const py = parseFloat(el.style.top);
+            const nx = (px + m.svgSz / 2) / m.bw;
+            const ny = (py + m.svgSz / 2) / m.bh;
             connection.invoke("SetPuzzleTilePosition", roomId, tileId, nx, ny).catch(()=>{});
             sndDrop();
         }
@@ -666,9 +680,8 @@ function renderPreview() {
     if (!canvas) return;
     const { rows, cols } = getGrid();
 
-    // Size canvas to fill the card width, preserving puzzle aspect ratio
-    const cardW  = Math.max((canvas.parentElement?.clientWidth || 160) - 24, 80);
-    const cellPx = Math.max(Math.floor(cardW / cols), 4);
+    // Compact thumbnail that fits the head bar — max 140 px wide / 80 px tall
+    const cellPx = Math.max(Math.floor(Math.min(140 / cols, 80 / rows)), 4);
     const W = cellPx * cols;
     const H = cellPx * rows;
     canvas.width  = W;
@@ -778,11 +791,12 @@ function render() {
 }
 
 // ----------------------------------------------------------------
-// Board aspect-ratio helper
+// Board sizing helper — called on state update before render()
+// boardMetrics() itself pins width + height; this just clears any
+// stale aspect-ratio that might override those explicit values.
 // ----------------------------------------------------------------
 function applyBoardAspectRatio() {
-    const { rows, cols } = getGrid();
-    board().style.aspectRatio = `${cols} / ${rows}`;
+    board().style.aspectRatio = '';
 }
 
 // ----------------------------------------------------------------

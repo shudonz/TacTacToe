@@ -371,6 +371,7 @@ async function startGame() {
     }
 
     if (mode === 'solo') {
+        botAI.reset();
         // Pre-build both players; computer fleet is random (invisible to human)
         const computerBoard = emptyBoard();
         const computerFleet = randomFleet(computerBoard);
@@ -380,6 +381,7 @@ async function startGame() {
         ];
         document.getElementById('modeText').textContent =
             'Solo mode: place your fleet, then sink the computer before it sinks you.';
+        document.getElementById('difficultyWrap').style.display = 'flex';
     } else {
         // In duel mode, use the logged-in player's name for Player 1
         state.players = [
@@ -559,9 +561,44 @@ function fire(shooterIndex, targetIndex, r, c) {
     }
 }
 
+// ── Bot AI state ──────────────────────────────────────────────────────────────
+const botAI = {
+    // Pending cells to try after a hit (Normal/Hard hunt mode)
+    huntQueue: [],
+    // The first hit of a current ship (Hard mode uses axis locking)
+    firstHit: null,
+    // Locked axis for Hard mode: null | 'row' | 'col'
+    axis: null,
+    // Direction being chased on the locked axis (+1 or -1); Hard mode
+    direction: null,
+    // Reset when a ship is sunk
+    reset() {
+        this.huntQueue  = [];
+        this.firstHit   = null;
+        this.axis       = null;
+        this.direction  = null;
+    }
+};
+
+function getBotDifficulty() {
+    return document.getElementById('difficultySelect')?.value ?? 'normal';
+}
+
 // ── Bot turn ──────────────────────────────────────────────────────────────────
 function botTurn() {
     if (state.gameOver || state.current !== 1) return;
+    const difficulty = getBotDifficulty();
+    if (difficulty === 'easy') {
+        botTurnEasy();
+    } else if (difficulty === 'normal') {
+        botTurnNormal();
+    } else {
+        botTurnHard();
+    }
+}
+
+// Easy: purely random, unchanged from original
+function botTurnEasy() {
     const bot    = state.players[1];
     const target = state.players[0];
     let r, c, id;
@@ -588,7 +625,6 @@ function botTurn() {
             endGame('Computer 🤖');
             return;
         }
-        // Bot hit: bot fires again
     } else {
         sfx.miss();
         logMsg('Computer missed. Your turn!');
@@ -596,7 +632,157 @@ function botTurn() {
     }
 
     render();
-    if (!state.gameOver && state.current === 1) setTimeout(botTurn, 560);
+    if (!state.gameOver && state.current === 1) setTimeout(botTurnEasy, 560);
+}
+
+// Normal: random search; after a hit, queues adjacent cells to hunt the ship
+function botTurnNormal() {
+    const bot    = state.players[1];
+    const target = state.players[0];
+
+    let r, c, id;
+    // Drain hunt queue first
+    while (botAI.huntQueue.length > 0) {
+        const [qr, qc] = botAI.huntQueue.shift();
+        const qid = coord(qr, qc);
+        if (!bot.shots.has(qid)) { r = qr; c = qc; id = qid; break; }
+    }
+    // Fall back to random if queue empty
+    if (id === undefined) {
+        do {
+            r  = rand(0, SIZE - 1);
+            c  = rand(0, SIZE - 1);
+            id = coord(r, c);
+        } while (bot.shots.has(id));
+    }
+
+    bot.shots.add(id);
+    const shipKey = target.board[r][c];
+    if (shipKey) {
+        const ship = target.fleet.find(s => s.key === shipKey);
+        ship.hits++;
+        sfx.hit();
+        logMsg(`🤖 Computer hit your ${ship.name}!`);
+        if (ship.hits >= ship.size && !ship.sunk) {
+            ship.sunk = true;
+            sfx.sink();
+            splashEmoji('🌊', r, c);
+            logMsg(`🆘 Your ${ship.name} is sunk!`);
+            botAI.reset();
+        } else {
+            // Queue the four orthogonal neighbors
+            for (const [dr, dc] of [[-1,0],[1,0],[0,-1],[0,1]]) {
+                const nr = r + dr, nc = c + dc;
+                if (nr >= 0 && nr < SIZE && nc >= 0 && nc < SIZE && !bot.shots.has(coord(nr, nc))) {
+                    botAI.huntQueue.push([nr, nc]);
+                }
+            }
+        }
+        if (target.fleet.every(s => s.sunk)) {
+            endGame('Computer 🤖');
+            return;
+        }
+    } else {
+        sfx.miss();
+        logMsg('Computer missed. Your turn!');
+        state.current = 0;
+    }
+
+    render();
+    if (!state.gameOver && state.current === 1) setTimeout(botTurnNormal, 560);
+}
+
+// Hard: checkerboard search pattern + axis-locked hunt after a hit
+function botTurnHard() {
+    const bot    = state.players[1];
+    const target = state.players[0];
+
+    let r, c, id;
+
+    // Drain the directed hunt queue first
+    while (botAI.huntQueue.length > 0) {
+        const [qr, qc] = botAI.huntQueue.shift();
+        const qid = coord(qr, qc);
+        if (!bot.shots.has(qid)) { r = qr; c = qc; id = qid; break; }
+    }
+
+    // Checkerboard random search (only fires on cells where (r+c) is even)
+    if (id === undefined) {
+        const candidates = [];
+        for (let rr = 0; rr < SIZE; rr++) {
+            for (let cc = 0; cc < SIZE; cc++) {
+                if ((rr + cc) % 2 === 0 && !bot.shots.has(coord(rr, cc))) {
+                    candidates.push([rr, cc]);
+                }
+            }
+        }
+        // If checkerboard is exhausted (very late game), fall back to any unseen cell
+        const pool = candidates.length > 0 ? candidates : (() => {
+            const all = [];
+            for (let rr = 0; rr < SIZE; rr++)
+                for (let cc = 0; cc < SIZE; cc++)
+                    if (!bot.shots.has(coord(rr, cc))) all.push([rr, cc]);
+            return all;
+        })();
+        const pick = pool[Math.floor(Math.random() * pool.length)];
+        r = pick[0]; c = pick[1]; id = coord(r, c);
+    }
+
+    bot.shots.add(id);
+    const shipKey = target.board[r][c];
+    if (shipKey) {
+        const ship = target.fleet.find(s => s.key === shipKey);
+        ship.hits++;
+        sfx.hit();
+        logMsg(`🤖 Computer hit your ${ship.name}!`);
+        if (ship.hits >= ship.size && !ship.sunk) {
+            ship.sunk = true;
+            sfx.sink();
+            splashEmoji('🌊', r, c);
+            logMsg(`🆘 Your ${ship.name} is sunk!`);
+            botAI.reset();
+        } else {
+            if (botAI.firstHit === null) {
+                // First hit on a new ship: queue all 4 neighbors
+                botAI.firstHit = [r, c];
+                botAI.axis = null;
+                for (const [dr, dc] of [[-1,0],[1,0],[0,-1],[0,1]]) {
+                    const nr = r + dr, nc = c + dc;
+                    if (nr >= 0 && nr < SIZE && nc >= 0 && nc < SIZE && !bot.shots.has(coord(nr, nc))) {
+                        botAI.huntQueue.push([nr, nc]);
+                    }
+                }
+            } else {
+                // Second hit: lock the axis and chase both ends
+                const [fr, fc] = botAI.firstHit;
+                if (botAI.axis === null) {
+                    botAI.axis = (r === fr) ? 'col' : 'row';
+                }
+                // Extend in both directions along the locked axis
+                botAI.huntQueue = [];
+                if (botAI.axis === 'col') {
+                    const minC = Math.min(fc, c), maxC = Math.max(fc, c);
+                    if (minC - 1 >= 0)  botAI.huntQueue.push([r, minC - 1]);
+                    if (maxC + 1 < SIZE) botAI.huntQueue.push([r, maxC + 1]);
+                } else {
+                    const minR = Math.min(fr, r), maxR = Math.max(fr, r);
+                    if (minR - 1 >= 0)  botAI.huntQueue.push([minR - 1, c]);
+                    if (maxR + 1 < SIZE) botAI.huntQueue.push([maxR + 1, c]);
+                }
+            }
+        }
+        if (target.fleet.every(s => s.sunk)) {
+            endGame('Computer 🤖');
+            return;
+        }
+    } else {
+        sfx.miss();
+        logMsg('Computer missed. Your turn!');
+        state.current = 0;
+    }
+
+    render();
+    if (!state.gameOver && state.current === 1) setTimeout(botTurnHard, 560);
 }
 
 // ── Splash animation ──────────────────────────────────────────────────────────

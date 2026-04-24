@@ -144,25 +144,33 @@ public static class PuzzleTimeEngine
         return tiles;
     }
 
-    /// <summary>Spread tiles randomly across the canvas at start-of-game with random rotation.</summary>
+    /// <summary>Spread tiles randomly in the tray to the right of the puzzle grid at start-of-game.</summary>
     private static void ScatterTiles(List<PuzzleTile> tiles, int rows, int cols)
     {
-        // Use a shuffled grid layout with jitter so pieces are spread out and distinguishable.
+        // TRAY_COLS must match the JS constant (0.65 × puzzle width to the right of the grid).
+        // Normalised X: 1.0 = right edge of puzzle grid, 1.0 + TRAY_COLS = right edge of tray.
+        const double TRAY_COLS = 0.65;
+
         int total = tiles.Count;
         var slots = Enumerable.Range(0, total).OrderBy(_ => Random.Shared.Next()).ToList();
+
+        // Arrange pieces in a grid that fills the tray columns × puzzle rows
+        int trayCols = (int)Math.Ceiling((double)total / rows);
         for (int i = 0; i < total; i++)
         {
-            int slot = slots[i];
-            int sr = slot / cols, sc = slot % cols;
-            double baseX = (sc + 0.5) / cols;
-            double baseY = (sr + 0.5) / rows;
-            // Add jitter within ±35 % of cell size
-            double jitter = 0.35;
-            double jx = (Random.Shared.NextDouble() * 2 - 1) * jitter / cols;
-            double jy = (Random.Shared.NextDouble() * 2 - 1) * jitter / rows;
-            tiles[i].X        = Math.Clamp(baseX + jx, 0.04, 0.96);
-            tiles[i].Y        = Math.Clamp(baseY + jy, 0.04, 0.96);
-            // Random initial rotation: 0–3 (multiples of 90°), ensuring at least some are rotated
+            int slot    = slots[i];
+            int trayCol = slot % trayCols;
+            int trayRow = slot / trayCols;
+            // Map into tray X range [1.02 … 1.0 + TRAY_COLS - margin]
+            double traySpan = Math.Max(TRAY_COLS - 0.06, 0.1);
+            double baseX = 1.02 + (trayCol + 0.5) / Math.Max(trayCols, 1) * traySpan;
+            // Map into full puzzle Y range [0.02 … 0.98]
+            double baseY = (trayRow + 0.5) / Math.Max(rows, 1);
+            // Small jitter
+            double jx = (Random.Shared.NextDouble() * 2 - 1) * 0.25 / Math.Max(trayCols, 1) * traySpan;
+            double jy = (Random.Shared.NextDouble() * 2 - 1) * 0.25 / Math.Max(rows, 1);
+            tiles[i].X        = baseX + jx;
+            tiles[i].Y        = Math.Clamp(baseY + jy, 0.02, 0.98);
             tiles[i].Rotation = Random.Shared.Next(4);
         }
     }
