@@ -348,7 +348,14 @@ public partial class GameHub
             }),
             Nodes = ChineseCheckersEngine.Nodes,
             Pieces = room.Pieces,
-            LegalMoves = legalMoves
+            LegalMoves = legalMoves,
+            LastMove = room.LastMove == null ? null : new
+            {
+                room.LastMove.PieceId,
+                room.LastMove.OwnerIndex,
+                room.LastMove.Path,
+                room.LastMove.IsJump
+            }
         };
     }
 

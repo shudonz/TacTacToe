@@ -4583,6 +4583,43 @@ tr.row-banned td:first-child { opacity: 1; }
 }
 .cc-rank { color: var(--text-dim); margin-left: 0.25rem; }
 
+/* ── Rules modal ───────────────────────────────────────────── */
+.cc-rules-content {
+    text-align: left;
+    max-width: min(92vw, 560px);
+    max-height: 80vh;
+    display: flex;
+    flex-direction: column;
+}
+.cc-rules-content h3 {
+    text-align: center;
+    margin-bottom: 1rem;
+}
+.cc-rules-body {
+    overflow-y: auto;
+    flex: 1;
+    padding-right: 0.25rem;
+}
+.cc-rules-body h4 {
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: var(--accent);
+    margin: 1rem 0 0.3rem;
+}
+.cc-rules-body h4:first-child { margin-top: 0; }
+.cc-rules-body p,
+.cc-rules-body li {
+    font-size: 0.88rem;
+    color: var(--text-dim);
+    line-height: 1.55;
+}
+.cc-rules-body ul {
+    margin: 0;
+    padding-left: 1.2rem;
+}
+.cc-rules-body li { margin-bottom: 0.2rem; }
+.cc-rules-body strong { color: var(--text); }
+
 /* ============================================================
    Crazy Eights
 ============================================================ */

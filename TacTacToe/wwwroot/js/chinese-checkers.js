@@ -98,7 +98,7 @@ function _animateHop(move, color, onDone) {
 
         if (isJump) sndJump(); else sndStep();
 
-        const su = isJump ? 1.55 : 1.2, dur = isJump ? 480 : 280;
+        const su = isJump ? 1.55 : 1.2, dur = isJump ? 380 : 230;
         const anim = el.animate([
             { transform: `translate(${fx-np/2}px,${fy-np/2}px) scale(1)`,        filter: 'brightness(1) drop-shadow(0 0 0 transparent)' },
             { transform: `translate(${midX-np/2}px,${midY-np/2}px) scale(${su})`, filter: `brightness(1.45) drop-shadow(0 0 ${np*0.7}px ${color})` },
@@ -106,6 +106,15 @@ function _animateHop(move, color, onDone) {
         ], { duration: dur, easing: 'cubic-bezier(0.4,0,0.2,1)', fill: 'forwards' });
         anim.onfinish = anim.oncancel = () => { el.remove(); onDone(); };
     } catch(e) { onDone(); }
+}
+
+// Animate each segment in a multi-hop path sequentially.
+// path is an array of nodeIds [start, hop1, hop2, ..., end].
+async function _animateHops(path, color) {
+    if (!path || path.length < 2) return;
+    for (let i = 0; i < path.length - 1; i++) {
+        await new Promise(resolve => _animateHop({ fromNodeId: path[i], toNodeId: path[i + 1] }, color, resolve));
+    }
 }
 
 // ── Hint laser SVG overlay ───────────────────────────────────────
@@ -312,14 +321,20 @@ async function init() {
                 const owner = s.players[m.ownerIndex];
                 const color = COLORS[(owner?.colorIndex ?? m.ownerIndex) % COLORS.length];
 
+                // Use the server-provided hop path for accurate multi-bounce animation.
+                // Fall back to straight start→end if no path available.
+                const path = (s.lastMove && s.lastMove.path && s.lastMove.path.length >= 2)
+                    ? s.lastMove.path
+                    : [m.fromNodeId, m.toNodeId];
+
                 // Render new state, then temporarily hide the destination marble
                 // so the flying marble appears to land there
                 _renderPlayers(); _renderStatus(false);
                 renderBoard(false);
-                const destPiece = document.querySelector(`[data-node-id="${m.toNodeId}"] .cc-piece`);
+                const destPiece = document.querySelector(`[data-node-id="${path[path.length-1]}"] .cc-piece`);
                 if (destPiece) destPiece.style.visibility = 'hidden';
 
-                await new Promise(resolve => _animateHop(m, color, resolve));
+                await _animateHops(path, color);
 
                 if (destPiece) destPiece.style.visibility = '';
                 renderBoard(myTurn);
@@ -368,6 +383,15 @@ async function init() {
 document.addEventListener('DOMContentLoaded', () => {
     document.getElementById("ccHintBtn").addEventListener("click", () => {
         connection.invoke("RequestChineseCheckersHint", roomId);
+    });
+    document.getElementById("ccRulesBtn").addEventListener("click", () => {
+        document.getElementById("ccRulesModal").style.display = "flex";
+    });
+    document.getElementById("ccRulesClose").addEventListener("click", () => {
+        document.getElementById("ccRulesModal").style.display = "none";
+    });
+    document.getElementById("ccRulesModal").addEventListener("click", e => {
+        if (e.target === e.currentTarget) e.currentTarget.style.display = "none";
     });
     document.getElementById("ccBackBtn").addEventListener("click", backToLobby);
     document.getElementById("backToLobby").addEventListener("click", backToLobby);
