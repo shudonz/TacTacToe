@@ -288,7 +288,7 @@ public static class ChineseCheckersEngine
     {
         int score = 0;
         foreach (var piece in room.Pieces.Where(p => p.OwnerIndex == playerIndex))
-            score += 8 - DistanceToGoal(playerIndex, piece.NodeId, room.Players.Count);
+            score += Math.Max(0, 8 - DistanceToGoal(playerIndex, piece.NodeId, room.Players.Count));
         if (HasPlayerFinished(room, playerIndex)) score += 100;
         return score;
     }

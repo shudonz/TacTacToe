@@ -337,7 +337,8 @@ async function init() {
                 await _animateHops(path, color);
 
                 if (destPiece) destPiece.style.visibility = '';
-                renderBoard(myTurn);
+                const curNow = state.players[state.currentPlayerIndex];
+                renderBoard(!!curNow && curNow.name === myName);
                 _hopLock = false;
             } else {
                 renderState();
