@@ -36,10 +36,55 @@
 
             <div class="cc-actions">
                 <button id="ccHintBtn" class="btn btn-sp">&#128161; Hint</button>
+                <button id="ccRulesBtn" class="btn btn-outline">&#128218; Rules</button>
                 <button id="ccBackBtn" class="btn btn-outline">Back to Lobby</button>
             </div>
             <div id="ccHintBanner" class="cc-hint-banner" style="display:none"></div>
         </main>
+    </div>
+
+    <!-- Rules modal -->
+    <div id="ccRulesModal" class="modal" style="display:none" role="dialog" aria-modal="true" aria-labelledby="ccRulesTitle">
+        <div class="modal-content cc-rules-content">
+            <h3 id="ccRulesTitle">&#127922; Chinese Checkers — Rules &amp; Scoring</h3>
+            <div class="cc-rules-body">
+                <h4>Objective</h4>
+                <p>Be the first player to move all 10 of your marbles from your starting triangle (home corner) into the <strong>opposite</strong> triangle across the board.</p>
+
+                <h4>How to Move</h4>
+                <ul>
+                    <li><strong>Step:</strong> Move one marble one space to any adjacent empty hole.</li>
+                    <li><strong>Jump:</strong> Leap over an adjacent marble (any colour) into the empty hole directly beyond it. You may chain multiple jumps in a single turn — all with the same marble.</li>
+                </ul>
+
+                <h4>Goal Zone Rules</h4>
+                <ul>
+                    <li>Once a marble enters your destination triangle it <strong>cannot leave</strong>.</li>
+                    <li>Marbles in the destination triangle may still hop within it to make room for your remaining marbles.</li>
+                </ul>
+
+                <h4>Winning</h4>
+                <p>The first player to fill their destination triangle with all 10 marbles wins. Play continues to determine 2nd, 3rd place, etc.</p>
+
+                <h4>Scoring</h4>
+                <p>Your score reflects how far your marbles have advanced:</p>
+                <ul>
+                    <li>Each marble scores <strong>8 − distance</strong> to its nearest destination hole (0–8 points per marble).</li>
+                    <li>Filling your destination triangle completely earns a <strong>+100 bonus</strong>.</li>
+                    <li>Maximum possible score: 10 × 8 + 100 = <strong>180 points</strong>.</li>
+                </ul>
+
+                <h4>Tips</h4>
+                <ul>
+                    <li>Look for long jump chains — they advance marbles without using extra turns.</li>
+                    <li>Fill your destination triangle from the tip inward so you never block yourself.</li>
+                    <li>Use the <strong>💡 Hint</strong> button if you get stuck.</li>
+                </ul>
+            </div>
+            <div class="modal-actions">
+                <button id="ccRulesClose" class="btn btn-outline">Close</button>
+            </div>
+        </div>
     </div>
 
     <div id="resultOverlay" class="result-overlay" style="display:none">

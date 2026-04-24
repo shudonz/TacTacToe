@@ -14,6 +14,15 @@ public class ChineseCheckersRoom
     public string? WinnerName { get; set; }
     public List<ChineseCheckersPiece> Pieces { get; set; } = [];
     public long StartedAtMs { get; set; }
+    public ChineseCheckersLastMove? LastMove { get; set; }
+}
+
+public class ChineseCheckersLastMove
+{
+    public string PieceId { get; set; } = "";
+    public int OwnerIndex { get; set; }
+    public List<string> Path { get; set; } = []; // all node IDs from start to end (inclusive)
+    public bool IsJump { get; set; }
 }
 
 public class ChineseCheckersSettings
@@ -172,11 +181,34 @@ public static class ChineseCheckersEngine
     public static bool TryMove(ChineseCheckersRoom room, int playerIndex, string pieceId, string toNodeId)
     {
         var legal = GetLegalMoves(room, playerIndex);
-        if (!legal.Any(m => m.PieceId == pieceId && m.ToNodeId == toNodeId))
-            return false;
+        var legalMove = legal.FirstOrDefault(m => m.PieceId == pieceId && m.ToNodeId == toNodeId);
+        if (legalMove == null) return false;
 
         var piece = room.Pieces.FirstOrDefault(p => p.Id == pieceId && p.OwnerIndex == playerIndex);
         if (piece == null) return false;
+
+        // Compute the full hop path before moving the piece
+        List<string> path;
+        if (legalMove.IsJump)
+        {
+            var occupancy = BuildOccupancy(room);
+            int targetArm = TargetArm(playerIndex, room.Players.Count);
+            bool inGoal = _armNodes[targetArm].Contains(piece.NodeId);
+            path = ComputeJumpPath(piece.NodeId, toNodeId, occupancy, inGoal ? targetArm : -1);
+        }
+        else
+        {
+            path = [piece.NodeId, toNodeId];
+        }
+
+        room.LastMove = new ChineseCheckersLastMove
+        {
+            PieceId  = pieceId,
+            OwnerIndex = playerIndex,
+            Path     = path,
+            IsJump   = legalMove.IsJump
+        };
+
         piece.NodeId = toNodeId;
         return true;
     }
@@ -194,9 +226,10 @@ public static class ChineseCheckersEngine
         if (moves.Count == 0)
             return new ChineseCheckersHint { HintAvailable = false, Description = "No legal moves available." };
 
+        int targetArm = TargetArm(playerIndex, room.Players.Count);
         var best = moves
-            .OrderByDescending(m => ScoreMove(room, playerIndex, m))
-            .ThenByDescending(m => PieceDistanceToGoal(room, playerIndex, m.PieceId)) // advance laggards first
+            .OrderByDescending(m => ScoreMove(room, playerIndex, m, targetArm))
+            .ThenByDescending(m => PieceProgressScore(room, playerIndex, m.PieceId, targetArm))
             .ThenByDescending(m => m.IsJump)
             .First();
 
@@ -218,12 +251,12 @@ public static class ChineseCheckersEngine
         var moves = GetLegalMoves(room, playerIndex);
         if (moves.Count == 0) return null;
 
-        // Primary:   biggest distance gain toward goal
-        // Secondary: advance laggards first — prefer the piece that is furthest from its goal
-        // Tertiary:  prefer jumps (free distance)
+        int targetArm = TargetArm(playerIndex, room.Players.Count);
+
         return moves
-            .OrderByDescending(m => ScoreMove(room, playerIndex, m))
-            .ThenByDescending(m => PieceDistanceToGoal(room, playerIndex, m.PieceId))
+            .OrderByDescending(m => ScoreMove(room, playerIndex, m, targetArm))
+            // Among equal scores: advance the laggard piece (furthest from its goal)
+            .ThenByDescending(m => PieceProgressScore(room, playerIndex, m.PieceId, targetArm))
             .ThenByDescending(m => m.IsJump)
             .First();
     }
@@ -233,6 +266,22 @@ public static class ChineseCheckersEngine
     {
         var piece = room.Pieces.FirstOrDefault(p => p.Id == pieceId);
         return piece == null ? 0 : DistanceToGoal(playerIndex, piece.NodeId, room.Players.Count);
+    }
+
+    // For secondary sort: pieces outside goal → distance to goal (laggards first);
+    // pieces inside goal → how shallow they are (ring) so shallowest piece moves deeper first.
+    private static int PieceProgressScore(ChineseCheckersRoom room, int playerIndex, string pieceId, int targetArm)
+    {
+        var piece = room.Pieces.FirstOrDefault(p => p.Id == pieceId);
+        if (piece == null) return 0;
+        if (_armNodes[targetArm].Contains(piece.NodeId))
+        {
+            // In goal: the shallowest piece (lowest ring) should move deeper.
+            // Negate so that descending order (used by caller) picks the lowest ring first.
+            var (r, d) = ParseNode(piece.NodeId);
+            return -GetNodeRing(r, d);
+        }
+        return DistanceToGoal(playerIndex, piece.NodeId, room.Players.Count);
     }
 
     public static int ScoreForPlayer(ChineseCheckersRoom room, int playerIndex)
@@ -246,13 +295,89 @@ public static class ChineseCheckersEngine
 
     // ── Private helpers ──────────────────────────────────────────────────────
 
-    private static int ScoreMove(ChineseCheckersRoom room, int playerIndex, ChineseCheckersMove move)
+    // Score a move from the perspective of playerIndex.
+    // Primary scoring axis:
+    //   • Pieces NOT yet in goal: reward reducing distance to goal; bonus for entering goal.
+    //   • Pieces already IN goal: reward moving to a deeper spot (higher ring = closer to tip).
+    private static int ScoreMove(ChineseCheckersRoom room, int playerIndex, ChineseCheckersMove move, int targetArm)
     {
         var piece = room.Pieces.First(p => p.Id == move.PieceId);
-        int gain = DistanceToGoal(playerIndex, piece.NodeId, room.Players.Count)
-                 - DistanceToGoal(playerIndex, move.ToNodeId, room.Players.Count);
-        if (move.IsJump) gain += 1;
-        return gain;
+        bool fromGoal = _armNodes[targetArm].Contains(piece.NodeId);
+        bool toGoal   = _armNodes[targetArm].Contains(move.ToNodeId);
+
+        int score;
+        if (fromGoal && toGoal)
+        {
+            // In goal: reward moving to a deeper spot (higher ring number).
+            var (fr, fd) = ParseNode(piece.NodeId);
+            var (tr, td) = ParseNode(move.ToNodeId);
+            score = GetNodeRing(tr, td) - GetNodeRing(fr, fd);
+        }
+        else
+        {
+            // Normal progression: reward shrinking distance to goal.
+            score = DistanceToGoal(playerIndex, piece.NodeId, room.Players.Count)
+                  - DistanceToGoal(playerIndex, move.ToNodeId, room.Players.Count);
+            // Bonus for entering the goal zone.
+            if (!fromGoal && toGoal) score += 4;
+        }
+
+        if (move.IsJump) score += 1;
+        return score;
+    }
+
+    // BFS from 'from', tracking the parent of each visited node.
+    // Reconstructs the shortest hop path from 'from' to 'to'.
+    // Returns [from, hop1, …, to] or falls back to [from, to] if path not found.
+    private static List<string> ComputeJumpPath(string from, string to, Dictionary<string, string> occupancy, int restrictToArm)
+    {
+        var parent = new Dictionary<string, string>();
+        var visited = new HashSet<string> { from };
+        var queue = new Queue<string>();
+        queue.Enqueue(from);
+
+        while (queue.Count > 0)
+        {
+            var current = queue.Dequeue();
+            if (current == to) break;
+
+            var (cr, cd) = ParseNode(current);
+            foreach (var neighbor in _adjacency[current])
+            {
+                if (!occupancy.ContainsKey(neighbor)) continue;
+                var (nr, nd) = ParseNode(neighbor);
+                int dr = nr - cr, dd = nd - cd;
+                string landing = NodeId(nr + dr, nd + dd);
+
+                if (!_boardNodeSet.Contains(landing)) continue;
+                if (occupancy.ContainsKey(landing)) continue;
+                if (visited.Contains(landing)) continue;
+                if (restrictToArm >= 0 && !_armNodes[restrictToArm].Contains(landing)) continue;
+
+                visited.Add(landing);
+                parent[landing] = current;
+                queue.Enqueue(landing);
+            }
+        }
+
+        if (!parent.ContainsKey(to) && to != from)
+        {
+            // This should only happen if the destination was not reachable via valid jumps,
+            // which GetLegalMoves should have already prevented. Return a direct path as a safe fallback.
+            return [from, to];
+        }
+
+        var path = new List<string>();
+        var node = to;
+        while (node != from)
+        {
+            path.Add(node);
+            if (!parent.TryGetValue(node, out var p)) break;
+            node = p;
+        }
+        path.Add(from);
+        path.Reverse();
+        return path;
     }
 
     // Cube-coordinate distance from 'nodeId' to the nearest node in the target arm.
