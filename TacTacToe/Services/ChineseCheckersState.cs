@@ -276,9 +276,10 @@ public static class ChineseCheckersEngine
         if (piece == null) return 0;
         if (_armNodes[targetArm].Contains(piece.NodeId))
         {
-            // In goal: prefer moving the shallowest (lowest ring) piece so it goes deeper
+            // In goal: the shallowest piece (lowest ring) should move deeper.
+            // Negate so that descending order (used by caller) picks the lowest ring first.
             var (r, d) = ParseNode(piece.NodeId);
-            return -GetNodeRing(r, d); // negate: we order descending, lowest ring = highest priority
+            return -GetNodeRing(r, d);
         }
         return DistanceToGoal(playerIndex, piece.NodeId, room.Players.Count);
     }
@@ -360,7 +361,11 @@ public static class ChineseCheckersEngine
         }
 
         if (!parent.ContainsKey(to) && to != from)
-            return [from, to]; // fallback
+        {
+            // This should only happen if the destination was not reachable via valid jumps,
+            // which GetLegalMoves should have already prevented. Return a direct path as a safe fallback.
+            return [from, to];
+        }
 
         var path = new List<string>();
         var node = to;
