@@ -5183,7 +5183,7 @@ button.ce-pile {
 
 .difficulty-opt.active {
     background: var(--electric-cyan);
-    color: #0F172A;
+    color: var(--bg);
     box-shadow: 0 2px 12px var(--electric-cyan-glow);
 }
 
@@ -5198,7 +5198,7 @@ button.ce-pile {
 /* Play button next to the toggle */
 .btn-play-selected {
     background: linear-gradient(135deg, var(--electric-cyan) 0%, #00B4D8 100%) !important;
-    color: #0F172A !important;
+    color: var(--bg) !important;
     border-color: transparent !important;
     box-shadow: 0 4px 18px var(--electric-cyan-glow) !important;
     font-weight: 800 !important;
@@ -5219,7 +5219,7 @@ button.ce-pile {
     border: none;
     border-radius: var(--radius-sm);
     background: linear-gradient(135deg, var(--electric-cyan) 0%, #0072FF 100%);
-    color: #0F172A;
+    color: var(--bg);
     font-family: var(--font);
     font-weight: 800;
     font-size: 0.92rem;
@@ -5349,7 +5349,7 @@ button.ce-pile {
 .lb-sticky-me {
     position: sticky;
     bottom: 0;
-    background: rgba(15, 37, 51, 0.95);
+    background: var(--surface-solid);
     border-top: 1px solid var(--glass-border);
     padding: 8px 12px;
     display: flex;
