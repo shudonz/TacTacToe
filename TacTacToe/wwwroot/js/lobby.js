@@ -704,13 +704,32 @@ async function init() {
     await connection.start();
     updateSections();
 
-    // Single player — Tic Tac Toe
-    document.getElementById("tttRegularBtn").addEventListener("click", () => { sessionStorage.setItem("isSinglePlayer", "1"); spInvoke("StartSinglePlayerTTT", "regular"); });
-    document.getElementById("tttHardBtn").addEventListener("click",    () => { sessionStorage.setItem("isSinglePlayer", "1"); spInvoke("StartSinglePlayerTTT", "hard"); });
+    // Single player — Tic Tac Toe (difficulty segmented control)
+    let tttDifficulty = "regular";
+    document.querySelectorAll("#tttDifficultyToggle .difficulty-opt").forEach(btn => {
+        btn.addEventListener("click", () => {
+            document.querySelectorAll("#tttDifficultyToggle .difficulty-opt").forEach(b => b.classList.remove("active"));
+            btn.classList.add("active");
+            tttDifficulty = btn.dataset.difficulty;
+        });
+    });
+    document.getElementById("tttPlayBtn").addEventListener("click", () => {
+        sessionStorage.setItem("isSinglePlayer", "1");
+        spInvoke("StartSinglePlayerTTT", tttDifficulty);
+    });
 
-    // Single player — Yahtzee
-    document.getElementById("yahtzeeRegularBtn").addEventListener("click", () => spInvoke("StartYahtzeeSinglePlayer", "regular"));
-    document.getElementById("yahtzeeHardBtn").addEventListener("click",    () => spInvoke("StartYahtzeeSinglePlayer", "hard"));
+    // Single player — Yahtzee (difficulty segmented control)
+    let yahtzeeDifficulty = "regular";
+    document.querySelectorAll("#yahtzeeDifficultyToggle .difficulty-opt").forEach(btn => {
+        btn.addEventListener("click", () => {
+            document.querySelectorAll("#yahtzeeDifficultyToggle .difficulty-opt").forEach(b => b.classList.remove("active"));
+            btn.classList.add("active");
+            yahtzeeDifficulty = btn.dataset.difficulty;
+        });
+    });
+    document.getElementById("yahtzeePlayBtn").addEventListener("click", () => {
+        spInvoke("StartYahtzeeSinglePlayer", yahtzeeDifficulty);
+    });
 
     // Auto-join via invite link (defaults to Yahtzee when no game query is provided)
     const params = new URLSearchParams(window.location.search);
@@ -876,10 +895,18 @@ async function init() {
         if (e.key === "Escape") document.getElementById("createCrazyEightsRoomCancelBtn").click();
     });
 
-    // Concentration single player
-    document.getElementById("concentrationEasyBtn").addEventListener("click",    () => spConcentration("easy"));
-    document.getElementById("concentrationRegularBtn").addEventListener("click", () => spConcentration("regular"));
-    document.getElementById("concentrationHardBtn").addEventListener("click",    () => spConcentration("hard"));
+    // Concentration single player (difficulty segmented control)
+    let concentrationDifficulty = "regular";
+    document.querySelectorAll("#concentrationDifficultyToggle .difficulty-opt").forEach(btn => {
+        btn.addEventListener("click", () => {
+            document.querySelectorAll("#concentrationDifficultyToggle .difficulty-opt").forEach(b => b.classList.remove("active"));
+            btn.classList.add("active");
+            concentrationDifficulty = btn.dataset.difficulty;
+        });
+    });
+    document.getElementById("concentrationPlayBtn").addEventListener("click", () => {
+        spConcentration(concentrationDifficulty);
+    });
 
     // Create Concentration room
     document.getElementById("createConcentrationRoomBtn").addEventListener("click", () => {

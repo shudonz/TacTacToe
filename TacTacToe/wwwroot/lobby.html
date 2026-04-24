@@ -182,24 +182,24 @@
                     </div>
 
                     <div id="tttPlaySections" class="game-play-sections" style="display:none">
+                    <div class="mode-cards">
                     <div class="detail-section">
                         <h3 class="detail-section-title">&#129302; Single Player</h3>
                         <p class="lobby-hint">Play against the computer — pick your difficulty.</p>
-                        <div id="tttSinglePlayer" class="sp-section">
-                            <span class="sp-label">vs Computer</span>
-                            <div class="sp-btns">
-                                <button id="tttRegularBtn" class="btn btn-sp">Regular</button>
-                                <button id="tttHardBtn" class="btn btn-sp btn-sp-hard">&#128128; Hard</button>
-                            </div>
+                        <div class="difficulty-toggle" id="tttDifficultyToggle">
+                            <button class="difficulty-opt active" data-difficulty="regular" id="tttRegularOpt">Regular</button>
+                            <button class="difficulty-opt difficulty-hard" data-difficulty="hard" id="tttHardOpt">&#128128; Hard</button>
                         </div>
+                        <button id="tttPlayBtn" class="btn btn-sp btn-play-selected" style="margin-top:0.5rem;">&#9654; Play</button>
                     </div>
 
                     <div id="tttRoomsSection" class="detail-section">
                         <h3 class="detail-section-title">&#127760; Multiplayer</h3>
                         <p class="lobby-hint">Create a room and share the link with a friend, or join an open room below.</p>
-                        <button id="createTttRoomBtn" class="btn btn-accept detail-create-btn">&#43; Create Room</button>
+                        <button id="createTttRoomBtn" class="btn-create-room">&#43; Create Room</button>
                         <div id="tttRoomList" class="player-list"></div>
                         <p id="noTttRooms" class="lobby-hint lobby-no-rooms" style="display:none;">No open rooms right now — create one to get started!</p>
+                    </div>
                     </div>
                     </div>
                 </div>
@@ -229,24 +229,24 @@
                     </div>
 
                     <div id="yahtzeePlaySections" class="game-play-sections" style="display:none">
+                    <div class="mode-cards">
                     <div class="detail-section">
                         <h3 class="detail-section-title">&#129302; Single Player</h3>
                         <p class="lobby-hint">Challenge the computer — choose your difficulty.</p>
-                        <div id="yahtzeeSpSection" class="sp-section">
-                            <span class="sp-label">vs Computer</span>
-                            <div class="sp-btns">
-                                <button id="yahtzeeRegularBtn" class="btn btn-sp">Regular</button>
-                                <button id="yahtzeeHardBtn" class="btn btn-sp btn-sp-hard">&#128128; Hard</button>
-                            </div>
+                        <div class="difficulty-toggle" id="yahtzeeDifficultyToggle">
+                            <button class="difficulty-opt active" data-difficulty="regular" id="yahtzeeRegularOpt">Regular</button>
+                            <button class="difficulty-opt difficulty-hard" data-difficulty="hard" id="yahtzeeHardOpt">&#128128; Hard</button>
                         </div>
+                        <button id="yahtzeePlayBtn" class="btn btn-sp btn-play-selected" style="margin-top:0.5rem;">&#9654; Play</button>
                     </div>
 
                     <div id="yahtzeeSection" class="detail-section">
                         <h3 class="detail-section-title">&#127760; Multiplayer</h3>
                         <p class="lobby-hint">Join an open room or create your own and invite friends.</p>
-                        <button id="createRoomBtn" class="btn btn-accept detail-create-btn">&#43; Create Room</button>
+                        <button id="createRoomBtn" class="btn-create-room">&#43; Create Room</button>
                         <div id="roomList" class="player-list"></div>
                         <p id="noRooms" class="lobby-hint lobby-no-rooms" style="display:none;">No open rooms right now — create one to get started!</p>
+                    </div>
                     </div>
                     </div>
                 </div>
@@ -276,6 +276,7 @@
                     </div>
 
                     <div id="slotsPlaySections" class="game-play-sections" style="display:none">
+                    <div class="mode-cards">
                     <div id="slotsSection" class="detail-section">
                         <h3 class="detail-section-title">&#129302; Single Player</h3>
                         <p class="lobby-hint">Play against the machine — just you vs the reels.</p>
@@ -290,9 +291,10 @@
                     <div class="detail-section">
                         <h3 class="detail-section-title">&#127760; Multiplayer</h3>
                         <p class="lobby-hint">Create a room (up to 4 players) or join an open one.</p>
-                        <button id="createSlotsRoomBtn" class="btn btn-accept detail-create-btn">&#43; Create Room</button>
+                        <button id="createSlotsRoomBtn" class="btn-create-room">&#43; Create Room</button>
                         <div id="slotsRoomList" class="player-list"></div>
                         <p id="noSlotsRooms" class="lobby-hint lobby-no-rooms" style="display:none;">No open rooms right now — create one to get started!</p>
+                    </div>
                     </div>
                     </div>
                 </div>
@@ -322,25 +324,25 @@
                     </div>
 
                     <div id="concentrationPlaySections" class="game-play-sections" style="display:none">
-                    <div id="concentrationSection" class="detail-section">
+                    <div class="mode-cards">
+                    <div class="detail-section">
                         <h3 class="detail-section-title">&#129302; Single Player</h3>
                         <p class="lobby-hint">Play against the computer — choose how sharp the AI memory is.</p>
-                        <div class="sp-section">
-                            <span class="sp-label">vs Computer</span>
-                            <div class="sp-btns">
-                                <button id="concentrationEasyBtn"    class="btn btn-sp" data-tooltip="Remembers: 10%&#10;Misses: 90%">Easy</button>
-                                <button id="concentrationRegularBtn" class="btn btn-sp" data-tooltip="Remembers: 70%&#10;Misses: 30%">Regular</button>
-                                <button id="concentrationHardBtn"    class="btn btn-sp btn-sp-hard" data-tooltip="Remembers: 90%&#10;Misses: 10%">&#128128; Hard</button>
-                            </div>
+                        <div class="difficulty-toggle" id="concentrationDifficultyToggle">
+                            <button class="difficulty-opt" data-difficulty="easy" id="concentrationEasyOpt" title="Remembers: 10%, Misses: 90%">Easy</button>
+                            <button class="difficulty-opt active" data-difficulty="regular" id="concentrationRegularOpt" title="Remembers: 70%, Misses: 30%">Regular</button>
+                            <button class="difficulty-opt difficulty-hard" data-difficulty="hard" id="concentrationHardOpt" title="Remembers: 90%, Misses: 10%">&#128128; Hard</button>
                         </div>
+                        <button id="concentrationPlayBtn" class="btn btn-sp btn-play-selected" style="margin-top:0.5rem;">&#9654; Play</button>
                     </div>
 
                     <div class="detail-section">
                         <h3 class="detail-section-title">&#127760; Multiplayer</h3>
                         <p class="lobby-hint">Create a room (2–4 players) or join an open one.</p>
-                        <button id="createConcentrationRoomBtn" class="btn btn-accept detail-create-btn">&#43; Create Room</button>
+                        <button id="createConcentrationRoomBtn" class="btn-create-room">&#43; Create Room</button>
                         <div id="concentrationRoomList" class="player-list"></div>
                         <p id="noConcentrationRooms" class="lobby-hint lobby-no-rooms" style="display:none;">No open rooms right now — create one to get started!</p>
+                    </div>
                     </div>
                     </div>
                 </div>
@@ -370,6 +372,7 @@
                     </div>
 
                     <div id="puzzleTimePlaySections" class="game-play-sections" style="display:none">
+                    <div class="mode-cards">
                     <div class="detail-section">
                         <h3 class="detail-section-title">&#129302; Single Player</h3>
                         <p class="lobby-hint">Pick a pre-designed image and piece count (5 / 25 / 50 / 100).</p>
@@ -399,9 +402,10 @@
                     <div class="detail-section">
                         <h3 class="detail-section-title">&#127760; Multiplayer</h3>
                         <p class="lobby-hint">Create a room for 2–4 players and solve the puzzle together in real-time.</p>
-                        <button id="createPuzzleTimeRoomBtn" class="btn btn-accept detail-create-btn">&#43; Create Room</button>
+                        <button id="createPuzzleTimeRoomBtn" class="btn-create-room">&#43; Create Room</button>
                         <div id="puzzleTimeRoomList" class="player-list"></div>
                         <p id="noPuzzleTimeRooms" class="lobby-hint lobby-no-rooms" style="display:none;">No open rooms right now — create one to get started!</p>
+                    </div>
                     </div>
                     </div>
                 </div>
@@ -430,6 +434,7 @@
                     </div>
 
                     <div id="solitairePlaySections" class="game-play-sections" style="display:none">
+                    <div class="mode-cards">
                     <div id="solitaireSingleSection" class="detail-section">
                         <h3 class="detail-section-title">&#129302; Single Player</h3>
                         <p class="lobby-hint">Play alone against the clock.</p>
@@ -444,9 +449,10 @@
                     <div class="detail-section">
                         <h3 class="detail-section-title">&#127760; Multiplayer</h3>
                         <p class="lobby-hint">Create a room (up to 4 players) — everyone gets the same deck and competes for the best score!</p>
-                        <button id="createSolitaireRoomBtn" class="btn btn-accept detail-create-btn">&#43; Create Room</button>
+                        <button id="createSolitaireRoomBtn" class="btn-create-room">&#43; Create Room</button>
                         <div id="solitaireRoomList" class="player-list"></div>
                         <p id="noSolitaireRooms" class="lobby-hint lobby-no-rooms" style="display:none;">No open rooms right now — create one to get started!</p>
+                    </div>
                     </div>
                     </div>
                 </div>
@@ -476,6 +482,7 @@
                     </div>
 
                     <div id="pegsolitairePlaySections" class="game-play-sections" style="display:none">
+                    <div class="mode-cards">
                     <div class="detail-section">
                         <h3 class="detail-section-title">&#129302; Single Player</h3>
                         <p class="lobby-hint">Play solo and aim for one peg left.</p>
@@ -490,9 +497,10 @@
                     <div class="detail-section">
                         <h3 class="detail-section-title">&#127760; Multiplayer</h3>
                         <p class="lobby-hint">Create a room (up to 4 players) or join one and race for the highest score.</p>
-                        <button id="createPegSolitaireRoomBtn" class="btn btn-accept detail-create-btn">&#43; Create Room</button>
+                        <button id="createPegSolitaireRoomBtn" class="btn-create-room">&#43; Create Room</button>
                         <div id="pegSolitaireRoomList" class="player-list"></div>
                         <p id="noPegSolitaireRooms" class="lobby-hint lobby-no-rooms" style="display:none;">No open rooms right now — create one to get started!</p>
+                    </div>
                     </div>
                     </div>
                 </div>
@@ -522,6 +530,7 @@
                     </div>
 
                     <div id="chineseCheckersPlaySections" class="game-play-sections" style="display:none">
+                    <div class="mode-cards">
                     <div class="detail-section">
                         <h3 class="detail-section-title">&#129302; Single Player</h3>
                         <p class="lobby-hint">Choose how many computer opponents you want to face (1–5).</p>
@@ -543,9 +552,10 @@
                     <div class="detail-section">
                         <h3 class="detail-section-title">&#127760; Multiplayer</h3>
                         <p class="lobby-hint">Create a room or join an existing one.</p>
-                        <button id="createChineseCheckersRoomBtn" class="btn btn-accept detail-create-btn">&#43; Create Room</button>
+                        <button id="createChineseCheckersRoomBtn" class="btn-create-room">&#43; Create Room</button>
                         <div id="chineseCheckersRoomList" class="player-list"></div>
                         <p id="noChineseCheckersRooms" class="lobby-hint lobby-no-rooms" style="display:none;">No open rooms right now — create one to get started!</p>
+                    </div>
                     </div>
                     </div>
                 </div>
@@ -575,6 +585,7 @@
                     </div>
 
                     <div id="crazyEightsPlaySections" class="game-play-sections" style="display:none">
+                    <div class="mode-cards">
                     <div class="detail-section">
                         <h3 class="detail-section-title">&#129302; Single Player</h3>
                         <p class="lobby-hint">Choose how many computer opponents you want to face (1–3).</p>
@@ -594,9 +605,10 @@
                     <div class="detail-section">
                         <h3 class="detail-section-title">&#127760; Multiplayer</h3>
                         <p class="lobby-hint">Create a room (up to 4 players) or join an open one.</p>
-                        <button id="createCrazyEightsRoomBtn" class="btn btn-accept detail-create-btn">&#43; Create Room</button>
+                        <button id="createCrazyEightsRoomBtn" class="btn-create-room">&#43; Create Room</button>
                         <div id="crazyEightsRoomList" class="player-list"></div>
                         <p id="noCrazyEightsRooms" class="lobby-hint lobby-no-rooms" style="display:none;">No open rooms right now — create one to get started!</p>
+                    </div>
                     </div>
                     </div>
                 </div>
@@ -626,6 +638,7 @@
                     </div>
 
                     <div id="battleBoatPlaySections" class="game-play-sections" style="display:none">
+                    <div class="mode-cards">
                     <div class="detail-section">
                         <h3 class="detail-section-title">&#129302; Single Player</h3>
                         <p class="lobby-hint">Play against the computer fleet.</p>
@@ -640,9 +653,10 @@
                     <div class="detail-section">
                         <h3 class="detail-section-title">&#127760; Multiplayer</h3>
                         <p class="lobby-hint">Create a room or join an open one for 2-player battles.</p>
-                        <button id="createBattleBoatRoomBtn" class="btn btn-accept detail-create-btn">&#43; Create Room</button>
+                        <button id="createBattleBoatRoomBtn" class="btn-create-room">&#43; Create Room</button>
                         <div id="battleBoatRoomList" class="player-list"></div>
                         <p id="noBattleBoatRooms" class="lobby-hint lobby-no-rooms" style="display:none;">No open rooms right now — create one to get started!</p>
+                    </div>
                     </div>
                     </div>
                 </div>

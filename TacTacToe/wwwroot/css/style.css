@@ -116,7 +116,7 @@
     --elephant:    #94979A;
 
     /* Backgrounds */
-    --bg:            #0C2230;                        /* deeper than Firefly */
+    --bg:            #0F172A;                        /* deep navy — reduced eye strain */
     --bg-subtle:     #112D38;                        /* Firefly */
     --surface:       rgba(22, 82, 103, 0.32);        /* Oceanic Teal glass */
     --surface-hover: rgba(22, 82, 103, 0.50);
@@ -133,10 +133,17 @@
     --accent-hard:   #7A4048;                        /* ⚠ accessibility exception: muted rust */
     --accent-hard-glow: rgba(122, 64, 72, 0.35);
 
+    /* GUI Overhaul — gamification palette */
+    --electric-cyan:      #00E5FF;                   /* Play / Join actions */
+    --electric-cyan-glow: rgba(0, 229, 255, 0.35);
+    --deep-orange:        #FF3D00;                   /* Hard mode / Destructive */
+    --deep-orange-glow:   rgba(255, 61, 0, 0.40);
+
     /* Typography */
     --text:          #F2F4F1;                        /* Carrara White */
     --text-mid:      #C4E7E9;                        /* Jagged Ice */
     --text-dim:      #94979A;                        /* Elephant */
+    --font-mono:     "Courier New", Courier, monospace;
 
     /* Shape */
     --radius:        20px;
@@ -5124,3 +5131,237 @@ button.ce-pile {
         max-height: 60vw;
     }
 }
+
+/* ============================================================
+   GUI OVERHAUL — Visual Hierarchy, Thumb-Zone & Gamification
+   ============================================================ */
+
+/* ── Mode Cards: side-by-side Single Player / Multiplayer ── */
+.mode-cards {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+    align-items: start;
+}
+
+@media (max-width: 600px) {
+    .mode-cards { grid-template-columns: 1fr; }
+}
+
+/* ── Difficulty Segmented Control (pill toggle) ── */
+.difficulty-toggle {
+    display: inline-flex;
+    background: rgba(196, 231, 233, 0.04);
+    border: 1.5px solid var(--glass-border);
+    border-radius: 50px;
+    padding: 3px;
+    gap: 2px;
+}
+
+.difficulty-opt {
+    padding: 8px 18px;
+    border-radius: 50px;
+    border: none;
+    background: transparent;
+    color: var(--text-dim);
+    font-family: var(--font);
+    font-weight: 700;
+    font-size: 0.85rem;
+    cursor: pointer;
+    letter-spacing: 0.03em;
+    transition: all var(--transition);
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+    user-select: none;
+    white-space: nowrap;
+}
+
+.difficulty-opt:hover {
+    color: var(--text);
+    background: rgba(196, 231, 233, 0.07);
+}
+
+.difficulty-opt.active {
+    background: var(--electric-cyan);
+    color: #0F172A;
+    box-shadow: 0 2px 12px var(--electric-cyan-glow);
+}
+
+.difficulty-hard { color: var(--text-dim); }
+.difficulty-hard:hover { color: var(--deep-orange); }
+.difficulty-hard.active {
+    background: var(--deep-orange);
+    color: #fff;
+    box-shadow: 0 2px 14px var(--deep-orange-glow), 0 0 22px rgba(255, 61, 0, 0.18);
+}
+
+/* Play button next to the toggle */
+.btn-play-selected {
+    background: linear-gradient(135deg, var(--electric-cyan) 0%, #00B4D8 100%) !important;
+    color: #0F172A !important;
+    border-color: transparent !important;
+    box-shadow: 0 4px 18px var(--electric-cyan-glow) !important;
+    font-weight: 800 !important;
+}
+.btn-play-selected:hover {
+    box-shadow: 0 6px 28px var(--electric-cyan-glow) !important;
+    background: linear-gradient(135deg, #22eeff 0%, #00C4E8 100%) !important;
+    transform: translateY(-1px);
+}
+
+/* ── Create Room — high-contrast gradient button ── */
+.btn-create-room {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 12px 20px;
+    border: none;
+    border-radius: var(--radius-sm);
+    background: linear-gradient(135deg, var(--electric-cyan) 0%, #0072FF 100%);
+    color: #0F172A;
+    font-family: var(--font);
+    font-weight: 800;
+    font-size: 0.92rem;
+    letter-spacing: 0.02em;
+    cursor: pointer;
+    transition: all var(--transition);
+    box-shadow: 0 4px 24px var(--electric-cyan-glow);
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+    width: 100%;
+}
+.btn-create-room:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 36px var(--electric-cyan-glow);
+    background: linear-gradient(135deg, #22eeff 0%, #0082ff 100%);
+}
+.btn-create-room:active { transform: translateY(0) scale(0.98); }
+
+/* ── Leaderboard Podium (Hall of Fame) ── */
+.lb-podium {
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+    gap: 8px;
+    padding: 0.25rem 0 0;
+}
+
+.lb-podium-slot {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    flex: 1;
+    max-width: 110px;
+    text-align: center;
+}
+
+.lb-podium-crown {
+    font-size: 1.2rem;
+    line-height: 1;
+    min-height: 1.4rem;
+}
+
+.lb-podium-avatar {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    background: var(--glass);
+    border: 2px solid var(--glass-border);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.2rem;
+    overflow: hidden;
+    flex-shrink: 0;
+}
+
+.lb-podium-1st .lb-podium-avatar {
+    width: 52px;
+    height: 52px;
+    border-color: #FFD700;
+    box-shadow: 0 0 16px rgba(255, 215, 0, 0.45);
+}
+.lb-podium-2nd .lb-podium-avatar {
+    border-color: #C0C0C0;
+    box-shadow: 0 0 10px rgba(192, 192, 192, 0.30);
+}
+.lb-podium-3rd .lb-podium-avatar {
+    border-color: #CD7F32;
+    box-shadow: 0 0 10px rgba(205, 127, 50, 0.30);
+}
+
+.lb-podium-name {
+    font-size: 0.74rem;
+    font-weight: 700;
+    color: var(--text);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 90px;
+}
+.lb-podium-name.lb-podium-you { color: var(--electric-cyan); }
+
+.lb-podium-score {
+    font-size: 0.75rem;
+    font-weight: 800;
+    font-family: var(--font-mono);
+    color: var(--text-mid);
+}
+
+.lb-podium-bar {
+    width: 100%;
+    border-radius: 6px 6px 0 0;
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+    padding-bottom: 6px;
+    font-size: 0.9rem;
+    font-weight: 900;
+}
+.lb-podium-1st .lb-podium-bar {
+    height: 68px;
+    background: linear-gradient(180deg, rgba(255,215,0,0.22) 0%, rgba(255,215,0,0.06) 100%);
+    border: 1px solid rgba(255,215,0,0.28);
+    color: #FFD700;
+}
+.lb-podium-2nd .lb-podium-bar {
+    height: 50px;
+    background: linear-gradient(180deg, rgba(192,192,192,0.16) 0%, rgba(192,192,192,0.04) 100%);
+    border: 1px solid rgba(192,192,192,0.20);
+    color: #C0C0C0;
+}
+.lb-podium-3rd .lb-podium-bar {
+    height: 36px;
+    background: linear-gradient(180deg, rgba(205,127,50,0.16) 0%, rgba(205,127,50,0.04) 100%);
+    border: 1px solid rgba(205,127,50,0.20);
+    color: #CD7F32;
+}
+
+/* Table below podium (ranks 4+) */
+.lb-rest { margin-top: 0.5rem; }
+
+/* Monospace for all leaderboard score cells */
+.lb-score { font-family: var(--font-mono); }
+
+/* ── Sticky "Your Rank" bar ── */
+.lb-sticky-me {
+    position: sticky;
+    bottom: 0;
+    background: rgba(15, 37, 51, 0.95);
+    border-top: 1px solid var(--glass-border);
+    padding: 8px 12px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.84rem;
+    font-weight: 700;
+    color: var(--electric-cyan);
+    border-radius: 0 0 var(--radius-sm) var(--radius-sm);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    margin-top: 4px;
+}
+.lb-sticky-me-rank { color: var(--text-dim); font-size: 0.75rem; font-weight: 600; }
+.lb-sticky-me-score { font-family: var(--font-mono); font-size: 0.88rem; margin-left: auto; }
