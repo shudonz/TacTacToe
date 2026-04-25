@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>TacTacToe &#8211; Fox and Hounds</title>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="/css/style.css" rel="stylesheet">
+    <style>
+        /* ── Fox and Hounds game styles ── */
+        .fah-page { display:flex; flex-direction:column; gap:0.75rem; padding:0.75rem; max-width:600px; margin:0 auto; }
+
+        .fah-header { display:flex; align-items:center; justify-content:space-between; gap:0.75rem; flex-wrap:wrap; }
+
+        /* Player chips */
+        .fah-player-bar { display:flex; flex-wrap:wrap; gap:0.55rem; }
+        .fah-player-chip {
+            display:flex; align-items:center; gap:0.5rem;
+            background:rgba(255,255,255,0.06); border:2px solid transparent;
+            border-radius:40px; padding:0.28rem 0.85rem 0.28rem 0.45rem;
+            font-size:0.85rem; color:var(--text-dim); transition:all 0.25s;
+        }
+        .fah-player-chip.active { border-color:var(--accent); color:var(--text); background:rgba(18,145,158,0.14); }
+        .fah-player-chip.is-me { font-weight:700; }
+        .fah-player-chip .chip-role { font-size:0.78rem; color:var(--text-dim); }
+        .fah-player-chip .chip-icon { font-size:1.1rem; line-height:1; }
+
+        /* Board */
+        .fah-board-wrap {
+            aspect-ratio:1; width:100%; max-width:480px; margin:0 auto;
+            position:relative;
+        }
+        .fah-board {
+            display:grid; grid-template-columns:repeat(8,1fr); grid-template-rows:repeat(8,1fr);
+            width:100%; height:100%; border:2px solid rgba(255,255,255,0.15); border-radius:8px; overflow:hidden;
+        }
+        .fah-cell {
+            aspect-ratio:1; display:flex; align-items:center; justify-content:center;
+            font-size:clamp(16px,4vw,30px); position:relative; cursor:default;
+            transition:background 0.15s;
+        }
+        .fah-cell.dark  { background:#4a3728; }
+        .fah-cell.light { background:#f0d9b5; }
+        .fah-cell.dark:hover.clickable { background:#6b5a3e; cursor:pointer; }
+        .fah-cell.legal-target { background:rgba(18,145,158,0.55) !important; cursor:pointer; }
+        .fah-cell.legal-target::after {
+            content:''; position:absolute; width:35%; height:35%;
+            border-radius:50%; background:rgba(18,145,158,0.7);
+            pointer-events:none;
+        }
+        .fah-cell.last-from { outline:2px dashed rgba(251,191,36,0.7); outline-offset:-2px; }
+        .fah-cell.last-to   { outline:2px solid #fbbf24; outline-offset:-2px; }
+        .fah-cell.selected-piece { background:rgba(251,191,36,0.4) !important; }
+
+        /* Piece tokens */
+        .piece-fox, .piece-hound {
+            width:72%; height:72%; border-radius:50%; display:flex; align-items:center;
+            justify-content:center; font-size:clamp(14px,3.2vw,26px);
+            box-shadow:0 2px 8px rgba(0,0,0,0.5); cursor:pointer;
+            transition:transform 0.15s, box-shadow 0.15s;
+            user-select:none; position:relative; z-index:1;
+        }
+        .piece-fox   { background:radial-gradient(circle at 35% 35%, #ff9a3c, #c8460a); }
+        .piece-hound { background:radial-gradient(circle at 35% 35%, #8bb3e8, #2955a0); }
+        .piece-fox.selectable, .piece-hound.selectable {
+            cursor:pointer; box-shadow:0 0 0 3px var(--accent), 0 2px 8px rgba(0,0,0,0.5);
+            animation:piece-pulse 1.2s ease-in-out infinite;
+        }
+        .piece-fox.selected, .piece-hound.selected {
+            transform:scale(1.18); box-shadow:0 0 0 4px #fbbf24, 0 4px 14px rgba(0,0,0,0.5);
+            animation:none;
+        }
+        @keyframes piece-pulse {
+            0%,100% { box-shadow:0 0 0 2px var(--accent), 0 2px 8px rgba(0,0,0,0.4); }
+            50%      { box-shadow:0 0 0 5px rgba(18,145,158,0.5), 0 2px 8px rgba(0,0,0,0.4); }
+        }
+
+        /* Piece move animation */
+        .piece-flying {
+            position:fixed; pointer-events:none; z-index:9000;
+            border-radius:50%; display:flex; align-items:center; justify-content:center;
+            font-size:clamp(14px,3.2vw,26px);
+            box-shadow:0 4px 16px rgba(0,0,0,0.6);
+        }
+
+        /* Hint banner */
+        .fah-hint-banner {
+            background:rgba(255,203,71,0.13); border:1px solid #fbbf24;
+            border-radius:8px; padding:0.45rem 0.85rem;
+            font-size:0.85rem; color:#fbbf24;
+        }
+
+        /* Action buttons */
+        .fah-actions { display:flex; flex-wrap:wrap; gap:0.55rem; align-items:center; }
+
+        /* Confetti */
+        @keyframes fah-fall { 0%{transform:translateY(-30px) rotate(0deg);opacity:1} 100%{transform:translateY(110vh) rotate(720deg);opacity:0} }
+        .fah-confetti { position:fixed; width:10px; height:10px; border-radius:2px; pointer-events:none; z-index:9999; animation:fah-fall linear forwards; }
+    </style>
+</head>
+<body>
+    <div class="ambient"></div>
+    <div class="noise"></div>
+    <div class="page-content">
+        <nav class="navbar">
+            <button class="ham-btn" onclick="hamOpen()" aria-label="Open menu"><span></span><span></span><span></span></button>
+            <div class="logo-sm"><span class="logo-x">Tac</span><span class="logo-o">Tac</span><span class="logo-x">Toe</span></div>
+            <a href="/profile" class="nav-profile-btn" title="Edit Profile">
+                <span id="navbarAvatarEmoji" class="nav-profile-emoji" style="display:none"></span>
+                <img id="navbarAvatarImg" class="nav-profile-img" src="" alt="Profile" style="display:none">
+                <span id="navbarAvatarPlaceholder" class="nav-profile-placeholder">&#128100;</span>
+                <span id="navbarUsername" class="nav-profile-username"></span>
+            </a>
+        </nav>
+
+        <main class="fah-page">
+            <div class="fah-header glass-card">
+                <h2 style="margin:0">🦊 Fox and Hounds</h2>
+                <div id="fahStatus" class="turn-indicator" style="margin:0">Loading&hellip;</div>
+            </div>
+
+            <div id="fahPlayerBar" class="fah-player-bar glass-card"></div>
+
+            <div class="fah-board-wrap glass-card" style="padding:0.5rem;">
+                <div id="fahBoard" class="fah-board"></div>
+            </div>
+
+            <div class="glass-card" style="display:flex;flex-direction:column;gap:0.6rem;padding:0.85rem;">
+                <div id="fahHintBanner" class="fah-hint-banner" style="display:none"></div>
+                <div class="fah-actions">
+                    <button id="fahHintBtn" class="btn btn-outline">&#128161; Hint</button>
+                    <button id="fahRulesBtn" class="btn btn-outline">&#128218; Rules</button>
+                    <button id="fahBackBtn" class="btn btn-outline">&#8592; Lobby</button>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Rules modal -->
+    <div id="fahRulesModal" class="modal" style="display:none" role="dialog" aria-modal="true" aria-labelledby="fahRulesTitle">
+        <div class="modal-content cc-rules-content">
+            <h3 id="fahRulesTitle">🦊 Fox and Hounds — Rules &amp; Scoring</h3>
+            <div class="cc-rules-body">
+                <h4>Overview</h4>
+                <p>Fox and Hounds is a classic asymmetric strategy game for 2 players played on the dark squares of an 8×8 checkerboard.</p>
+
+                <h4>Setup</h4>
+                <ul>
+                    <li>The <strong>Fox</strong> 🦊 starts on any dark square on the top row (row 0).</li>
+                    <li>Four <strong>Hounds</strong> 🐕 start on the four dark squares of the bottom row (row 7).</li>
+                    <li>Roles are randomly assigned — one player gets the Fox, the other controls all four Hounds.</li>
+                </ul>
+
+                <h4>Movement</h4>
+                <ul>
+                    <li><strong>Fox:</strong> Moves diagonally in any direction (forward <em>or</em> backward) one square at a time.</li>
+                    <li><strong>Hounds:</strong> Each hound moves diagonally <em>forward only</em> (toward row 0). No jumping over pieces.</li>
+                    <li>The <strong>Fox moves first</strong>. Players alternate turns.</li>
+                </ul>
+
+                <h4>Winning</h4>
+                <ul>
+                    <li><strong>Fox wins</strong> if it reaches the hound back-rank (row 7) or if the Hounds have no legal moves.</li>
+                    <li><strong>Hounds win</strong> if they trap the Fox so it has no legal moves.</li>
+                </ul>
+
+                <h4>Scoring</h4>
+                <ul>
+                    <li><strong>Fox score:</strong> 10 × row reached + 100 bonus for winning.</li>
+                    <li><strong>Hounds score:</strong> 10 × (7 − fox row) + number of moves made + 100 bonus for winning.</li>
+                </ul>
+
+                <h4>Strategy Tips</h4>
+                <ul>
+                    <li>Fox: Try to find a gap between hounds and dart through — think ahead two moves.</li>
+                    <li>Hounds: Advance in a diagonal wall to cut off the Fox's escape routes.</li>
+                    <li>Fox: Backward moves can bait hounds into overextending.</li>
+                    <li>Use the <strong>💡 Hint</strong> button when stuck!</li>
+                </ul>
+            </div>
+            <div class="modal-actions">
+                <button id="fahRulesClose" class="btn btn-outline">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Game over overlay -->
+    <div id="resultOverlay" class="result-overlay" style="display:none">
+        <div class="result-card">
+            <h2 id="resultText"></h2>
+            <p id="resultSub" style="color:var(--text-dim);margin:0.4rem 0 1.4rem;font-size:0.92rem;"></p>
+            <button id="backToLobby" class="btn btn-outline">Back to Lobby</button>
+            <div class="leaderboard-panel" style="margin-top:1rem;">
+                <div class="leaderboard-panel-tabs">
+                    <button class="lb-tab active" onclick="showLbTab(this,'fah-lb')">&#127942; Top Scores</button>
+                    <button class="lb-tab" onclick="showLbTab(this,'fah-hist')">&#128196; My History</button>
+                </div>
+                <div class="lb-body" id="fah-lb"></div>
+                <div class="lb-body" id="fah-hist" style="display:none"></div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/8.0.0/signalr.min.js"></script>
+    <script src="/js/avatarCache.js"></script>
+    <script src="/js/leaderboard.js"></script>
+    <script src="/js/fox-and-hounds.js"></script>
+    <script>
+        function showLbTab(btn, showId) {
+            btn.closest('.leaderboard-panel').querySelectorAll('.lb-tab').forEach(t => t.classList.remove('active'));
+            btn.classList.add('active');
+            ['fah-lb','fah-hist'].forEach(id => {
+                document.getElementById(id).style.display = (id === showId) ? '' : 'none';
+            });
+        }
+        document.addEventListener('gameOver', () => {
+            setTimeout(() => {
+                loadLeaderboard('FoxAndHounds', document.getElementById('fah-lb'));
+                loadPersonalHistory('FoxAndHounds', document.getElementById('fah-hist'));
+            }, 1200);
+        });
+    </script>
+    <div class="ham-overlay" onclick="hamClose()"></div>
+    <nav class="ham-drawer" aria-label="Navigation menu">
+        <div class="ham-drawer-header">
+            <div class="ham-drawer-logo"><span class="logo-x">Tac</span><span class="logo-o">Tac</span><span class="logo-x">Toe</span></div>
+            <button class="ham-close" onclick="hamClose()" aria-label="Close menu">&#10005;</button>
+        </div>
+        <div class="ham-menu">
+            <button id="hamBackBtn" class="ham-item">&#8592; Back to Lobby</button>
+        </div>
+    </nav>
+    <script src="/js/hamburger.js"></script>
+</body>
+</html>

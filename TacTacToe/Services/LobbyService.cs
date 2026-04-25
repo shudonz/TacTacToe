@@ -17,6 +17,7 @@ public class LobbyService
     private readonly ConcurrentDictionary<string, PuzzleTimeRoom> _puzzleTimeRooms = new();
     private readonly ConcurrentDictionary<string, BattleBoatRoom> _battleBoatRooms = new();
     private readonly ConcurrentDictionary<string, BonesRoom> _bonesRooms = new();
+    private readonly ConcurrentDictionary<string, FoxAndHoundsRoom> _foxAndHoundsRooms = new();
 
     public bool AddPlayer(string connectionId, string name, string email, string picture)
     {
@@ -450,6 +451,39 @@ public class LobbyService
             r.Players.Any(p => p.ConnectionId == connectionId && !p.IsBot));
 
     public void RemoveBonesRoom(string id) => _bonesRooms.TryRemove(id, out _);
+
+    // --- Fox and Hounds Rooms ---
+
+    public FoxAndHoundsRoom CreateFoxAndHoundsRoom(string id, string hostConnectionId)
+    {
+        var host = _players.GetValueOrDefault(hostConnectionId);
+        var room = new FoxAndHoundsRoom
+        {
+            Id = id,
+            HostConnectionId = hostConnectionId,
+            HostName = host?.Name ?? "Host",
+            Players = [new FoxAndHoundsPlayer { ConnectionId = hostConnectionId, Name = host?.Name ?? "Host", Connected = true }]
+        };
+        _foxAndHoundsRooms[id] = room;
+        return room;
+    }
+
+    public FoxAndHoundsRoom? GetFoxAndHoundsRoom(string id) { _foxAndHoundsRooms.TryGetValue(id, out var r); return r; }
+    public void StoreFoxAndHoundsRoom(string id, FoxAndHoundsRoom room) => _foxAndHoundsRooms[id] = room;
+
+    public IEnumerable<FoxAndHoundsRoom> GetOpenFoxAndHoundsRooms() =>
+        _foxAndHoundsRooms.Values.Where(r => !r.Started && !r.IsOver &&
+            IsOnlineConnection(r.HostConnectionId) &&
+            r.Players.Any(p => p.IsBot || IsOnlineConnection(p.ConnectionId)));
+
+    public IEnumerable<FoxAndHoundsRoom> GetFoxAndHoundsRoomsForConnection(string connectionId) =>
+        _foxAndHoundsRooms.Values.Where(r => !r.Started && r.Players.Any(p => p.ConnectionId == connectionId));
+
+    public IEnumerable<FoxAndHoundsRoom> GetActiveFoxAndHoundsRoomsForConnection(string connectionId) =>
+        _foxAndHoundsRooms.Values.Where(r => r.Started && !r.IsOver &&
+            r.Players.Any(p => p.ConnectionId == connectionId && !p.IsBot));
+
+    public void RemoveFoxAndHoundsRoom(string id) => _foxAndHoundsRooms.TryRemove(id, out _);
 }
 
 public class LobbyPlayer

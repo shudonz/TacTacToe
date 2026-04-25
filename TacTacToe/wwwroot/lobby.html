@@ -130,6 +130,15 @@
                         <span class="game-list-arrow">&#8250;</span>
                     </button>
 
+                    <button class="game-option game-list-item" data-game="fox-and-hounds" aria-label="Fox and Hounds">
+                        <span class="game-list-icon">🦊</span>
+                        <div class="game-list-info">
+                            <span class="game-list-name">Fox and Hounds</span>
+                            <span class="game-list-sub">1–2 players &middot; Strategy</span>
+                        </div>
+                        <span class="game-list-arrow">&#8250;</span>
+                    </button>
+
                 </nav>
             </aside>
 
@@ -723,6 +732,54 @@
                     </div>
                 </div>
 
+                <!-- ── Fox and Hounds Panel ── -->
+                <div id="foxAndHoundsPanel" class="game-detail-panel" style="display:none">
+                    <div class="game-detail-header">
+                        <span class="game-detail-icon">🦊</span>
+                        <div class="game-detail-header-body">
+                            <div class="game-title-row">
+                                <h2 class="game-detail-title">Fox and Hounds</h2>
+                                <button class="btn-play" onclick="showPlaySections('foxAndHounds')">&#9654; Play</button>
+                            </div>
+                            <p class="game-detail-desc">An asymmetric strategy classic! The Fox tries to break through four Hounds to reach the far side, while the Hounds work together to trap it. Roles are randomly assigned — who will you be?</p>
+                            <div class="lobby-lb-inline">
+                                <div class="lobby-lb-inline-tabs">
+                                    <span class="lobby-lb-title">&#127942; High Scores</span>
+                                    <button class="lb-tab active" onclick="lobbyLbTab(this,'fah-lobby-lb','fah-lobby-hist')">Top 5</button>
+                                    <button class="lb-tab" onclick="lobbyLbTab(this,'fah-lobby-hist','fah-lobby-lb')">My Scores</button>
+                                </div>
+                                <div class="lobby-lb-scroll">
+                                    <div class="lb-body" id="fah-lobby-lb"></div>
+                                    <div class="lb-body" id="fah-lobby-hist" style="display:none"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="foxAndHoundsPlaySections" class="game-play-sections" style="display:none">
+                    <div class="mode-cards">
+                    <div class="detail-section">
+                        <h3 class="detail-section-title">&#129302; Single Player</h3>
+                        <p class="lobby-hint">Play against a computer opponent. Your role (Fox or Hounds) is randomly assigned.</p>
+                        <div class="sp-section">
+                            <span class="sp-label">vs Computer</span>
+                            <div class="sp-btns">
+                                <button id="foxAndHoundsSpBtn" class="btn btn-sp">🦊 Play Solo</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="detail-section">
+                        <h3 class="detail-section-title">&#127760; Multiplayer</h3>
+                        <p class="lobby-hint">Create a room or join an open one for a 2-player match.</p>
+                        <button id="createFoxAndHoundsRoomBtn" class="btn-create-room">&#43; Create Room</button>
+                        <div id="foxAndHoundsRoomList" class="player-list"></div>
+                        <p id="noFoxAndHoundsRooms" class="lobby-hint lobby-no-rooms" style="display:none;">No open rooms right now — create one to get started!</p>
+                    </div>
+                    </div>
+                    </div>
+                </div>
+
             </section>
         </main>
 
@@ -859,6 +916,17 @@
                 <div class="modal-actions">
                     <button id="createBonesRoomConfirmBtn" class="btn btn-accept">Create Room</button>
                     <button id="createBonesRoomCancelBtn" class="btn btn-decline">Cancel</button>
+                </div>
+            </div>
+        </div>
+        <div id="createFoxAndHoundsRoomModal" class="modal" style="display:none">
+            <div class="modal-content">
+                <h3>🦊 Create Fox and Hounds Room</h3>
+                <p>Give your room a name so friends can find it.</p>
+                <input id="newFoxAndHoundsRoomName" class="guest-input" type="text" placeholder="e.g. Fox Hunt" maxlength="30" style="margin-top:1.25rem;width:100%;">
+                <div class="modal-actions">
+                    <button id="createFoxAndHoundsRoomConfirmBtn" class="btn btn-accept">Create Room</button>
+                    <button id="createFoxAndHoundsRoomCancelBtn" class="btn btn-decline">Cancel</button>
                 </div>
             </div>
         </div>

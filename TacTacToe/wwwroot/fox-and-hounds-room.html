@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>TacTacToe &#8211; Fox and Hounds Room</title>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="/css/style.css" rel="stylesheet">
+</head>
+<body>
+    <div class="ambient"></div>
+    <div class="noise"></div>
+    <div class="page-content">
+        <nav class="navbar">
+            <button class="ham-btn" onclick="hamOpen()" aria-label="Open menu"><span></span><span></span><span></span></button>
+            <div class="logo-sm"><span class="logo-x">Tac</span><span class="logo-o">Tac</span><span class="logo-x">Toe</span></div>
+            <a href="/profile" class="nav-profile-btn" title="Edit Profile">
+                <span id="navbarAvatarEmoji" class="nav-profile-emoji" style="display:none"></span>
+                <img id="navbarAvatarImg" class="nav-profile-img" src="" alt="Profile" style="display:none">
+                <span id="navbarAvatarPlaceholder" class="nav-profile-placeholder">&#128100;</span>
+                <span id="navbarUsername" class="nav-profile-username"></span>
+            </a>
+        </nav>
+
+        <main class="room-container">
+            <h2 class="lobby-title" id="roomTitle">Fox and Hounds Room</h2>
+            <div class="room-invite-bar glass-card">
+                <div class="room-invite-code">
+                    <span class="room-invite-label">Room Code</span>
+                    <span class="room-code-value" id="roomCode"></span>
+                </div>
+                <button id="copyCodeBtn" class="btn-copy">&#128203; Copy Code</button>
+                <button id="copyLinkBtn" class="btn-copy btn-copy-link">&#128279; Copy Invite Link</button>
+            </div>
+
+            <div class="room-section glass-card">
+                <h3 class="room-section-title">Players <span id="playerCount" style="font-weight:500;color:var(--text-dim);">0/2</span></h3>
+                <p class="lobby-hint" style="margin-bottom:0.75rem;font-size:0.82rem;">Fox tries to break through; Hounds try to trap the Fox. Roles are randomly assigned at game start.</p>
+                <div id="roomPlayers" class="room-player-list"></div>
+            </div>
+
+            <div class="room-section glass-card" id="fillBotsWrap" style="display:none;">
+                <label style="display:flex;align-items:center;gap:0.6rem;color:var(--text);font-size:0.92rem;">
+                    <input id="fillBotsToggle" type="checkbox" checked>
+                    Fill empty seat with a computer player on start
+                </label>
+            </div>
+
+            <div class="room-actions">
+                <button id="startBtn" class="btn btn-accept" style="display:none;">🦊 Start Game</button>
+                <p id="waitMsg" class="wait-for-host" style="display:none;">&#9203; Waiting for <strong id="hostNameWait">the host</strong> to start&hellip;</p>
+            </div>
+        </main>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/8.0.0/signalr.min.js"></script>
+    <script src="/js/avatarCache.js"></script>
+    <script src="/js/fox-and-hounds-room.js"></script>
+    <div class="ham-overlay" onclick="hamClose()"></div>
+    <nav class="ham-drawer" aria-label="Navigation menu">
+        <div class="ham-drawer-header">
+            <div class="ham-drawer-logo"><span class="logo-x">Tac</span><span class="logo-o">Tac</span><span class="logo-x">Toe</span></div>
+            <button class="ham-close" onclick="hamClose()" aria-label="Close menu">&#10005;</button>
+        </div>
+        <div class="ham-menu">
+            <button id="backBtn" class="ham-item">&#8592; Back to Lobby</button>
+        </div>
+    </nav>
+    <script src="/js/hamburger.js"></script>
+</body>
+</html>

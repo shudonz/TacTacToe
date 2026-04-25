@@ -25,6 +25,7 @@ const DASH_GAMES = [
     { key: "crazy-eights",  api: "CrazyEights",    icon: "🃏",  label: "Crazy Eights"   },
     { key: "battle-boat",   api: "BattleBoat",     icon: "🚢",  label: "Battle Boat"    },
     { key: "bones",         api: "Bones",          icon: "🦴",  label: "Bones"          },
+    { key: "fox-and-hounds", api: "FoxAndHounds",  icon: "🦊",  label: "Fox and Hounds" },
 ];
 
 async function loadDashboard(me) {
@@ -210,7 +211,8 @@ async function init() {
             "chinese-checkers": "chineseCheckersPanel",
             "crazy-eights": "crazyEightsPanel",
             "battle-boat": "battleBoatPanel",
-            "bones": "bonesPanel"
+            "bones": "bonesPanel",
+            "fox-and-hounds": "foxAndHoundsPanel"
         };
 
         // Leaderboard containers per game  [apiGameType, lbId, histId]
@@ -225,7 +227,8 @@ async function init() {
             "chinese-checkers": ["ChineseCheckers", "cc-lobby-lb", "cc-lobby-hist"],
             "crazy-eights": ["CrazyEights", "ce-lobby-lb", "ce-lobby-hist"],
             "battle-boat": ["BattleBoat", "bb-lobby-lb", "bb-lobby-hist"],
-            "bones": ["Bones", "bon-lobby-lb", "bon-lobby-hist"]
+            "bones": ["Bones", "bon-lobby-lb", "bon-lobby-hist"],
+            "fox-and-hounds": ["FoxAndHounds", "fah-lobby-lb", "fah-lobby-hist"]
         };
 
         // Show welcome state when no game is selected, otherwise hide it
@@ -251,6 +254,7 @@ async function init() {
         else if (selectedGame === "crazy-eights")  connection.invoke("GetCrazyEightsRooms");
         else if (selectedGame === "battle-boat")   connection.invoke("GetBattleBoatRooms");
         else if (selectedGame === "bones")         connection.invoke("GetBonesRooms");
+        else if (selectedGame === "fox-and-hounds") connection.invoke("GetFoxAndHoundsRooms");
         else if (selectedGame === "yahtzee")       connection.invoke("GetYahtzeeRooms");
 
         // Load leaderboard + personal history for the selected game
@@ -686,6 +690,49 @@ async function init() {
         window.location.href = "/bones";
     });
 
+    // Fox and Hounds room list
+    connection.on("FoxAndHoundsRoomList", rooms => {
+        const list = document.getElementById("foxAndHoundsRoomList");
+        const noRooms = document.getElementById("noFoxAndHoundsRooms");
+        list.innerHTML = "";
+        const open = rooms.filter(r => !r.started);
+        if (open.length === 0) {
+            noRooms.style.display = "block";
+        } else {
+            noRooms.style.display = "none";
+            open.forEach(r => {
+                const isFull = r.isFull;
+                const card = document.createElement("div");
+                card.className = "player-card room-list-card" + (isFull ? " room-full" : "");
+                const badge = isFull ? '<span class="room-badge room-badge-full">Full</span>' : '<span class="room-badge room-badge-open">Open</span>';
+                card.innerHTML =
+                    '<span class="game-option-icon" style="font-size:1.4rem;">🦊</span>'
+                    + '<div class="room-card-info"><span class="name">' + escapeHtml(r.roomName) + '</span>'
+                    + '<span class="room-card-host">Hosted by ' + escapeHtml(r.hostName) + '</span></div>'
+                    + '<div class="room-card-right"><span class="room-player-count-badge">' + r.playerCount + '/' + r.maxPlayers + '</span>'
+                    + badge + (!isFull ? '<button class="btn btn-accept room-join-btn">Join &rarr;</button>' : '') + '</div>';
+                if (!isFull) {
+                    card.querySelector(".room-join-btn").addEventListener("click", e => { e.stopPropagation(); joinFoxAndHoundsRoom(r.id); });
+                    card.onclick = () => joinFoxAndHoundsRoom(r.id);
+                }
+                list.appendChild(card);
+            });
+        }
+    });
+
+    connection.on("FoxAndHoundsRoomCreated", roomId => {
+        sessionStorage.setItem("foxAndHoundsRoomId", roomId);
+        sessionStorage.setItem("isSinglePlayer", "0");
+        window.location.href = "/fox-and-hounds-room";
+    });
+
+    connection.on("FoxAndHoundsSinglePlayerStarted", roomId => {
+        sessionStorage.setItem("foxAndHoundsRoomId", roomId);
+        sessionStorage.setItem("myName", me.name);
+        sessionStorage.setItem("isSinglePlayer", "1");
+        window.location.href = "/fox-and-hounds";
+    });
+
     // Yahtzee room list
     connection.on("YahtzeeRoomList", rooms => {
         const list = document.getElementById("roomList");
@@ -794,6 +841,7 @@ async function init() {
         else if (gameParam === "crazy-eights") joinCrazyEightsRoom(joinParam);
         else if (gameParam === "battle-boat") joinBattleBoatRoom(joinParam);
         else if (gameParam === "bones") joinBonesRoom(joinParam);
+        else if (gameParam === "fox-and-hounds") joinFoxAndHoundsRoom(joinParam);
         else joinYahtzeeRoom(joinParam);
     }
 
@@ -1032,6 +1080,31 @@ async function init() {
         if (e.key === "Escape") document.getElementById("createBonesRoomCancelBtn").click();
     });
 
+    // Fox and Hounds single player
+    document.getElementById("foxAndHoundsSpBtn").addEventListener("click", () => {
+        sessionStorage.setItem("myName", me.name);
+        connection.invoke("StartFoxAndHoundsSinglePlayer");
+    });
+
+    // Create Fox and Hounds room
+    document.getElementById("createFoxAndHoundsRoomBtn").addEventListener("click", () => {
+        document.getElementById("newFoxAndHoundsRoomName").value = "";
+        document.getElementById("createFoxAndHoundsRoomModal").style.display = "flex";
+        setTimeout(() => document.getElementById("newFoxAndHoundsRoomName").focus(), 50);
+    });
+    document.getElementById("createFoxAndHoundsRoomCancelBtn").addEventListener("click", () => {
+        document.getElementById("createFoxAndHoundsRoomModal").style.display = "none";
+    });
+    document.getElementById("createFoxAndHoundsRoomConfirmBtn").addEventListener("click", () => {
+        const name = document.getElementById("newFoxAndHoundsRoomName").value.trim() || "Fox Hunt";
+        document.getElementById("createFoxAndHoundsRoomModal").style.display = "none";
+        connection.invoke("CreateFoxAndHoundsRoom", name);
+    });
+    document.getElementById("newFoxAndHoundsRoomName").addEventListener("keydown", e => {
+        if (e.key === "Enter") document.getElementById("createFoxAndHoundsRoomConfirmBtn").click();
+        if (e.key === "Escape") document.getElementById("createFoxAndHoundsRoomCancelBtn").click();
+    });
+
     // Create Puzzle Time room
     document.getElementById("createPuzzleTimeRoomBtn").addEventListener("click", () => {
         document.getElementById("newPuzzleTimeRoomName").value = "";
@@ -1162,6 +1235,14 @@ function joinBonesRoom(roomId) {
     connection.invoke("JoinBonesRoom", roomId).then(() => {
         sessionStorage.setItem("bonesRoomId", roomId);
         window.location.href = "/bones-room";
+    });
+}
+
+function joinFoxAndHoundsRoom(roomId) {
+    sessionStorage.setItem("isSinglePlayer", "0");
+    connection.invoke("JoinFoxAndHoundsRoom", roomId).then(() => {
+        sessionStorage.setItem("foxAndHoundsRoomId", roomId);
+        window.location.href = "/fox-and-hounds-room";
     });
 }
 // Ensures the connection is live before invoking a hub method
