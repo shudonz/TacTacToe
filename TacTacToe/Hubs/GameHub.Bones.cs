@@ -204,7 +204,7 @@ public partial class GameHub
         await BroadcastBonesState(room);
     }
 
-    public async Task BonesPas(string roomId)
+    public async Task BonesPass(string roomId)
     {
         var room = _lobby.GetBonesRoom(roomId);
         if (room == null || !room.Started || room.IsOver || room.RoundOver) return;

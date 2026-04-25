@@ -363,7 +363,7 @@ document.getElementById('bonesDrawBtn').addEventListener('click', () => {
 
 document.getElementById('bonesPassBtn').addEventListener('click', () => {
     sndPass();
-    connection.invoke('BonesPas', roomId);
+    connection.invoke('BonesPass', roomId);
 });
 
 document.getElementById('bonesHintBtn').addEventListener('click', () => {
