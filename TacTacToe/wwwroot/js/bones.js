@@ -78,9 +78,9 @@ function handDominoHtml(tileId, low, high, canPlace, selected) {
     const pipTotal = low + high;
 
     let badge = '';
-    if (canPlace === 'left')  badge = '<div class="tile-connect-badge">⬅ Left</div>';
-    else if (canPlace === 'right') badge = '<div class="tile-connect-badge">Right ➡</div>';
-    else if (canPlace === 'both')  badge = '<div class="tile-connect-badge">⬅ L or R ➡</div>';
+    if (canPlace === 'left')  badge = '<div class="tile-connect-badge">⬅ Head</div>';
+    else if (canPlace === 'right') badge = '<div class="tile-connect-badge">Tail ➡</div>';
+    else if (canPlace === 'both')  badge = '<div class="tile-connect-badge">⬅ Head or Tail ➡</div>';
 
     return `<div class="${cls.join(' ')}" data-tile="${tileId}" title="${tileLabel(low,high)} — ${canPlace === 'none' ? 'no match' : 'click to play'} (${pipTotal} pips)" aria-label="Domino ${low}|${high}">
         <div class="domino-half">${pipFaceHtml(low)}</div>
@@ -159,23 +159,16 @@ function renderChain(s) {
     }
     let html = '';
     if (s.leftOpenEnd >= 0) {
-        html += `<div class="chain-end-marker">${s.leftOpenEnd}</div>`;
+        html += `<div class="chain-end-marker" title="Head of chain">⬅ ${s.leftOpenEnd}</div>`;
     }
-    // Show up to 15 chain entries to keep it manageable
-    const maxVisible = 15;
-    const startIdx = Math.max(0, s.chain.length - maxVisible);
-    if (startIdx > 0) html += `<span style="color:var(--text-dim);font-size:0.8rem;">…+${startIdx}</span>`;
-    for (let i = startIdx; i < s.chain.length; i++) {
+    for (let i = 0; i < s.chain.length; i++) {
         const e = s.chain[i];
         html += chainDominoHtml(e.shownLeft, e.shownRight);
     }
     if (s.rightOpenEnd >= 0) {
-        html += `<div class="chain-end-marker">${s.rightOpenEnd}</div>`;
+        html += `<div class="chain-end-marker" title="Tail of chain">${s.rightOpenEnd} ➡</div>`;
     }
     chain.innerHTML = html;
-    // Scroll to end
-    const wrap = document.getElementById('bonesBoardWrap');
-    wrap.scrollLeft = wrap.scrollWidth;
 }
 
 function renderHand(s) {
