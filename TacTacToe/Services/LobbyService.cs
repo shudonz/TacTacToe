@@ -19,6 +19,7 @@ public class LobbyService
     private readonly ConcurrentDictionary<string, BonesRoom> _bonesRooms = new();
     private readonly ConcurrentDictionary<string, MancalaRoom> _mancalaRooms = new();
     private readonly ConcurrentDictionary<string, FoxAndHoundsRoom> _foxAndHoundsRooms = new();
+    private readonly ConcurrentDictionary<string, RattlerRoom> _rattlerRooms = new();
 
     public bool AddPlayer(string connectionId, string name, string email, string picture)
     {
@@ -518,6 +519,39 @@ public class LobbyService
             r.Players.Any(p => p.ConnectionId == connectionId && !p.IsBot));
 
     public void RemoveFoxAndHoundsRoom(string id) => _foxAndHoundsRooms.TryRemove(id, out _);
+
+    // --- Rattler Rooms ---
+
+    public RattlerRoom CreateRattlerRoom(string id, string hostConnectionId)
+    {
+        var host = _players.GetValueOrDefault(hostConnectionId);
+        var room = new RattlerRoom
+        {
+            Id = id,
+            HostConnectionId = hostConnectionId,
+            HostName = host?.Name ?? "Host",
+            Players = [new RattlerPlayer { ConnectionId = hostConnectionId, Name = host?.Name ?? "Host", Connected = true }]
+        };
+        _rattlerRooms[id] = room;
+        return room;
+    }
+
+    public RattlerRoom? GetRattlerRoom(string id) { _rattlerRooms.TryGetValue(id, out var r); return r; }
+    public void StoreRattlerRoom(string id, RattlerRoom room) => _rattlerRooms[id] = room;
+
+    public IEnumerable<RattlerRoom> GetOpenRattlerRooms() =>
+        _rattlerRooms.Values.Where(r => !r.Started && !r.IsOver &&
+            IsOnlineConnection(r.HostConnectionId) &&
+            r.Players.Any(p => p.IsBot || IsOnlineConnection(p.ConnectionId)));
+
+    public IEnumerable<RattlerRoom> GetRattlerRoomsForConnection(string connectionId) =>
+        _rattlerRooms.Values.Where(r => !r.Started && r.Players.Any(p => p.ConnectionId == connectionId));
+
+    public IEnumerable<RattlerRoom> GetActiveRattlerRoomsForConnection(string connectionId) =>
+        _rattlerRooms.Values.Where(r => r.Started && !r.IsOver &&
+            r.Players.Any(p => p.ConnectionId == connectionId && !p.IsBot));
+
+    public void RemoveRattlerRoom(string id) => _rattlerRooms.TryRemove(id, out _);
 }
 
 public class LobbyPlayer

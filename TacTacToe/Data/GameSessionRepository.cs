@@ -173,4 +173,13 @@ public class GameSessionRepository
 
         return new { summary, gameBreakdown, topPlayers, dailyActivity };
     }
+
+    /// <summary>Looks up a user's ID by their username — used by background tasks that lack UserRepository.</summary>
+    public async Task<int?> GetUserIdByUsernameAsync(string username)
+    {
+        using var c = Open();
+        var id = await c.QueryFirstOrDefaultAsync<int?>(
+            "SELECT Id FROM Users WHERE Username = @u LIMIT 1", new { u = username });
+        return id;
+    }
 }

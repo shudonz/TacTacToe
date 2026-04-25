@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>TacTacToe &#8211; Rattler</title>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="/css/style.css" rel="stylesheet">
+    <style>
+        /* ── Rattler game styles ──────────────────────────────────── */
+        .rattler-layout {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.5rem 0.75rem 2rem;
+            max-width: 640px;
+            margin: 0 auto;
+        }
+
+        .rattler-scorebar {
+            display: flex;
+            gap: 0.5rem;
+            width: 100%;
+            justify-content: stretch;
+        }
+
+        .rattler-score-chip {
+            flex: 1;
+            background: var(--surface);
+            border: 1.5px solid var(--glass-border);
+            border-radius: var(--radius-sm);
+            padding: 0.55rem 0.85rem;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0.15rem;
+            transition: border-color 0.2s, box-shadow 0.2s;
+            position: relative;
+            overflow: hidden;
+        }
+        .rattler-score-chip.is-me {
+            border-color: var(--accent);
+            box-shadow: 0 0 12px rgba(18,145,158,0.22);
+        }
+        .rattler-score-chip.is-dead { opacity: 0.45; }
+        .rattler-score-chip-color {
+            position: absolute;
+            top: 0; left: 0; right: 0;
+            height: 3px;
+        }
+        .rattler-score-chip-name {
+            font-size: 0.82rem;
+            font-weight: 700;
+            color: var(--text);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 120px;
+        }
+        .rattler-score-chip-pts {
+            font-size: 1.3rem;
+            font-weight: 800;
+            color: var(--accent);
+        }
+        .rattler-score-chip-len {
+            font-size: 0.73rem;
+            color: var(--text-dim);
+        }
+        .rattler-score-chip-dead {
+            font-size: 0.73rem;
+            color: #ff5555;
+            font-weight: 700;
+        }
+
+        .rattler-status {
+            font-size: 0.88rem;
+            font-weight: 600;
+            color: var(--text-mid);
+            text-align: center;
+            min-height: 1.4em;
+        }
+
+        .rattler-canvas-wrap {
+            position: relative;
+            display: inline-block;
+            border-radius: var(--radius-sm);
+            overflow: hidden;
+            box-shadow: 0 0 40px rgba(18,145,158,0.2), 0 4px 24px rgba(0,0,0,0.4);
+            touch-action: none;
+            width: 100%;
+            max-width: 560px;
+        }
+        #rattlerCanvas {
+            display: block;
+            width: 100%;
+            height: auto;
+            image-rendering: crisp-edges;
+            cursor: default;
+        }
+        .rattler-canvas-overlay {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 1.1rem;
+            background: rgba(12, 34, 48, 0.88);
+            backdrop-filter: blur(4px);
+            z-index: 10;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s;
+        }
+        .rattler-canvas-overlay.visible {
+            opacity: 1;
+            pointer-events: auto;
+        }
+        .rattler-overlay-title {
+            font-size: 2rem;
+            font-weight: 900;
+            color: var(--text);
+            text-shadow: 0 2px 8px rgba(0,0,0,0.6);
+        }
+        .rattler-overlay-sub {
+            font-size: 1rem;
+            color: var(--text-mid);
+            text-align: center;
+            padding: 0 1rem;
+        }
+        .rattler-overlay-scores {
+            display: flex;
+            flex-direction: column;
+            gap: 0.4rem;
+            min-width: 180px;
+        }
+        .rattler-overlay-score-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 1rem;
+            padding: 0.4rem 0.75rem;
+            background: rgba(18,145,158,0.09);
+            border-radius: 8px;
+            font-size: 0.93rem;
+            font-weight: 600;
+            color: var(--text);
+        }
+        .rattler-overlay-score-row.is-winner {
+            background: rgba(18,145,158,0.22);
+            border: 1px solid var(--accent);
+            color: var(--accent);
+        }
+        .rattler-overlay-actions {
+            display: flex;
+            gap: 0.75rem;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        /* ── Controls row ───────────────────────────────────────── */
+        .rattler-controls {
+            display: flex;
+            gap: 0.5rem;
+            align-items: center;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        /* ── Hints panel ────────────────────────────────────────── */
+        .rattler-hint-banner {
+            background: var(--glass);
+            border: 1px solid var(--glass-border);
+            border-radius: var(--radius-sm);
+            padding: 0.55rem 0.9rem;
+            font-size: 0.83rem;
+            color: var(--text-mid);
+            text-align: center;
+            width: 100%;
+            display: none;
+        }
+
+        /* ── Instructions accordion ─────────────────────────────── */
+        .rattler-instructions {
+            width: 100%;
+            background: var(--surface);
+            border: 1px solid var(--glass-border);
+            border-radius: var(--radius-sm);
+            overflow: hidden;
+        }
+        .rattler-instr-toggle {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            width: 100%;
+            padding: 0.65rem 0.9rem;
+            background: none;
+            border: none;
+            color: var(--text-mid);
+            font-size: 0.85rem;
+            font-weight: 600;
+            cursor: pointer;
+            text-align: left;
+        }
+        .rattler-instr-body {
+            display: none;
+            padding: 0.65rem 0.9rem 0.85rem;
+            font-size: 0.82rem;
+            color: var(--text-dim);
+            line-height: 1.6;
+        }
+        .rattler-instr-body.open { display: block; }
+        .rattler-instr-body ul { margin: 0.4rem 0 0 1.1rem; }
+        .rattler-instr-body li { margin-bottom: 0.25rem; }
+
+        /* ── D-pad for mobile ───────────────────────────────────── */
+        .rattler-dpad {
+            display: grid;
+            grid-template-columns: repeat(3, 48px);
+            grid-template-rows: repeat(3, 48px);
+            gap: 4px;
+        }
+        .dpad-btn {
+            background: var(--surface);
+            border: 1.5px solid var(--glass-border);
+            border-radius: 10px;
+            color: var(--text);
+            font-size: 1.2rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            touch-action: manipulation;
+            user-select: none;
+            transition: background 0.12s, border-color 0.12s;
+            -webkit-tap-highlight-color: transparent;
+        }
+        .dpad-btn:active { background: var(--accent); border-color: var(--accent); }
+        .dpad-btn.empty { visibility: hidden; pointer-events: none; }
+
+        /* ── Floating score pop ─────────────────────────────────── */
+        .rattler-score-pop {
+            position: absolute;
+            font-size: 1.1rem;
+            font-weight: 900;
+            pointer-events: none;
+            z-index: 20;
+            animation: rattler-pop 0.9s ease-out forwards;
+            text-shadow: 0 2px 6px rgba(0,0,0,0.5);
+        }
+        @keyframes rattler-pop {
+            0%   { opacity: 1; transform: translateY(0) scale(1.2); }
+            80%  { opacity: 1; transform: translateY(-36px) scale(1); }
+            100% { opacity: 0; transform: translateY(-50px) scale(0.8); }
+        }
+
+        /* ── Confetti ────────────────────────────────────────────── */
+        .rattler-confetti {
+            position: fixed;
+            top: -10px;
+            width: 10px;
+            height: 10px;
+            border-radius: 2px;
+            z-index: 9999;
+            pointer-events: none;
+            animation: rattler-confetti-fall linear forwards;
+        }
+        @keyframes rattler-confetti-fall {
+            0%   { transform: translateY(0) rotate(0deg) scaleX(1); opacity: 1; }
+            80%  { opacity: 1; }
+            100% { transform: translateY(105vh) rotate(720deg) scaleX(-1); opacity: 0; }
+        }
+
+        /* ── Countdown overlay ───────────────────────────────────── */
+        #rattlerCountdownOverlay {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(12,34,48,0.75);
+            z-index: 15;
+            pointer-events: none;
+        }
+        #rattlerCountdownNum {
+            font-size: 6rem;
+            font-weight: 900;
+            color: var(--accent);
+            text-shadow: 0 0 40px var(--accent-glow);
+            animation: countdown-pulse 0.9s ease-out;
+        }
+        @keyframes countdown-pulse {
+            0%  { transform: scale(1.6); opacity: 0; }
+            30% { opacity: 1; transform: scale(1); }
+            80% { opacity: 1; }
+            100%{ opacity: 0; }
+        }
+    </style>
+</head>
+<body>
+    <div class="ambient"></div>
+    <div class="noise"></div>
+    <div class="page-content" style="padding-top:0">
+        <nav class="navbar">
+            <button class="ham-btn" onclick="hamOpen()" aria-label="Open menu"><span></span><span></span><span></span></button>
+            <div class="logo-sm"><span class="logo-x">Tac</span><span class="logo-o">Tac</span><span class="logo-x">Toe</span></div>
+            <a href="/profile" class="nav-profile-btn" title="Edit Profile">
+                <span id="navbarAvatarEmoji" class="nav-profile-emoji" style="display:none"></span>
+                <img id="navbarAvatarImg" class="nav-profile-img" src="" alt="Profile" style="display:none">
+                <span id="navbarAvatarPlaceholder" class="nav-profile-placeholder">&#128100;</span>
+                <span id="navbarUsername" class="nav-profile-username"></span>
+            </a>
+        </nav>
+
+        <div class="rattler-layout">
+
+            <!-- Score bar -->
+            <div class="rattler-scorebar" id="rattlerScorebar"></div>
+
+            <!-- Status line -->
+            <div class="rattler-status" id="rattlerStatus"></div>
+
+            <!-- Canvas -->
+            <div class="rattler-canvas-wrap" id="rattlerCanvasWrap">
+                <canvas id="rattlerCanvas" width="480" height="480" aria-label="Rattler game board"></canvas>
+
+                <!-- Countdown -->
+                <div id="rattlerCountdownOverlay" style="display:none">
+                    <span id="rattlerCountdownNum">3</span>
+                </div>
+
+                <!-- Game over / result overlay -->
+                <div class="rattler-canvas-overlay" id="rattlerOverlay">
+                    <div class="rattler-overlay-title" id="overlayTitle">🐍 Game Over!</div>
+                    <div class="rattler-overlay-sub" id="overlaySub"></div>
+                    <div class="rattler-overlay-scores" id="overlayScores"></div>
+                    <div class="rattler-overlay-actions">
+                        <button class="btn btn-accept" id="overlayPlayAgainBtn" style="display:none;">🐍 Play Again</button>
+                        <button class="btn" onclick="window.location.href='/lobby'" style="border:1px solid var(--glass-border);color:var(--text-mid);">&#8592; Lobby</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Hint banner -->
+            <div class="rattler-hint-banner" id="rattlerHint"></div>
+
+            <!-- Mobile d-pad -->
+            <div class="rattler-dpad" id="rattlerDpad" style="display:none">
+                <button class="dpad-btn empty" aria-hidden="true"></button>
+                <button class="dpad-btn" id="dpadUp"    data-dir="0" aria-label="Up">&#8679;</button>
+                <button class="dpad-btn empty" aria-hidden="true"></button>
+                <button class="dpad-btn" id="dpadLeft"  data-dir="2" aria-label="Left">&#8678;</button>
+                <button class="dpad-btn empty" aria-hidden="true"></button>
+                <button class="dpad-btn" id="dpadRight" data-dir="3" aria-label="Right">&#8680;</button>
+                <button class="dpad-btn empty" aria-hidden="true"></button>
+                <button class="dpad-btn" id="dpadDown"  data-dir="1" aria-label="Down">&#8681;</button>
+                <button class="dpad-btn empty" aria-hidden="true"></button>
+            </div>
+
+            <!-- Instructions accordion -->
+            <div class="rattler-instructions">
+                <button class="rattler-instr-toggle" onclick="toggleInstructions()">
+                    <span>&#9432; How to Play</span><span id="instrArrow">&#9660;</span>
+                </button>
+                <div class="rattler-instr-body" id="instrBody">
+                    <ul>
+                        <li>🐍 <strong>You are Teal</strong>, your opponent is Orange. Both snakes move simultaneously on the same board.</li>
+                        <li>🍎 <strong>Eat food</strong> to grow and score points. Regular food = 1pt, Silver = 3pts, Gold = 10pts.</li>
+                        <li>💀 <strong>Avoid walls</strong>, your own body, and colliding head-on with the other snake.</li>
+                        <li>🏆 <strong>Highest score wins</strong> — even if you die first, keep the lead!</li>
+                        <li>⌨️ <strong>Desktop:</strong> Arrow keys or WASD to change direction.</li>
+                        <li>📱 <strong>Mobile:</strong> Swipe on the board, or use the D-pad below.</li>
+                    </ul>
+                    <p style="margin-top:0.6rem;color:var(--text-mid)">💡 <em>Tip: Try to cut off your opponent by curling around food before they reach it!</em></p>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <script src="/js/signalr.min.js"></script>
+    <script src="/js/avatarCache.js"></script>
+    <script src="/js/rattler.js"></script>
+    <div class="ham-overlay" onclick="hamClose()"></div>
+    <nav class="ham-drawer" aria-label="Navigation menu">
+        <div class="ham-drawer-header">
+            <div class="ham-drawer-logo"><span class="logo-x">Tac</span><span class="logo-o">Tac</span><span class="logo-x">Toe</span></div>
+            <button class="ham-close" onclick="hamClose()" aria-label="Close menu">&#10005;</button>
+        </div>
+        <div class="ham-menu">
+            <button id="backBtn" class="ham-item">&#8592; Back to Lobby</button>
+        </div>
+    </nav>
+    <script src="/js/hamburger.js"></script>
+</body>
+</html>

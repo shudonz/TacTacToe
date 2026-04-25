@@ -27,6 +27,7 @@ const DASH_GAMES = [
     { key: "bones",         api: "Bones",          icon: "🦴",  label: "Bones"          },
     { key: "mancala",       api: "Mancala",        icon: "🪨",  label: "Mancala"        },
     { key: "fox-and-hounds", api: "FoxAndHounds",  icon: "🦊",  label: "Fox and Hounds" },
+    { key: "rattler",       api: "Rattler",        icon: "🐍",  label: "Rattler"        },
 ];
 
 async function loadDashboard(me) {
@@ -214,7 +215,8 @@ async function init() {
             "battle-boat": "battleBoatPanel",
             "bones": "bonesPanel",
             "mancala": "mancalaPanel",
-            "fox-and-hounds": "foxAndHoundsPanel"
+            "fox-and-hounds": "foxAndHoundsPanel",
+            "rattler": "rattlerPanel"
         };
 
         // Leaderboard containers per game  [apiGameType, lbId, histId]
@@ -231,7 +233,8 @@ async function init() {
             "battle-boat": ["BattleBoat", "bb-lobby-lb", "bb-lobby-hist"],
             "bones": ["Bones", "bon-lobby-lb", "bon-lobby-hist"],
             "mancala": ["Mancala", "man-lobby-lb", "man-lobby-hist"],
-            "fox-and-hounds": ["FoxAndHounds", "fah-lobby-lb", "fah-lobby-hist"]
+            "fox-and-hounds": ["FoxAndHounds", "fah-lobby-lb", "fah-lobby-hist"],
+            "rattler": ["Rattler", "rat-lobby-lb", "rat-lobby-hist"]
         };
 
         // Show welcome state when no game is selected, otherwise hide it
@@ -259,6 +262,7 @@ async function init() {
         else if (selectedGame === "bones")         connection.invoke("GetBonesRooms");
         else if (selectedGame === "mancala")       connection.invoke("GetMancalaRooms");
         else if (selectedGame === "fox-and-hounds") connection.invoke("GetFoxAndHoundsRooms");
+        else if (selectedGame === "rattler")        connection.invoke("GetRattlerRooms");
         else if (selectedGame === "yahtzee")       connection.invoke("GetYahtzeeRooms");
 
         // Load leaderboard + personal history for the selected game
@@ -780,6 +784,49 @@ async function init() {
         window.location.href = "/fox-and-hounds";
     });
 
+    // Rattler room list
+    connection.on("RattlerRoomList", rooms => {
+        const list = document.getElementById("rattlerRoomList");
+        const noRooms = document.getElementById("noRattlerRooms");
+        list.innerHTML = "";
+        const open = rooms.filter(r => !r.started);
+        if (open.length === 0) {
+            noRooms.style.display = "block";
+        } else {
+            noRooms.style.display = "none";
+            open.forEach(r => {
+                const isFull = r.isFull;
+                const card = document.createElement("div");
+                card.className = "player-card room-list-card" + (isFull ? " room-full" : "");
+                const badge = isFull ? '<span class="room-badge room-badge-full">Full</span>' : '<span class="room-badge room-badge-open">Open</span>';
+                card.innerHTML =
+                    '<span class="game-option-icon" style="font-size:1.4rem;">🐍</span>'
+                    + '<div class="room-card-info"><span class="name">' + escapeHtml(r.roomName) + '</span>'
+                    + '<span class="room-card-host">Hosted by ' + escapeHtml(r.hostName) + '</span></div>'
+                    + '<div class="room-card-right"><span class="room-player-count-badge">' + r.playerCount + '/' + r.maxPlayers + '</span>'
+                    + badge + (!isFull ? '<button class="btn btn-accept room-join-btn">Join &rarr;</button>' : '') + '</div>';
+                if (!isFull) {
+                    card.querySelector(".room-join-btn").addEventListener("click", e => { e.stopPropagation(); joinRattlerRoom(r.id); });
+                    card.onclick = () => joinRattlerRoom(r.id);
+                }
+                list.appendChild(card);
+            });
+        }
+    });
+
+    connection.on("RattlerRoomCreated", roomId => {
+        sessionStorage.setItem("rattlerRoomId", roomId);
+        sessionStorage.setItem("isSinglePlayer", "0");
+        window.location.href = "/rattler-room";
+    });
+
+    connection.on("RattlerSinglePlayerStarted", roomId => {
+        sessionStorage.setItem("rattlerRoomId", roomId);
+        sessionStorage.setItem("myName", me.name);
+        sessionStorage.setItem("isSinglePlayer", "1");
+        window.location.href = "/rattler";
+    });
+
     // Yahtzee room list
     connection.on("YahtzeeRoomList", rooms => {
         const list = document.getElementById("roomList");
@@ -890,6 +937,7 @@ async function init() {
         else if (gameParam === "bones") joinBonesRoom(joinParam);
         else if (gameParam === "mancala") joinMancalaRoom(joinParam);
         else if (gameParam === "fox-and-hounds") joinFoxAndHoundsRoom(joinParam);
+        else if (gameParam === "rattler") joinRattlerRoom(joinParam);
         else joinYahtzeeRoom(joinParam);
     }
 
@@ -1196,6 +1244,31 @@ async function init() {
         if (e.key === "Escape") document.getElementById("createFoxAndHoundsRoomCancelBtn").click();
     });
 
+    // Rattler single player
+    document.getElementById("rattlerSpBtn").addEventListener("click", () => {
+        sessionStorage.setItem("myName", me.name);
+        connection.invoke("StartRattlerSinglePlayer");
+    });
+
+    // Create Rattler room
+    document.getElementById("createRattlerRoomBtn").addEventListener("click", () => {
+        document.getElementById("newRattlerRoomName").value = "";
+        document.getElementById("createRattlerRoomModal").style.display = "flex";
+        setTimeout(() => document.getElementById("newRattlerRoomName").focus(), 50);
+    });
+    document.getElementById("createRattlerRoomCancelBtn").addEventListener("click", () => {
+        document.getElementById("createRattlerRoomModal").style.display = "none";
+    });
+    document.getElementById("createRattlerRoomConfirmBtn").addEventListener("click", () => {
+        const name = document.getElementById("newRattlerRoomName").value.trim() || "Rattler Room";
+        document.getElementById("createRattlerRoomModal").style.display = "none";
+        connection.invoke("CreateRattlerRoom", name);
+    });
+    document.getElementById("newRattlerRoomName").addEventListener("keydown", e => {
+        if (e.key === "Enter") document.getElementById("createRattlerRoomConfirmBtn").click();
+        if (e.key === "Escape") document.getElementById("createRattlerRoomCancelBtn").click();
+    });
+
     // Create Puzzle Time room
     document.getElementById("createPuzzleTimeRoomBtn").addEventListener("click", () => {
         document.getElementById("newPuzzleTimeRoomName").value = "";
@@ -1342,6 +1415,14 @@ function joinFoxAndHoundsRoom(roomId) {
     connection.invoke("JoinFoxAndHoundsRoom", roomId).then(() => {
         sessionStorage.setItem("foxAndHoundsRoomId", roomId);
         window.location.href = "/fox-and-hounds-room";
+    });
+}
+
+function joinRattlerRoom(roomId) {
+    sessionStorage.setItem("isSinglePlayer", "0");
+    connection.invoke("JoinRattlerRoom", roomId).then(() => {
+        sessionStorage.setItem("rattlerRoomId", roomId);
+        window.location.href = "/rattler-room";
     });
 }
 // Ensures the connection is live before invoking a hub method

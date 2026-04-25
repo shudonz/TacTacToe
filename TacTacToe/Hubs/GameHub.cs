@@ -859,6 +859,70 @@ public partial class GameHub : Hub
             });
         }
 
+        // Defer Rattler waiting-room cleanup
+        var rattlerWaitSnapshot = _lobby.GetRattlerRoomsForConnection(disconnectedConnectionId).ToList();
+        if (rattlerWaitSnapshot.Count > 0)
+        {
+            _ = Task.Run(async () =>
+            {
+                await Task.Delay(TimeSpan.FromSeconds(DefaultRejoinGracePeriodSeconds));
+                bool changed = false;
+                foreach (var snap in rattlerWaitSnapshot)
+                {
+                    var room = _lobby.GetRattlerRoom(snap.Id);
+                    if (room == null || room.Started) continue;
+                    var player = room.Players.FirstOrDefault(p => p.Name == name);
+                    if (player == null || player.ConnectionId != disconnectedConnectionId) continue;
+                    room.Players.Remove(player);
+                    changed = true;
+                    if (room.Players.Count == 0 || room.HostName == name)
+                    { await _hubContext.Clients.Group(room.Id).SendAsync("RattlerRoomDissolved"); _lobby.RemoveRattlerRoom(room.Id); }
+                    else
+                    { await _hubContext.Clients.Group(room.Id).SendAsync("RattlerRoomUpdated", room); }
+                }
+                if (changed) await _hubContext.Clients.All.SendAsync("RattlerRoomList", RattlerRoomSummaries());
+            });
+        }
+
+        // Defer Rattler active-game disconnect
+        var rattlerGameSnapshot = _lobby.GetActiveRattlerRoomsForConnection(disconnectedConnectionId).ToList();
+        if (rattlerGameSnapshot.Count > 0)
+        {
+            _ = Task.Run(async () =>
+            {
+                await Task.Delay(TimeSpan.FromSeconds(DefaultRejoinGracePeriodSeconds));
+                foreach (var snap in rattlerGameSnapshot)
+                {
+                    var room = _lobby.GetRattlerRoom(snap.Id);
+                    if (room == null || room.IsOver) continue;
+                    var player = room.Players.FirstOrDefault(p => p.Name == name && !p.IsBot);
+                    if (player == null || player.ConnectionId != disconnectedConnectionId) continue;
+                    player.Connected = false;
+                    player.Dead = true;
+                    await _hubContext.Clients.Group(room.Id).SendAsync("PlayerLeft", name);
+
+                    if (room.IsSinglePlayer)
+                    {
+                        StopRattlerLoop(room.Id);
+                        _lobby.RemoveRattlerRoom(room.Id);
+                        continue;
+                    }
+
+                    var connectedHumans = room.Players.Where(p => !p.IsBot && p.Connected).ToList();
+                    if (connectedHumans.Count == 0) { StopRattlerLoop(room.Id); _lobby.RemoveRattlerRoom(room.Id); continue; }
+
+                    if (!room.IsOver)
+                    {
+                        StopRattlerLoop(room.Id);
+                        RattlerEngine.EndGame(room);
+                        foreach (var hp in connectedHumans) _hubContext.Clients.Client(hp.ConnectionId)
+                            .SendAsync("RattlerUpdated", RattlerEngine.BuildStateFor(room, hp.Name));
+                        _ = SaveRattlerSessionsStaticAsync(room, _sessions, _lobby);
+                    }
+                }
+            });
+        }
+
         _lobby.RemovePlayer(disconnectedConnectionId);
         await BroadcastLobby();
         await BroadcastAllRoomLists();
@@ -1898,6 +1962,7 @@ public partial class GameHub : Hub
         await BroadcastCrazyEightsRooms();
         await BroadcastPuzzleTimeRooms();
         await BroadcastBonesRooms();
+        await BroadcastRattlerRooms();
     }
 
     private static bool CheckWin(string[] board, string mark)

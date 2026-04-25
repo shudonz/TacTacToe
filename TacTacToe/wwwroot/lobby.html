@@ -143,7 +143,14 @@
                         <span class="game-list-arrow">&#8250;</span>
                     </button>
 
-                </nav>
+                    <button class="game-option game-list-item" data-game="rattler" aria-label="Rattler">
+                        <span class="game-list-icon">🐍</span>
+                        <div class="game-list-info">
+                            <span class="game-list-name">Rattler</span>
+                            <span class="game-list-sub">1–2 players &middot; Snake</span>
+                        </div>
+                        <span class="game-list-arrow">&#8250;</span>
+                    </button>
             </aside>
 
             <!-- ── RIGHT: Detail Panel ── -->
@@ -833,6 +840,54 @@
                     </div>
                 </div>
 
+                <!-- ── Rattler Panel ── -->
+                <div id="rattlerPanel" class="game-detail-panel" style="display:none">
+                    <div class="game-detail-header">
+                        <span class="game-detail-icon">🐍</span>
+                        <div class="game-detail-header-body">
+                            <div class="game-title-row">
+                                <h2 class="game-detail-title">Rattler</h2>
+                                <button class="btn-play" onclick="showPlaySections('rattler')">&#9654; Play</button>
+                            </div>
+                            <p class="game-detail-desc">A high-speed snake showdown on a shared board! Eat food to grow and score, avoid walls and tails, and outscore your opponent. Both snakes move at the same time — best score wins!</p>
+                            <div class="lobby-lb-inline">
+                                <div class="lobby-lb-inline-tabs">
+                                    <span class="lobby-lb-title">&#127942; High Scores</span>
+                                    <button class="lb-tab active" onclick="lobbyLbTab(this,'rat-lobby-lb','rat-lobby-hist')">Top 5</button>
+                                    <button class="lb-tab" onclick="lobbyLbTab(this,'rat-lobby-hist','rat-lobby-lb')">My Scores</button>
+                                </div>
+                                <div class="lobby-lb-scroll">
+                                    <div class="lb-body" id="rat-lobby-lb"></div>
+                                    <div class="lb-body" id="rat-lobby-hist" style="display:none"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="rattlerPlaySections" class="game-play-sections" style="display:none">
+                    <div class="mode-cards">
+                    <div class="detail-section">
+                        <h3 class="detail-section-title">&#129302; Single Player</h3>
+                        <p class="lobby-hint">Play against a bot — eat more food and survive longer to win!</p>
+                        <div class="sp-section">
+                            <span class="sp-label">vs Bot</span>
+                            <div class="sp-btns">
+                                <button id="rattlerSpBtn" class="btn btn-sp">🐍 Play Solo</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="detail-section">
+                        <h3 class="detail-section-title">&#127760; Multiplayer</h3>
+                        <p class="lobby-hint">Create a room or join an open one for a 2-player snake battle.</p>
+                        <button id="createRattlerRoomBtn" class="btn-create-room">&#43; Create Room</button>
+                        <div id="rattlerRoomList" class="player-list"></div>
+                        <p id="noRattlerRooms" class="lobby-hint lobby-no-rooms" style="display:none;">No open rooms right now — create one to get started!</p>
+                    </div>
+                    </div>
+                    </div>
+                </div>
+
             </section>
         </main>
 
@@ -988,6 +1043,17 @@
                 <div class="modal-actions">
                     <button id="createFoxAndHoundsRoomConfirmBtn" class="btn btn-accept">Create Room</button>
                     <button id="createFoxAndHoundsRoomCancelBtn" class="btn btn-decline">Cancel</button>
+                </div>
+            </div>
+        </div>
+        <div id="createRattlerRoomModal" class="modal" style="display:none">
+            <div class="modal-content">
+                <h3>🐍 Create Rattler Room</h3>
+                <p>Give your room a name so friends can find it.</p>
+                <input id="newRattlerRoomName" class="guest-input" type="text" placeholder="e.g. Snake Pit" maxlength="30" style="margin-top:1.25rem;width:100%;">
+                <div class="modal-actions">
+                    <button id="createRattlerRoomConfirmBtn" class="btn btn-accept">Create Room</button>
+                    <button id="createRattlerRoomCancelBtn" class="btn btn-decline">Cancel</button>
                 </div>
             </div>
         </div>
