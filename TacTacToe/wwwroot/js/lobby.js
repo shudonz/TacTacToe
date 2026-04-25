@@ -25,6 +25,7 @@ const DASH_GAMES = [
     { key: "crazy-eights",  api: "CrazyEights",    icon: "🃏",  label: "Crazy Eights"   },
     { key: "battle-boat",   api: "BattleBoat",     icon: "🚢",  label: "Battle Boat"    },
     { key: "bones",         api: "Bones",          icon: "🦴",  label: "Bones"          },
+    { key: "mancala",       api: "Mancala",        icon: "🪨",  label: "Mancala"        },
     { key: "fox-and-hounds", api: "FoxAndHounds",  icon: "🦊",  label: "Fox and Hounds" },
 ];
 
@@ -212,6 +213,7 @@ async function init() {
             "crazy-eights": "crazyEightsPanel",
             "battle-boat": "battleBoatPanel",
             "bones": "bonesPanel",
+            "mancala": "mancalaPanel"
             "fox-and-hounds": "foxAndHoundsPanel"
         };
 
@@ -228,6 +230,7 @@ async function init() {
             "crazy-eights": ["CrazyEights", "ce-lobby-lb", "ce-lobby-hist"],
             "battle-boat": ["BattleBoat", "bb-lobby-lb", "bb-lobby-hist"],
             "bones": ["Bones", "bon-lobby-lb", "bon-lobby-hist"],
+            "mancala": ["Mancala", "man-lobby-lb", "man-lobby-hist"]
             "fox-and-hounds": ["FoxAndHounds", "fah-lobby-lb", "fah-lobby-hist"]
         };
 
@@ -254,6 +257,7 @@ async function init() {
         else if (selectedGame === "crazy-eights")  connection.invoke("GetCrazyEightsRooms");
         else if (selectedGame === "battle-boat")   connection.invoke("GetBattleBoatRooms");
         else if (selectedGame === "bones")         connection.invoke("GetBonesRooms");
+        else if (selectedGame === "mancala")       connection.invoke("GetMancalaRooms");
         else if (selectedGame === "fox-and-hounds") connection.invoke("GetFoxAndHoundsRooms");
         else if (selectedGame === "yahtzee")       connection.invoke("GetYahtzeeRooms");
 
@@ -690,6 +694,10 @@ async function init() {
         window.location.href = "/bones";
     });
 
+    // Mancala room list
+    connection.on("MancalaRoomList", rooms => {
+        const list = document.getElementById("mancalaRoomList");
+        const noRooms = document.getElementById("noMancalaRooms");
     // Fox and Hounds room list
     connection.on("FoxAndHoundsRoomList", rooms => {
         const list = document.getElementById("foxAndHoundsRoomList");
@@ -706,12 +714,15 @@ async function init() {
                 card.className = "player-card room-list-card" + (isFull ? " room-full" : "");
                 const badge = isFull ? '<span class="room-badge room-badge-full">Full</span>' : '<span class="room-badge room-badge-open">Open</span>';
                 card.innerHTML =
+                    '<span class="game-option-icon" style="font-size:1.4rem;">🪨</span>'
                     '<span class="game-option-icon" style="font-size:1.4rem;">🦊</span>'
                     + '<div class="room-card-info"><span class="name">' + escapeHtml(r.roomName) + '</span>'
                     + '<span class="room-card-host">Hosted by ' + escapeHtml(r.hostName) + '</span></div>'
                     + '<div class="room-card-right"><span class="room-player-count-badge">' + r.playerCount + '/' + r.maxPlayers + '</span>'
                     + badge + (!isFull ? '<button class="btn btn-accept room-join-btn">Join &rarr;</button>' : '') + '</div>';
                 if (!isFull) {
+                    card.querySelector(".room-join-btn").addEventListener("click", e => { e.stopPropagation(); joinMancalaRoom(r.id); });
+                    card.onclick = () => joinMancalaRoom(r.id);
                     card.querySelector(".room-join-btn").addEventListener("click", e => { e.stopPropagation(); joinFoxAndHoundsRoom(r.id); });
                     card.onclick = () => joinFoxAndHoundsRoom(r.id);
                 }
@@ -720,6 +731,17 @@ async function init() {
         }
     });
 
+    connection.on("MancalaRoomCreated", roomId => {
+        sessionStorage.setItem("mancalaRoomId", roomId);
+        sessionStorage.setItem("isSinglePlayer", "0");
+        window.location.href = "/mancala-room";
+    });
+
+    connection.on("MancalaSinglePlayerStarted", roomId => {
+        sessionStorage.setItem("mancalaRoomId", roomId);
+        sessionStorage.setItem("myName", me.name);
+        sessionStorage.setItem("isSinglePlayer", "1");
+        window.location.href = "/mancala";
     connection.on("FoxAndHoundsRoomCreated", roomId => {
         sessionStorage.setItem("foxAndHoundsRoomId", roomId);
         sessionStorage.setItem("isSinglePlayer", "0");
@@ -841,6 +863,7 @@ async function init() {
         else if (gameParam === "crazy-eights") joinCrazyEightsRoom(joinParam);
         else if (gameParam === "battle-boat") joinBattleBoatRoom(joinParam);
         else if (gameParam === "bones") joinBonesRoom(joinParam);
+        else if (gameParam === "mancala") joinMancalaRoom(joinParam);
         else if (gameParam === "fox-and-hounds") joinFoxAndHoundsRoom(joinParam);
         else joinYahtzeeRoom(joinParam);
     }
@@ -1080,6 +1103,37 @@ async function init() {
         if (e.key === "Escape") document.getElementById("createBonesRoomCancelBtn").click();
     });
 
+    // Mancala single player
+    let mancalaDifficulty = "regular";
+    document.querySelectorAll("#mancalaDifficultyToggle .difficulty-opt").forEach(btn => {
+        btn.addEventListener("click", () => {
+            document.querySelectorAll("#mancalaDifficultyToggle .difficulty-opt").forEach(b => b.classList.remove("active"));
+            btn.classList.add("active");
+            mancalaDifficulty = btn.dataset.difficulty;
+        });
+    });
+    document.getElementById("mancalaSpBtn").addEventListener("click", () => {
+        sessionStorage.setItem("myName", me.name);
+        connection.invoke("StartMancalaSinglePlayer", mancalaDifficulty);
+    });
+
+    // Create Mancala room
+    document.getElementById("createMancalaRoomBtn").addEventListener("click", () => {
+        document.getElementById("newMancalaRoomName").value = "";
+        document.getElementById("createMancalaRoomModal").style.display = "flex";
+        setTimeout(() => document.getElementById("newMancalaRoomName").focus(), 50);
+    });
+    document.getElementById("createMancalaRoomCancelBtn").addEventListener("click", () => {
+        document.getElementById("createMancalaRoomModal").style.display = "none";
+    });
+    document.getElementById("createMancalaRoomConfirmBtn").addEventListener("click", () => {
+        const name = document.getElementById("newMancalaRoomName").value.trim() || "Mancala";
+        document.getElementById("createMancalaRoomModal").style.display = "none";
+        connection.invoke("CreateMancalaRoom", name);
+    });
+    document.getElementById("newMancalaRoomName").addEventListener("keydown", e => {
+        if (e.key === "Enter") document.getElementById("createMancalaRoomConfirmBtn").click();
+        if (e.key === "Escape") document.getElementById("createMancalaRoomCancelBtn").click();
     // Fox and Hounds difficulty segmented control
     let fahDifficulty = "medium";
     document.querySelectorAll("#fahDifficultyToggle .difficulty-opt").forEach(btn => {
@@ -1248,6 +1302,12 @@ function joinBonesRoom(roomId) {
     });
 }
 
+function joinMancalaRoom(roomId) {
+    sessionStorage.setItem("mancalaRoomId", roomId);
+    sessionStorage.setItem("isSinglePlayer", "0");
+    connection.invoke("JoinMancalaRoom", roomId);
+    connection.once("MancalaRoomUpdated", () => {
+        window.location.href = "/mancala-room";
 function joinFoxAndHoundsRoom(roomId) {
     sessionStorage.setItem("isSinglePlayer", "0");
     connection.invoke("JoinFoxAndHoundsRoom", roomId).then(() => {

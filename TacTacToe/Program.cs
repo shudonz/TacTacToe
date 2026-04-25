@@ -348,18 +348,18 @@ app.MapGet("/bones-room", (HttpContext ctx) =>
     return Results.File("bones-room.html", "text/html");
 });
 
-app.MapGet("/fox-and-hounds", (HttpContext ctx) =>
+app.MapGet("/mancala", (HttpContext ctx) =>
 {
     if (ctx.User.Identity?.IsAuthenticated != true)
         return Results.Redirect("/login");
-    return Results.File("fox-and-hounds.html", "text/html");
+    return Results.File("mancala.html", "text/html");
 });
 
-app.MapGet("/fox-and-hounds-room", (HttpContext ctx) =>
+app.MapGet("/mancala-room", (HttpContext ctx) =>
 {
     if (ctx.User.Identity?.IsAuthenticated != true)
         return Results.Redirect("/login");
-    return Results.File("fox-and-hounds-room.html", "text/html");
+    return Results.File("mancala-room.html", "text/html");
 });
 
 app.MapGet("/api/me", async (HttpContext ctx) =>

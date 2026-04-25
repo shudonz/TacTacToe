@@ -17,6 +17,7 @@ public class LobbyService
     private readonly ConcurrentDictionary<string, PuzzleTimeRoom> _puzzleTimeRooms = new();
     private readonly ConcurrentDictionary<string, BattleBoatRoom> _battleBoatRooms = new();
     private readonly ConcurrentDictionary<string, BonesRoom> _bonesRooms = new();
+    private readonly ConcurrentDictionary<string, MancalaRoom> _mancalaRooms = new();
     private readonly ConcurrentDictionary<string, FoxAndHoundsRoom> _foxAndHoundsRooms = new();
 
     public bool AddPlayer(string connectionId, string name, string email, string picture)
@@ -452,6 +453,12 @@ public class LobbyService
 
     public void RemoveBonesRoom(string id) => _bonesRooms.TryRemove(id, out _);
 
+    // --- Mancala Rooms ---
+
+    public MancalaRoom CreateMancalaRoom(string id, string hostConnectionId)
+    {
+        var host = _players.GetValueOrDefault(hostConnectionId);
+        var room = new MancalaRoom
     // --- Fox and Hounds Rooms ---
 
     public FoxAndHoundsRoom CreateFoxAndHoundsRoom(string id, string hostConnectionId)
@@ -462,6 +469,28 @@ public class LobbyService
             Id = id,
             HostConnectionId = hostConnectionId,
             HostName = host?.Name ?? "Host",
+            Players = [new MancalaPlayer { ConnectionId = hostConnectionId, Name = host?.Name ?? "Host", Connected = true }]
+        };
+        _mancalaRooms[id] = room;
+        return room;
+    }
+
+    public MancalaRoom? GetMancalaRoom(string id) { _mancalaRooms.TryGetValue(id, out var r); return r; }
+    public void StoreMancalaRoom(string id, MancalaRoom room) => _mancalaRooms[id] = room;
+
+    public IEnumerable<MancalaRoom> GetOpenMancalaRooms() =>
+        _mancalaRooms.Values.Where(r => !r.Started && !r.IsOver &&
+            IsOnlineConnection(r.HostConnectionId) &&
+            r.Players.Any(p => p.IsBot || IsOnlineConnection(p.ConnectionId)));
+
+    public IEnumerable<MancalaRoom> GetMancalaRoomsForConnection(string connectionId) =>
+        _mancalaRooms.Values.Where(r => !r.Started && r.Players.Any(p => p.ConnectionId == connectionId));
+
+    public IEnumerable<MancalaRoom> GetActiveMancalaRoomsForConnection(string connectionId) =>
+        _mancalaRooms.Values.Where(r => r.Started && !r.IsOver &&
+            r.Players.Any(p => p.ConnectionId == connectionId && !p.IsBot));
+
+    public void RemoveMancalaRoom(string id) => _mancalaRooms.TryRemove(id, out _);
             Players = [new FoxAndHoundsPlayer { ConnectionId = hostConnectionId, Name = host?.Name ?? "Host", Connected = true }]
         };
         _foxAndHoundsRooms[id] = room;
