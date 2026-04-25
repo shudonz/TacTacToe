@@ -225,7 +225,7 @@ public static class MancalaEngine
 
         // Default: pick pit with most stones
         int best = validMoves.OrderByDescending(p => room.Board[p]).First();
-        int display = playerIndex == 0 ? best + 1 : best - 6;
+        int display = playerIndex == 0 ? best + 1 : 13 - best;
         return new MancalaHint { HintAvailable = true, PitIndex = best, Description = $"Play pit {display} ({room.Board[best]} stones)." };
     }
 
