@@ -130,6 +130,10 @@
                         <span class="game-list-arrow">&#8250;</span>
                     </button>
 
+                    <button class="game-option game-list-item" data-game="mancala" aria-label="Mancala">
+                        <span class="game-list-icon">🪨</span>
+                        <div class="game-list-info">
+                            <span class="game-list-name">Mancala</span>
                     <button class="game-option game-list-item" data-game="fox-and-hounds" aria-label="Fox and Hounds">
                         <span class="game-list-icon">🦊</span>
                         <div class="game-list-info">
@@ -732,6 +736,25 @@
                     </div>
                 </div>
 
+                <!-- ── Mancala Panel ── -->
+                <div id="mancalaPanel" class="game-detail-panel" style="display:none">
+                    <div class="game-detail-header">
+                        <span class="game-detail-icon">🪨</span>
+                        <div class="game-detail-header-body">
+                            <div class="game-title-row">
+                                <h2 class="game-detail-title">Mancala</h2>
+                                <button class="btn-play" onclick="showPlaySections('mancala')">&#9654; Play</button>
+                            </div>
+                            <p class="game-detail-desc">Classic sowing strategy! Distribute stones, capture your opponent's, and fill your store to win.</p>
+                            <div class="lobby-lb-inline">
+                                <div class="lobby-lb-inline-tabs">
+                                    <span class="lobby-lb-title">&#127942; High Scores</span>
+                                    <button class="lb-tab active" onclick="lobbyLbTab(this,'man-lobby-lb','man-lobby-hist')">Top 5</button>
+                                    <button class="lb-tab" onclick="lobbyLbTab(this,'man-lobby-hist','man-lobby-lb')">My Scores</button>
+                                </div>
+                                <div class="lobby-lb-scroll">
+                                    <div class="lb-body" id="man-lobby-lb"></div>
+                                    <div class="lb-body" id="man-lobby-hist" style="display:none"></div>
                 <!-- ── Fox and Hounds Panel ── -->
                 <div id="foxAndHoundsPanel" class="game-detail-panel" style="display:none">
                     <div class="game-detail-header">
@@ -756,6 +779,18 @@
                         </div>
                     </div>
 
+                    <div id="mancalaPlaySections" class="game-play-sections" style="display:none">
+                    <div class="mode-cards">
+                    <div class="detail-section">
+                        <h3 class="detail-section-title">&#129302; Single Player</h3>
+                        <p class="lobby-hint">Play against a computer opponent — choose difficulty.</p>
+                        <div class="difficulty-toggle" id="mancalaDifficultyToggle">
+                            <button class="difficulty-opt active" data-difficulty="regular" id="mancalaRegularOpt">Regular</button>
+                            <button class="difficulty-opt difficulty-hard" data-difficulty="hard" id="mancalaHardOpt">&#128128; Hard</button>
+                        </div>
+                        <div class="sp-section" style="margin-top:0.6rem;">
+                            <button id="mancalaSpBtn" class="btn btn-sp">🪨 Play Solo</button>
+                        </div>
                     <div id="foxAndHoundsPlaySections" class="game-play-sections" style="display:none">
                     <div class="mode-cards">
                     <div class="detail-section">
@@ -771,6 +806,10 @@
 
                     <div class="detail-section">
                         <h3 class="detail-section-title">&#127760; Multiplayer</h3>
+                        <p class="lobby-hint">Create a room or join an open one for 2-player Mancala.</p>
+                        <button id="createMancalaRoomBtn" class="btn-create-room">&#43; Create Room</button>
+                        <div id="mancalaRoomList" class="player-list"></div>
+                        <p id="noMancalaRooms" class="lobby-hint lobby-no-rooms" style="display:none;">No open rooms right now — create one to get started!</p>
                         <p class="lobby-hint">Create a room or join an open one for a 2-player match.</p>
                         <button id="createFoxAndHoundsRoomBtn" class="btn-create-room">&#43; Create Room</button>
                         <div id="foxAndHoundsRoomList" class="player-list"></div>
@@ -919,6 +958,14 @@
                 </div>
             </div>
         </div>
+        <div id="createMancalaRoomModal" class="modal" style="display:none">
+            <div class="modal-content">
+                <h3>🪨 Create Mancala Room</h3>
+                <p>Give your room a name so friends can find it.</p>
+                <input id="newMancalaRoomName" class="guest-input" type="text" placeholder="e.g. Stone Showdown" maxlength="30" style="margin-top:1.25rem;width:100%;">
+                <div class="modal-actions">
+                    <button id="createMancalaRoomConfirmBtn" class="btn btn-accept">Create Room</button>
+                    <button id="createMancalaRoomCancelBtn" class="btn btn-decline">Cancel</button>
         <div id="createFoxAndHoundsRoomModal" class="modal" style="display:none">
             <div class="modal-content">
                 <h3>🦊 Create Fox and Hounds Room</h3>

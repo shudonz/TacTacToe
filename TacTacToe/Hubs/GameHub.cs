@@ -796,6 +796,69 @@ public partial class GameHub : Hub
             });
         }
 
+        // Defer Mancala waiting-room cleanup
+        var mancalaWaitSnapshot = _lobby.GetMancalaRoomsForConnection(disconnectedConnectionId).ToList();
+        if (mancalaWaitSnapshot.Count > 0)
+        {
+            _ = Task.Run(async () =>
+            {
+                await Task.Delay(TimeSpan.FromSeconds(DefaultRejoinGracePeriodSeconds));
+                bool changed = false;
+                foreach (var snap in mancalaWaitSnapshot)
+                {
+                    var room = _lobby.GetMancalaRoom(snap.Id);
+                    if (room == null || room.Started) continue;
+                    var player = room.Players.FirstOrDefault(p => p.Name == name);
+                    if (player == null || player.ConnectionId != disconnectedConnectionId) continue;
+                    room.Players.Remove(player);
+                    changed = true;
+                    if (room.Players.Count == 0 || room.HostName == name)
+                    { await _hubContext.Clients.Group(room.Id).SendAsync("MancalaRoomDissolved"); _lobby.RemoveMancalaRoom(room.Id); }
+                    else
+                    { await _hubContext.Clients.Group(room.Id).SendAsync("MancalaRoomUpdated", room); }
+                }
+                if (changed) await _hubContext.Clients.All.SendAsync("MancalaRoomList", MancalaRoomSummaries());
+            });
+        }
+
+        // Defer Mancala active-game disconnect
+        var mancalaGameSnapshot = _lobby.GetActiveMancalaRoomsForConnection(disconnectedConnectionId).ToList();
+        if (mancalaGameSnapshot.Count > 0)
+        {
+            _ = Task.Run(async () =>
+            {
+                await Task.Delay(TimeSpan.FromSeconds(DefaultRejoinGracePeriodSeconds));
+                foreach (var snap in mancalaGameSnapshot)
+                {
+                    var room = _lobby.GetMancalaRoom(snap.Id);
+                    if (room == null || room.IsOver) continue;
+                    var player = room.Players.FirstOrDefault(p => p.Name == name && !p.IsBot);
+                    if (player == null || player.ConnectionId != disconnectedConnectionId) continue;
+                    player.Connected = false;
+                    await _hubContext.Clients.Group(room.Id).SendAsync("PlayerLeft", name);
+
+                    var connectedHumans = room.Players.Where(p => !p.IsBot && p.Connected).ToList();
+                    if (connectedHumans.Count == 0)
+                    {
+                        _lobby.RemoveMancalaRoom(room.Id);
+                        continue;
+                    }
+                    room.IsOver = true;
+                    room.WinnerName = connectedHumans[0].Name;
+                    await _hubContext.Clients.Group(room.Id).SendAsync("MancalaUpdated", new
+                    {
+                        room.Board,
+                        room.CurrentPlayerIndex,
+                        room.ExtraTurn,
+                        room.LastPitIndex,
+                        room.IsOver,
+                        room.WinnerName,
+                        Players = room.Players.Select(p => new { p.Name, p.IsBot, p.Connected }).ToList()
+                    });
+                }
+            });
+        }
+
         _lobby.RemovePlayer(disconnectedConnectionId);
         await BroadcastLobby();
         await BroadcastAllRoomLists();

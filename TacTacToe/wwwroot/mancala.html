@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>TacTacToe &#8211; Mancala</title>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="/css/style.css" rel="stylesheet">
+    <style>
+        .mancala-container { max-width: 900px; margin: 0 auto; padding: 1rem; }
+        .mancala-header { display: flex; align-items: center; justify-content: space-between; gap: 1rem; flex-wrap: wrap; margin-bottom: 1rem; }
+        .mancala-status { font-size: 1rem; font-weight: 600; color: var(--text); }
+        .mancala-board-wrap { background: linear-gradient(135deg, #5c3a1e 0%, #8b5e3c 100%); border-radius: 2rem; padding: 1.2rem 1.4rem; box-shadow: 0 8px 32px rgba(0,0,0,0.35); border: 3px solid #c8a26b; }
+        .mancala-board { display: grid; grid-template-columns: auto 1fr auto; gap: 0.7rem; align-items: center; }
+        .mancala-store { display: flex; flex-direction: column; align-items: center; justify-content: center; background: rgba(0,0,0,0.35); border-radius: 1.5rem; min-width: 70px; padding: 0.8rem 0.5rem; gap: 0.4rem; border: 2px solid rgba(255,255,255,0.15); transition: transform 0.2s; }
+        .mancala-store.active-store { border-color: #ffd700; box-shadow: 0 0 12px #ffd70066; }
+        .mancala-store-label { font-size: 0.72rem; font-weight: 700; color: rgba(255,255,255,0.75); text-transform: uppercase; letter-spacing: 0.04em; text-align: center; }
+        .mancala-store-count { font-size: 2rem; font-weight: 800; color: #ffd700; }
+        .mancala-pits-area { display: flex; flex-direction: column; gap: 0.55rem; }
+        .mancala-pits-row { display: grid; grid-template-columns: repeat(6, 1fr); gap: 0.55rem; }
+        .mancala-pit { position: relative; background: rgba(0,0,0,0.3); border: 2px solid rgba(255,255,255,0.15); border-radius: 50%; aspect-ratio: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; cursor: pointer; transition: background 0.18s, border-color 0.18s, transform 0.15s; min-width: 52px; min-height: 52px; }
+        .mancala-pit:hover:not(:disabled) { background: rgba(255,215,0,0.18); border-color: #ffd700; transform: scale(1.07); }
+        .mancala-pit:disabled { cursor: default; opacity: 0.65; }
+        .mancala-pit.active-pit { border-color: #7c6aff; background: rgba(124,106,255,0.18); }
+        .mancala-pit.hint-pit { border-color: #36d6c3 !important; background: rgba(54,214,195,0.22) !important; box-shadow: 0 0 10px #36d6c344; animation: hint-pulse 1.1s ease-in-out infinite; }
+        .mancala-pit.last-pit { border-color: #ff8a47; background: rgba(255,138,71,0.18); }
+        @keyframes hint-pulse { 0%,100% { box-shadow: 0 0 8px #36d6c344; } 50% { box-shadow: 0 0 18px #36d6c3aa; } }
+        .mancala-pit-count { font-size: 1.25rem; font-weight: 800; color: #fff; line-height: 1; }
+        .mancala-pit-stones { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 2px; padding: 4px; max-width: 90%; }
+        .mancala-stone { width: 9px; height: 9px; border-radius: 50%; background: radial-gradient(circle at 35% 35%, #e8c97d, #8b6914); box-shadow: 0 1px 2px rgba(0,0,0,0.5); transition: all 0.3s; }
+        .mancala-stone.stone-p2 { background: radial-gradient(circle at 35% 35%, #9b7aff, #4c3a99); }
+        .mancala-pit-label { position: absolute; top: 2px; right: 4px; font-size: 0.58rem; color: rgba(255,255,255,0.45); font-weight: 600; }
+        .mancala-player-row { display: flex; gap: 1rem; align-items: center; margin-top: 0.5rem; flex-wrap: wrap; }
+        .mancala-player-chip { display: flex; align-items: center; gap: 0.5rem; background: rgba(255,255,255,0.08); border-radius: 2rem; padding: 0.35rem 0.85rem; border: 2px solid transparent; transition: border-color 0.2s; }
+        .mancala-player-chip.active { border-color: #7c6aff; background: rgba(124,106,255,0.15); }
+        .mancala-player-chip.is-me { font-weight: 700; }
+        .mancala-player-chip-name { font-size: 0.88rem; color: var(--text); }
+        .mancala-player-chip-score { font-size: 1rem; font-weight: 800; color: #ffd700; }
+        .mancala-actions { display: flex; gap: 0.75rem; flex-wrap: wrap; margin-top: 0.85rem; }
+        .mancala-instructions { background: rgba(255,255,255,0.05); border-radius: 1rem; padding: 1rem 1.2rem; margin-top: 1rem; }
+        .mancala-instructions h3 { font-size: 0.9rem; font-weight: 700; color: var(--text); margin-bottom: 0.5rem; }
+        .mancala-instructions ul { margin: 0; padding-left: 1.2rem; }
+        .mancala-instructions li { font-size: 0.82rem; color: var(--text-dim); margin-bottom: 0.25rem; }
+        .stone-bounce { animation: stoneBounce 0.35s cubic-bezier(.36,1.5,.6,1) forwards; }
+        @keyframes stoneBounce { 0% { transform: scale(0) rotate(-30deg); opacity: 0; } 60% { transform: scale(1.25) rotate(5deg); opacity: 1; } 100% { transform: scale(1) rotate(0); opacity: 1; } }
+        /* Flying stones */
+        .mancala-flying-stone { position: fixed; width: 11px; height: 11px; border-radius: 50%; pointer-events: none; z-index: 9100; background: radial-gradient(circle at 35% 35%, #e8c97d, #8b6914); box-shadow: 0 2px 8px rgba(0,0,0,0.55), 0 0 5px rgba(255,220,100,0.4); will-change: left, top, transform; }
+        .mancala-flying-stone.stone-p2 { background: radial-gradient(circle at 35% 35%, #b39aff, #4c3a99); box-shadow: 0 2px 8px rgba(0,0,0,0.55), 0 0 5px rgba(140,100,255,0.4); }
+        /* Landing ripple on pit/store */
+        .mancala-pit.stone-landing, .mancala-store.stone-landing { animation: pit-ripple 0.32s ease-out; }
+        @keyframes pit-ripple { 0% { box-shadow: 0 0 0 0 rgba(255,215,0,0.75); } 60% { box-shadow: 0 0 0 9px rgba(255,215,0,0); } 100% { box-shadow: none; } }
+        /* Keep hint/last-pit glow during landing */
+        .mancala-pit.hint-pit.stone-landing { animation: hint-pulse 1.1s ease-in-out infinite, pit-ripple 0.32s ease-out; }
+        .mancala-pit.last-pit.stone-landing { animation: pit-ripple 0.32s ease-out; }
+        @media (max-width: 600px) {
+            .mancala-pit { min-width: 38px; min-height: 38px; }
+            .mancala-store { min-width: 50px; }
+            .mancala-pit-count { font-size: 1rem; }
+            .mancala-store-count { font-size: 1.5rem; }
+        }
+    </style>
+</head>
+<body>
+    <div class="ambient"></div>
+    <div class="noise"></div>
+    <div class="page-content">
+        <nav class="navbar">
+            <button class="ham-btn" onclick="hamOpen()" aria-label="Open menu">
+                <span></span><span></span><span></span>
+            </button>
+            <div class="logo-sm"><span class="logo-x">Tac</span><span class="logo-o">Tac</span><span class="logo-x">Toe</span></div>
+            <a href="/profile" class="nav-profile-btn" title="Edit Profile">
+                <span id="navbarAvatarEmoji" class="nav-profile-emoji" style="display:none"></span>
+                <img id="navbarAvatarImg" class="nav-profile-img" src="" alt="Profile" style="display:none">
+                <span id="navbarAvatarPlaceholder" class="nav-profile-placeholder">&#128100;</span>
+                <span id="navbarUsername" class="nav-profile-username"></span>
+            </a>
+        </nav>
+        <main class="mancala-container">
+            <div class="mancala-header glass-card">
+                <h2 class="lobby-title" style="margin:0;">🪨 Mancala</h2>
+                <div id="statusText" class="mancala-status turn-indicator" style="margin:0;">Loading&hellip;</div>
+                <button id="hintBtn" class="btn btn-outline" style="font-size:0.82rem;padding:0.4rem 0.9rem;">💡 Hint</button>
+            </div>
+            <div id="mancalaPlayers" class="mancala-player-row" style="margin-bottom:0.5rem;"></div>
+            <div class="mancala-board-wrap">
+                <div class="mancala-board">
+                    <div id="storeP2" class="mancala-store">
+                        <span class="mancala-store-label" id="storeP2Label">P2 Store</span>
+                        <span class="mancala-store-count" id="storeP2Count">0</span>
+                    </div>
+                    <div class="mancala-pits-area">
+                        <div id="pitsP2" class="mancala-pits-row"></div>
+                        <div id="pitsP1" class="mancala-pits-row"></div>
+                    </div>
+                    <div id="storeP1" class="mancala-store">
+                        <span class="mancala-store-label" id="storeP1Label">P1 Store</span>
+                        <span class="mancala-store-count" id="storeP1Count">0</span>
+                    </div>
+                </div>
+            </div>
+            <div class="mancala-actions">
+                <button id="backBtn2" class="btn btn-outline">&#8592; Back to Lobby</button>
+            </div>
+            <div class="mancala-instructions glass-card">
+                <h3>📖 How to Play</h3>
+                <ul>
+                    <li>On your turn, click any of your pits (bottom row) that contain stones.</li>
+                    <li>Stones are distributed counter-clockwise, one per pit.</li>
+                    <li>Your <strong>store</strong> (right side) collects your points — opponent's store is skipped.</li>
+                    <li><strong>Extra turn:</strong> If your last stone lands in your store, play again!</li>
+                    <li><strong>Capture:</strong> Last stone in an empty pit on your side captures opposite stones.</li>
+                    <li>Game ends when one side is empty. Most stones in store wins.</li>
+                </ul>
+            </div>
+        </main>
+    </div>
+
+    <div id="resultOverlay" class="result-overlay" style="display:none">
+        <div class="result-card">
+            <h2 id="resultText"></h2>
+            <div id="resultScores" style="margin:0.5rem 0 1rem;font-size:1rem;color:var(--text-dim);"></div>
+            <button id="backToLobby" class="btn btn-outline">Back to Lobby</button>
+            <div class="leaderboard-panel" style="margin-top:1rem;">
+                <div class="leaderboard-panel-tabs">
+                    <button class="lb-tab active" onclick="showLbTab(this,'man-lb')">&#127942; Top Scores</button>
+                    <button class="lb-tab" onclick="showLbTab(this,'man-hist')">&#128196; My History</button>
+                </div>
+                <div class="lb-body" id="man-lb"></div>
+                <div class="lb-body" id="man-hist" style="display:none"></div>
+            </div>
+        </div>
+    </div>
+
+    <div id="chatWidget" class="chat-widget">
+        <button id="chatToggle" class="chat-toggle">&#128172; <span id="chatBadge" class="chat-badge" style="display:none">0</span></button>
+        <div id="chatPanel" class="chat-panel" style="display:none">
+            <div class="chat-header"><span>Game Chat</span><button id="chatClose" class="chat-close">&#x2715;</button></div>
+            <div id="chatMessages" class="chat-messages"></div>
+            <div class="chat-input-row"><input id="chatInput" class="chat-input" placeholder="Type a message&#8230;" maxlength="500"><button id="chatSend" class="chat-send">&#10148;</button></div>
+        </div>
+    </div>
+
+    <script src="/js/signalr.min.js"></script>
+    <script src="/js/avatarCache.js"></script>
+    <script src="/js/leaderboard.js"></script>
+    <script src="/js/mancala.js"></script>
+    <script>
+        function showLbTab(btn, id) {
+            btn.closest('.leaderboard-panel').querySelectorAll('.lb-tab').forEach(t => t.classList.remove('active'));
+            btn.classList.add('active');
+            btn.closest('.leaderboard-panel').querySelectorAll('.lb-body').forEach(b => b.style.display = 'none');
+            document.getElementById(id).style.display = '';
+        }
+        document.addEventListener('gameOver', () => {
+            setTimeout(() => {
+                loadLeaderboard('Mancala', document.getElementById('man-lb'));
+                loadPersonalHistory('Mancala', document.getElementById('man-hist'));
+            }, 1500);
+        });
+    </script>
+    <div class="ham-overlay" onclick="hamClose()"></div>
+    <nav class="ham-drawer" aria-label="Navigation menu">
+        <div class="ham-drawer-header">
+            <div class="ham-drawer-logo"><span class="logo-x">Tac</span><span class="logo-o">Tac</span><span class="logo-x">Toe</span></div>
+            <button class="ham-close" onclick="hamClose()" aria-label="Close menu">&#10005;</button>
+        </div>
+        <div class="ham-menu">
+            <button id="backBtn" class="ham-item">&#8592; Back to Lobby</button>
+        </div>
+    </nav>
+    <script src="/js/hamburger.js"></script>
+</body>
+</html>
