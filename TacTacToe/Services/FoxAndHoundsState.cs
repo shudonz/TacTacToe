@@ -7,8 +7,8 @@ namespace TacTacToe.Services;
 //   • 4 Hounds start on the four dark squares of row 7 (bottom row)
 //   • Hounds move diagonally forward only (increasing row index toward row 0)
 //   • Fox moves diagonally in any direction (4 choices)
-//   • Fox wins if it reaches row 7 (the hound back rank) or gets completely
-//     surrounded with no legal moves
+//   • Fox wins if it reaches row 7 (the hound back rank) or if the Hounds have
+//     no legal moves remaining
 //   • Hounds win if they surround the Fox so it has no legal moves
 
 public class FoxAndHoundsRoom
@@ -283,9 +283,8 @@ public static class FoxAndHoundsEngine
     }
 
     // ── Scoring ────────────────────────────────────────────────────────────
-    // Fox score: how close to row 7 it got (0-7).  Win bonus: +100.
-    // Hounds score: how many moves they made without Fox escaping (+1 per
-    // move where they held Fox's freedom <2).  Win bonus: +100.
+    // Fox score: 10 × row reached + 100 win bonus.
+    // Hounds score: 10 × (7 − fox row) + total move count + 100 win bonus.
 
     public static int ScoreForFox(FoxAndHoundsRoom room)
     {
