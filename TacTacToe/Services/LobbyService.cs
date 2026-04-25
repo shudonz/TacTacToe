@@ -459,12 +459,6 @@ public class LobbyService
     {
         var host = _players.GetValueOrDefault(hostConnectionId);
         var room = new MancalaRoom
-    // --- Fox and Hounds Rooms ---
-
-    public FoxAndHoundsRoom CreateFoxAndHoundsRoom(string id, string hostConnectionId)
-    {
-        var host = _players.GetValueOrDefault(hostConnectionId);
-        var room = new FoxAndHoundsRoom
         {
             Id = id,
             HostConnectionId = hostConnectionId,
@@ -491,6 +485,17 @@ public class LobbyService
             r.Players.Any(p => p.ConnectionId == connectionId && !p.IsBot));
 
     public void RemoveMancalaRoom(string id) => _mancalaRooms.TryRemove(id, out _);
+
+    // --- Fox and Hounds Rooms ---
+
+    public FoxAndHoundsRoom CreateFoxAndHoundsRoom(string id, string hostConnectionId)
+    {
+        var host = _players.GetValueOrDefault(hostConnectionId);
+        var room = new FoxAndHoundsRoom
+        {
+            Id = id,
+            HostConnectionId = hostConnectionId,
+            HostName = host?.Name ?? "Host",
             Players = [new FoxAndHoundsPlayer { ConnectionId = hostConnectionId, Name = host?.Name ?? "Host", Connected = true }]
         };
         _foxAndHoundsRooms[id] = room;
