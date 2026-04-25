@@ -68,7 +68,7 @@ public partial class GameHub
             PuzzleTimeEngine.ReleaseLocksForConnection(room, oldConnectionId);
 
         await Groups.AddToGroupAsync(Context.ConnectionId, roomId);
-        if (room.Started)
+        if (room.Started && !room.IsOver)
         {
             _lobby.SetInGame(Context.ConnectionId, true);
             await BroadcastLobby();
@@ -76,6 +76,18 @@ public partial class GameHub
         }
         else
         {
+            if (room.IsOver)
+            {
+                room.Started = false;
+                room.IsOver = false;
+                room.WinnerName = null;
+                room.SessionsSaved = false;
+                room.Tiles = [];
+                room.Players.RemoveAll(p => p.IsBot);
+                foreach (var p in room.Players)
+                    _lobby.SetInGame(p.ConnectionId, false);
+                await BroadcastLobby();
+            }
             await Clients.Group(roomId).SendAsync("PuzzleTimeRoomUpdated", room);
         }
     }

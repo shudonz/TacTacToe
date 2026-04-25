@@ -1,5 +1,5 @@
 const connection = new signalR.HubConnectionBuilder().withUrl("/gamehub").withAutomaticReconnect().build();
-const roomId = sessionStorage.getItem("mancalaRoomId");
+let roomId = sessionStorage.getItem("mancalaRoomId");
 const isSinglePlayer = sessionStorage.getItem("isSinglePlayer") === "1";
 if (!roomId) { window.location.replace("/lobby"); throw new Error("Missing Mancala room id"); }
 
@@ -312,6 +312,15 @@ async function init() {
         document.getElementById("statusText").textContent = name + " left the game.";
     });
 
+    connection.on("MancalaSinglePlayerStarted", newRoomId => {
+        roomId = newRoomId;
+        sessionStorage.setItem("mancalaRoomId", newRoomId);
+    });
+
+    connection.on("MancalaRoomUpdated", () => {
+        window.location.href = "/mancala-room";
+    });
+
     await connection.start();
     await connection.invoke("RejoinMancalaRoom", roomId);
     if (!isSinglePlayer) initChat(connection, roomId);
@@ -447,6 +456,16 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById("backBtn").addEventListener("click", backToLobby);
     document.getElementById("backBtn2").addEventListener("click", backToLobby);
     document.getElementById("backToLobby").addEventListener("click", backToLobby);
+    document.getElementById("playAgainBtn").addEventListener("click", () => {
+        if (isSinglePlayer) {
+            document.getElementById("resultOverlay").style.display = "none";
+            _gameOverEventFired = false;
+            gameState = null;
+            connection.invoke("StartMancalaSinglePlayer", "regular").catch(e => console.error(e));
+        } else {
+            window.location.href = "/mancala-room";
+        }
+    });
 });
 
 function initChat(conn, groupId) {

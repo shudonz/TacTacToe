@@ -1155,7 +1155,7 @@ public partial class GameHub : Hub
         player.Connected = true;
         if (room.HostName == name) room.HostConnectionId = Context.ConnectionId;
         await Groups.AddToGroupAsync(Context.ConnectionId, roomId);
-        if (room.Started)
+        if (room.Started && !room.IsOver)
         {
             _lobby.SetInGame(Context.ConnectionId, true);
             await BroadcastLobby();
@@ -1163,6 +1163,30 @@ public partial class GameHub : Hub
         }
         else
         {
+            if (room.IsOver)
+            {
+                room.Started = false;
+                room.IsOver = false;
+                room.WinnerName = null;
+                room.RoundsPlayed = 0;
+                room.Phase = SlotsPhase.Betting;
+                room.Players.RemoveAll(p => p.IsBot);
+                foreach (var p in room.Players)
+                {
+                    p.Balance = room.Settings.StartingBalance;
+                    p.CurrentBet = 0;
+                    p.BetPerLine = 0;
+                    p.ActivePaylines = 0;
+                    p.LastWin = 0;
+                    p.WinningPaylines = [];
+                    p.TotalMultiplier = 0;
+                    p.HasSpun = false;
+                    p.Reels = SlotsEngine.UnspunReels();
+                }
+                foreach (var p in room.Players)
+                    _lobby.SetInGame(p.ConnectionId, false);
+                await BroadcastLobby();
+            }
             await Clients.Group(roomId).SendAsync("SlotsRoomUpdated", room);
         }
     }
@@ -1447,7 +1471,7 @@ public partial class GameHub : Hub
         player.Connected = true;
         if (room.HostName == name) room.HostConnectionId = Context.ConnectionId;
         await Groups.AddToGroupAsync(Context.ConnectionId, roomId);
-        if (room.Started)
+        if (room.Started && !room.IsOver)
         {
             _lobby.SetInGame(Context.ConnectionId, true);
             await BroadcastLobby();
@@ -1455,6 +1479,23 @@ public partial class GameHub : Hub
         }
         else
         {
+            if (room.IsOver)
+            {
+                room.Started = false;
+                room.IsOver = false;
+                room.WinnerName = null;
+                room.CurrentPlayerIndex = 0;
+                room.Deck = [];
+                room.Matched = [];
+                room.TurnRevealedIndexes = [];
+                room.Players.RemoveAll(p => p.IsBot);
+                foreach (var p in room.Players)
+                    p.Score = 0;
+                room.SeenCardIndexes = [];
+                foreach (var p in room.Players)
+                    _lobby.SetInGame(p.ConnectionId, false);
+                await BroadcastLobby();
+            }
             await Clients.Group(roomId).SendAsync("ConcentrationRoomUpdated", room);
         }
     }
@@ -2032,7 +2073,7 @@ public partial class GameHub : Hub
         player.Connected = true;
         if (room.HostName == name) room.HostConnectionId = Context.ConnectionId;
         await Groups.AddToGroupAsync(Context.ConnectionId, roomId);
-        if (room.Started)
+        if (room.Started && !room.IsOver)
         {
             _lobby.SetInGame(Context.ConnectionId, true);
             await BroadcastLobby();
@@ -2040,6 +2081,27 @@ public partial class GameHub : Hub
         }
         else
         {
+            if (room.IsOver)
+            {
+                room.Started = false;
+                room.IsOver = false;
+                room.WinnerName = null;
+                room.CurrentPlayerIndex = 0;
+                room.Round = 1;
+                room.Dice = new int[5];
+                room.Held = new bool[5];
+                room.RollsLeft = 3;
+                room.TurnDeadline = null;
+                room.Players.RemoveAll(p => p.IsBot);
+                foreach (var p in room.Players)
+                {
+                    p.Scores = YahtzeePlayer.InitScorecard();
+                    p.Connected = true;
+                }
+                foreach (var p in room.Players)
+                    _lobby.SetInGame(p.ConnectionId, false);
+                await BroadcastLobby();
+            }
             await Clients.Group(roomId).SendAsync("YahtzeeRoomUpdated", room);
         }
     }
@@ -2049,8 +2111,6 @@ public partial class GameHub : Hub
         var room = _lobby.GetRoom(roomId);
         if (room == null || room.Started) return;
         if (Context.ConnectionId != room.HostConnectionId) return;
-
-        // Clamp values
         settings.MaxPlayers = Math.Clamp(settings.MaxPlayers, 2, 20);
         settings.RollsPerTurn = Math.Clamp(settings.RollsPerTurn, 1, 5);
         settings.NumberOfDice = Math.Clamp(settings.NumberOfDice, 3, 8);
@@ -2613,7 +2673,7 @@ public partial class GameHub : Hub
         player.Connected = true;
         if (room.HostName == name) room.HostConnectionId = Context.ConnectionId;
         await Groups.AddToGroupAsync(Context.ConnectionId, roomId);
-        if (room.Started)
+        if (room.Started && !room.IsOver)
         {
             _lobby.SetInGame(Context.ConnectionId, true);
             await BroadcastLobby();
@@ -2621,6 +2681,26 @@ public partial class GameHub : Hub
         }
         else
         {
+            if (room.IsOver)
+            {
+                room.Started = false;
+                room.IsOver = false;
+                room.DeckSeed = 0;
+                room.FinishCount = 0;
+                room.Players.RemoveAll(p => p.IsBot);
+                foreach (var p in room.Players)
+                {
+                    p.Game = new SolitaireGameState();
+                    p.Score = 0;
+                    p.HasFinished = false;
+                    p.FinishRank = 0;
+                    p.GaveUp = false;
+                    p.HintsUsed = 0;
+                }
+                foreach (var p in room.Players)
+                    _lobby.SetInGame(p.ConnectionId, false);
+                await BroadcastLobby();
+            }
             await Clients.Group(roomId).SendAsync("SolitaireRoomUpdated", room);
         }
     }
@@ -2920,7 +3000,7 @@ public partial class GameHub : Hub
         player.Connected = true;
         if (room.HostName == name) room.HostConnectionId = Context.ConnectionId;
         await Groups.AddToGroupAsync(Context.ConnectionId, roomId);
-        if (room.Started)
+        if (room.Started && !room.IsOver)
         {
             _lobby.SetInGame(Context.ConnectionId, true);
             await BroadcastLobby();
@@ -2928,6 +3008,26 @@ public partial class GameHub : Hub
         }
         else
         {
+            if (room.IsOver)
+            {
+                room.Started = false;
+                room.IsOver = false;
+                room.FinishCount = 0;
+                room.Players.RemoveAll(p => p.IsBot);
+                foreach (var p in room.Players)
+                {
+                    p.Game = new PegSolitaireGameState();
+                    p.Score = 0;
+                    p.PegsLeft = 15;
+                    p.Rating = "Try Again";
+                    p.HasFinished = false;
+                    p.FinishRank = 0;
+                    p.SessionSaved = false;
+                }
+                foreach (var p in room.Players)
+                    _lobby.SetInGame(p.ConnectionId, false);
+                await BroadcastLobby();
+            }
             await Clients.Group(roomId).SendAsync("PegSolitaireRoomUpdated", room);
         }
     }

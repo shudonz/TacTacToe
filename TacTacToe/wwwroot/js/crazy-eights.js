@@ -1,5 +1,5 @@
 const connection = new signalR.HubConnectionBuilder().withUrl('/gamehub').withAutomaticReconnect().build();
-const roomId = sessionStorage.getItem('crazyEightsRoomId');
+let roomId = sessionStorage.getItem('crazyEightsRoomId');
 if (!roomId) {
     window.location.replace('/lobby');
     throw new Error('Missing Crazy Eights room id');
@@ -330,6 +330,15 @@ async function init() {
         showHint(`${name} left the game.`);
     });
 
+    connection.on('CrazyEightsSinglePlayerStarted', newRoomId => {
+        roomId = newRoomId;
+        sessionStorage.setItem('crazyEightsRoomId', newRoomId);
+    });
+
+    connection.on('CrazyEightsRoomUpdated', () => {
+        window.location.href = '/crazy-eights-room';
+    });
+
     await connection.start();
     await connection.invoke('RejoinCrazyEightsRoom', roomId);
 }
@@ -351,6 +360,17 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('ceBackBtn').addEventListener('click', backToLobby);
     document.getElementById('backToLobby').addEventListener('click', backToLobby);
     document.getElementById('hamBackBtn').addEventListener('click', backToLobby);
+    document.getElementById('playAgainBtn').addEventListener('click', () => {
+        const isSinglePlayer = sessionStorage.getItem('isSinglePlayer') === '1';
+        if (isSinglePlayer) {
+            const botCount = (state?.players?.filter(p => p.isBot).length) || 1;
+            document.getElementById('resultOverlay').style.display = 'none';
+            _gameOverFired = false;
+            connection.invoke('StartCrazyEightsSinglePlayer', botCount).catch(e => console.error(e));
+        } else {
+            window.location.href = '/crazy-eights-room';
+        }
+    });
     document.getElementById('ceSuitCancel').addEventListener('click', () => {
         document.getElementById('ceSuitModal').style.display = 'none';
     });

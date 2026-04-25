@@ -3,7 +3,7 @@
 // =============================================================
 
 const connection = new signalR.HubConnectionBuilder().withUrl("/gamehub").withAutomaticReconnect().build();
-const roomId = sessionStorage.getItem("chineseCheckersRoomId");
+let roomId = sessionStorage.getItem("chineseCheckersRoomId");
 const isSinglePlayer = sessionStorage.getItem("isSinglePlayer") === "1";
 if (!roomId) { window.location.replace("/lobby"); throw new Error("Missing Chinese Checkers room id"); }
 
@@ -373,6 +373,15 @@ async function init() {
             document.getElementById("ccStatus").textContent = name + " left the game.";
         });
 
+        connection.on("ChineseCheckersSinglePlayerStarted", newRoomId => {
+            roomId = newRoomId;
+            sessionStorage.setItem("chineseCheckersRoomId", newRoomId);
+        });
+
+        connection.on("ChineseCheckersRoomUpdated", () => {
+            window.location.href = "/chinese-checkers-room";
+        });
+
         await connection.start();
         await connection.invoke("RejoinChineseCheckersRoom", roomId);
     } catch(err) {
@@ -397,6 +406,17 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById("ccBackBtn").addEventListener("click", backToLobby);
     document.getElementById("backToLobby").addEventListener("click", backToLobby);
     document.getElementById("hamBackBtn").addEventListener("click", backToLobby);
+    document.getElementById("playAgainBtn").addEventListener("click", () => {
+        if (isSinglePlayer) {
+            const botCount = (state?.players?.filter(p => p.isBot).length) || 5;
+            document.getElementById("resultOverlay").style.display = "none";
+            _gameOverFired = false;
+            state = null;
+            connection.invoke("StartChineseCheckersSinglePlayer", botCount).catch(e => console.error(e));
+        } else {
+            window.location.href = "/chinese-checkers-room";
+        }
+    });
 });
 
 init();

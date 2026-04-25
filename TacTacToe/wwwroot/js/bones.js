@@ -1,5 +1,5 @@
 const connection = new signalR.HubConnectionBuilder().withUrl('/gamehub').withAutomaticReconnect().build();
-const roomId = sessionStorage.getItem('bonesRoomId');
+let roomId = sessionStorage.getItem('bonesRoomId');
 if (!roomId) {
     window.location.replace('/lobby');
     throw new Error('Missing Bones room id');
@@ -338,6 +338,15 @@ connection.on('PlayerLeft', name => {
     showHintBanner(`${name} left the game.`);
 });
 
+connection.on('BonesSinglePlayerStarted', newRoomId => {
+    roomId = newRoomId;
+    sessionStorage.setItem('bonesRoomId', newRoomId);
+});
+
+connection.on('BonesRoomUpdated', () => {
+    window.location.href = '/bones-room';
+});
+
 // ─── Button handlers ──────────────────────────────────────────────────────────
 document.getElementById('sideLeftBtn').addEventListener('click', () => {
     if (_selectedTileId == null) return;
@@ -385,6 +394,18 @@ document.getElementById('bonesBackBtn').addEventListener('click', () => {
 
 document.getElementById('backToLobby').addEventListener('click', () => {
     connection.invoke('LeaveBonesGame', roomId).then(() => { window.location.href = '/lobby'; });
+});
+
+document.getElementById('playAgainBtn').addEventListener('click', () => {
+    if (state?.isSinglePlayer) {
+        const botCount = (state.players?.filter(p => p.isBot).length) || 1;
+        document.getElementById('resultOverlay').style.display = 'none';
+        _gameOverFired = false;
+        _prevIsOver = false;
+        connection.invoke('StartBonesSinglePlayer', botCount).catch(e => console.error(e));
+    } else {
+        window.location.href = '/bones-room';
+    }
 });
 
 if (document.getElementById('backBtn2'))

@@ -3,7 +3,7 @@
 // ════════════════════════════════════════════════════════════════
 
 const connection = new signalR.HubConnectionBuilder().withUrl('/gamehub').withAutomaticReconnect().build();
-const roomId = sessionStorage.getItem('foxAndHoundsRoomId');
+let roomId = sessionStorage.getItem('foxAndHoundsRoomId');
 const isSinglePlayer = sessionStorage.getItem('isSinglePlayer') === '1';
 if (!roomId) { window.location.replace('/lobby'); throw new Error('Missing Fox and Hounds room id'); }
 
@@ -426,6 +426,24 @@ async function init() {
     document.getElementById('hamBackBtn').addEventListener('click', backFn);
 
     document.getElementById('backToLobby').addEventListener('click', backFn);
+    document.getElementById('playAgainBtn').addEventListener('click', () => {
+        if (isSinglePlayer) {
+            document.getElementById('resultOverlay').style.display = 'none';
+            _gameOverFired = false;
+            connection.invoke('StartFoxAndHoundsSinglePlayer', 'medium').catch(e => console.error(e));
+        } else {
+            window.location.href = '/fox-and-hounds-room';
+        }
+    });
 }
+
+connection.on('FoxAndHoundsSinglePlayerStarted', newRoomId => {
+    roomId = newRoomId;
+    sessionStorage.setItem('foxAndHoundsRoomId', newRoomId);
+});
+
+connection.on('FoxAndHoundsRoomUpdated', () => {
+    window.location.href = '/fox-and-hounds-room';
+});
 
 init();
