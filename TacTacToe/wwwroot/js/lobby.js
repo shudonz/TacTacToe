@@ -1080,10 +1080,20 @@ async function init() {
         if (e.key === "Escape") document.getElementById("createBonesRoomCancelBtn").click();
     });
 
-    // Fox and Hounds single player
+    // Fox and Hounds difficulty segmented control
+    let fahDifficulty = "medium";
+    document.querySelectorAll("#fahDifficultyToggle .difficulty-opt").forEach(btn => {
+        btn.addEventListener("click", () => {
+            document.querySelectorAll("#fahDifficultyToggle .difficulty-opt").forEach(b => b.classList.remove("active"));
+            btn.classList.add("active");
+            fahDifficulty = btn.dataset.difficulty;
+        });
+    });
+
+    // Single player — Fox and Hounds single player
     document.getElementById("foxAndHoundsSpBtn").addEventListener("click", () => {
         sessionStorage.setItem("myName", me.name);
-        connection.invoke("StartFoxAndHoundsSinglePlayer");
+        connection.invoke("StartFoxAndHoundsSinglePlayer", fahDifficulty);
     });
 
     // Create Fox and Hounds room

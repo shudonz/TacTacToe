@@ -53,6 +53,7 @@ public class FoxAndHoundsSettings
     public string RoomName { get; set; } = "Fox and Hounds";
     public int MaxPlayers { get; set; } = 2;
     public bool FillWithBotsOnStart { get; set; }
+    public string BotDifficulty { get; set; } = "medium";  // "easy" | "medium" | "hard"
 }
 
 public class FoxAndHoundsPlayer
@@ -302,14 +303,34 @@ public static class FoxAndHoundsEngine
     }
 
     // ── Bot AI ─────────────────────────────────────────────────────────────
+    // difficulty: "easy" | "medium" | "hard"
 
-    public static FoxAndHoundsMove? ChooseBotMove(FoxAndHoundsRoom room, string botRole)
+    public static FoxAndHoundsMove? ChooseBotMove(FoxAndHoundsRoom room, string botRole, string difficulty = "medium")
+    {
+        return difficulty switch
+        {
+            "easy" => ChooseBotMoveEasy(room, botRole),
+            "hard" => ChooseBotMoveHard(room, botRole),
+            _      => ChooseBotMoveMedium(room, botRole)
+        };
+    }
+
+    // Easy: purely random legal move
+    private static FoxAndHoundsMove? ChooseBotMoveEasy(FoxAndHoundsRoom room, string botRole)
+    {
+        var moves = botRole == "Fox" ? GetFoxMoves(room) : GetHoundMoves(room);
+        if (moves.Count == 0) return null;
+        return moves[Random.Shared.Next(moves.Count)];
+    }
+
+    // Medium: single-ply greedy heuristic (original logic)
+    private static FoxAndHoundsMove? ChooseBotMoveMedium(FoxAndHoundsRoom room, string botRole)
     {
         if (botRole == "Fox")
         {
             var moves = GetFoxMoves(room);
             if (moves.Count == 0) return null;
-            // Greedy: prefer moves that advance toward row 7, else random
+            // Prefer moves that advance toward row 7
             var adv = moves.Where(m => m.ToRow > m.FromRow).ToList();
             var pool = adv.Count > 0 ? adv : moves;
             return pool[Random.Shared.Next(pool.Count)];
@@ -318,27 +339,161 @@ public static class FoxAndHoundsEngine
         {
             var moves = GetHoundMoves(room);
             if (moves.Count == 0) return null;
-            // Greedy: prefer moves that reduce Fox's legal moves count
+            // Prefer moves that minimise Fox's legal move count
             FoxAndHoundsMove? best = null;
             int bestFreedom = int.MaxValue;
             foreach (var m in moves)
             {
-                // Simulate
-                var saved = (room.Hounds.First(h => h.Index == m.HoundIndex).Row,
-                             room.Hounds.First(h => h.Index == m.HoundIndex).Col);
                 var hound = room.Hounds.First(h => h.Index == m.HoundIndex);
+                int savedRow = hound.Row, savedCol = hound.Col;
                 hound.Row = m.ToRow; hound.Col = m.ToCol;
                 int freedom = GetFoxMoves(room).Count;
-                hound.Row = saved.Row; hound.Col = saved.Col;
-
-                if (freedom < bestFreedom)
-                {
-                    bestFreedom = freedom;
-                    best = m;
-                }
+                hound.Row = savedRow; hound.Col = savedCol;
+                if (freedom < bestFreedom) { bestFreedom = freedom; best = m; }
             }
             return best ?? moves[Random.Shared.Next(moves.Count)];
         }
+    }
+
+    // Hard: minimax with alpha-beta pruning (depth 8)
+    // Positive score = good for Hounds; negative = good for Fox.
+    private const int HardSearchDepth = 8;
+
+    private static FoxAndHoundsMove? ChooseBotMoveHard(FoxAndHoundsRoom room, string botRole)
+    {
+        // Snapshot mutable state
+        var snap = Snapshot(room);
+        bool houndsToMove = botRole == "Hounds";
+
+        FoxAndHoundsMove? bestMove = null;
+        int alpha = int.MinValue, beta = int.MaxValue;
+
+        if (houndsToMove)
+        {
+            int bestScore = int.MinValue;
+            foreach (var m in GetHoundMoves(room))
+            {
+                ApplyHoundMove(room, m);
+                int score = Minimax(room, HardSearchDepth - 1, alpha, beta, false);
+                RestoreSnapshot(room, snap);
+                if (score > bestScore) { bestScore = score; bestMove = m; }
+                if (bestScore > alpha) alpha = bestScore;
+                if (beta <= alpha) break;
+            }
+        }
+        else
+        {
+            int bestScore = int.MaxValue;
+            foreach (var m in GetFoxMoves(room))
+            {
+                ApplyFoxMove(room, m);
+                int score = Minimax(room, HardSearchDepth - 1, alpha, beta, true);
+                RestoreSnapshot(room, snap);
+                if (score < bestScore) { bestScore = score; bestMove = m; }
+                if (bestScore < beta) beta = bestScore;
+                if (beta <= alpha) break;
+            }
+        }
+        return bestMove ?? (houndsToMove ? ChooseBotMoveMedium(room, "Hounds") : ChooseBotMoveMedium(room, "Fox"));
+    }
+
+    // Minimax: maximizing = Hounds, minimizing = Fox
+    private static int Minimax(FoxAndHoundsRoom room, int depth, int alpha, int beta, bool houndsToMove)
+    {
+        // Terminal: Fox reaches row 7 → Fox wins (very negative for Hounds)
+        if (room.FoxRow == 7) return -10000;
+
+        var foxMoves   = GetFoxMoves(room);
+        var houndMoves = GetHoundMoves(room);
+
+        // Terminal: Fox trapped → Hounds win (very positive)
+        if (foxMoves.Count == 0) return 10000;
+        // Terminal: Hounds have no moves → Fox wins (very negative for Hounds)
+        if (houndMoves.Count == 0) return -10000;
+
+        if (depth == 0) return Evaluate(room);
+
+        var snap = Snapshot(room);
+
+        if (houndsToMove)
+        {
+            int value = int.MinValue;
+            foreach (var m in houndMoves)
+            {
+                ApplyHoundMove(room, m);
+                int v = Minimax(room, depth - 1, alpha, beta, false);
+                RestoreSnapshot(room, snap);
+                if (v > value) value = v;
+                if (value > alpha) alpha = value;
+                if (beta <= alpha) break;
+            }
+            return value;
+        }
+        else
+        {
+            int value = int.MaxValue;
+            foreach (var m in foxMoves)
+            {
+                ApplyFoxMove(room, m);
+                int v = Minimax(room, depth - 1, alpha, beta, true);
+                RestoreSnapshot(room, snap);
+                if (v < value) value = v;
+                if (value < beta) beta = value;
+                if (beta <= alpha) break;
+            }
+            return value;
+        }
+    }
+
+    // Heuristic score (positive = Hounds winning, negative = Fox winning)
+    private static int Evaluate(FoxAndHoundsRoom room)
+    {
+        int foxMobility   = GetFoxMoves(room).Count;
+        int houndMobility = GetHoundMoves(room).Count;
+
+        // How many hounds are ahead of (closer to row 0 than) the fox
+        int houndsAhead = room.Hounds.Count(h => h.Row < room.FoxRow);
+
+        // How far the fox has advanced (higher row = closer to goal at row 7)
+        int foxAdvance = room.FoxRow;
+
+        // Hounds want: low fox mobility, many hounds ahead of fox, fox far from goal
+        // Fox wants: high mobility, fewer hounds ahead, closer to row 7
+        return  (4 - foxMobility) * 15       // restrict Fox
+              + houndsAhead       * 10       // hounds cutting off Fox's path back
+              - foxAdvance        * 8        // penalise Fox advancing
+              + houndMobility     * 2;       // some hound mobility is good
+    }
+
+    // Lightweight snapshot / restore (only mutable positions, not full deep clone)
+    private record FahSnap(int FoxRow, int FoxCol, (int Row, int Col)[] Hounds);
+
+    private static FahSnap Snapshot(FoxAndHoundsRoom room) =>
+        new(room.FoxRow, room.FoxCol,
+            room.Hounds.Select(h => (h.Row, h.Col)).ToArray());
+
+    private static void RestoreSnapshot(FoxAndHoundsRoom room, FahSnap s)
+    {
+        room.FoxRow = s.FoxRow;
+        room.FoxCol = s.FoxCol;
+        for (int i = 0; i < room.Hounds.Count; i++)
+        {
+            room.Hounds[i].Row = s.Hounds[i].Row;
+            room.Hounds[i].Col = s.Hounds[i].Col;
+        }
+    }
+
+    private static void ApplyFoxMove(FoxAndHoundsRoom room, FoxAndHoundsMove m)
+    {
+        room.FoxRow = m.ToRow;
+        room.FoxCol = m.ToCol;
+    }
+
+    private static void ApplyHoundMove(FoxAndHoundsRoom room, FoxAndHoundsMove m)
+    {
+        var h = room.Hounds.First(h => h.Index == m.HoundIndex);
+        h.Row = m.ToRow;
+        h.Col = m.ToCol;
     }
 
     // ── Hint ───────────────────────────────────────────────────────────────
@@ -350,7 +505,7 @@ public static class FoxAndHoundsEngine
             var moves = GetFoxMoves(room);
             if (moves.Count == 0)
                 return new FoxAndHoundsHint { HintAvailable = false, Description = "Fox has no legal moves!" };
-            // Prefer advancing
+            // Use medium logic: prefer advancing
             var adv = moves.Where(m => m.ToRow > m.FromRow).ToList();
             var m = adv.Count > 0 ? adv[0] : moves[0];
             return new FoxAndHoundsHint
@@ -365,8 +520,8 @@ public static class FoxAndHoundsEngine
             var moves = GetHoundMoves(room);
             if (moves.Count == 0)
                 return new FoxAndHoundsHint { HintAvailable = false, Description = "Hounds have no legal moves!" };
-            // Pick a move that best traps the fox
-            var best = ChooseBotMove(room, "Hounds") ?? moves[0];
+            // Use medium (greedy) logic for hints regardless of difficulty
+            var best = ChooseBotMoveMedium(room, "Hounds") ?? moves[0];
             return new FoxAndHoundsHint
             {
                 HintAvailable = true,

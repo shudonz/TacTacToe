@@ -9,7 +9,7 @@ public partial class GameHub
 {
     private static readonly string[] FoxAndHoundsBotNames =
     [
-        "🦊 Sly Bot", "🐕 Hunter Bot"
+        "🦊 Sly Bot", "🐕 Hunter Bot", "🐕 Relentless", "🐕 Apex Hound"
     ];
 
     // ── Room management ──────────────────────────────────────────────────────
@@ -101,12 +101,11 @@ public partial class GameHub
             _ = TakeFoxAndHoundsBotTurnAsync(roomId);
     }
 
-    public async Task StartFoxAndHoundsSinglePlayer()
+    public async Task StartFoxAndHoundsSinglePlayer(string difficulty = "medium")
     {
         var name = Context.User?.FindFirst(ClaimTypes.Name)?.Value ?? "Unknown";
         var roomId = Guid.NewGuid().ToString("N");
 
-        var botName = FoxAndHoundsBotNames[1];
         var room = new FoxAndHoundsRoom
         {
             Id = roomId,
@@ -118,15 +117,28 @@ public partial class GameHub
             {
                 RoomName = "Fox and Hounds vs Bot",
                 MaxPlayers = 2,
-                FillWithBotsOnStart = true
+                FillWithBotsOnStart = true,
+                BotDifficulty = difficulty
             },
             Players = [
                 new FoxAndHoundsPlayer { ConnectionId = Context.ConnectionId, Name = name, Connected = true },
-                new FoxAndHoundsPlayer { ConnectionId = $"BOT_{roomId}_0", Name = botName, IsBot = true, Connected = true }
+                new FoxAndHoundsPlayer { ConnectionId = $"BOT_{roomId}_0", Name = "Bot", IsBot = true, Connected = true }
             ]
         };
 
         FoxAndHoundsEngine.StartGame(room);
+
+        // Name the bot to reflect both its role and difficulty now that roles are assigned
+        var bot = room.Players.First(p => p.IsBot);
+        bot.Name = (bot.Role, difficulty) switch
+        {
+            ("Fox",    "easy")   => "🦊 Clumsy Fox",
+            ("Fox",    "hard")   => "🦊 Phantom Fox",
+            ("Fox",    _)        => "🦊 Sly Fox",
+            ("Hounds", "easy")   => "🐕 Rookie Pack",
+            ("Hounds", "hard")   => "🐕 Apex Pack",
+            _                    => "🐕 Hunter Pack"
+        };
 
         _lobby.StoreFoxAndHoundsRoom(roomId, room);
         await Groups.AddToGroupAsync(Context.ConnectionId, roomId);
@@ -261,7 +273,7 @@ public partial class GameHub
         var bot = room.Players[room.CurrentPlayerIndex];
         if (!bot.IsBot) return;
 
-        var move = FoxAndHoundsEngine.ChooseBotMove(room, bot.Role);
+        var move = FoxAndHoundsEngine.ChooseBotMove(room, bot.Role, room.Settings.BotDifficulty);
         if (move == null)
         {
             // Bot has no moves — declare winner (other side)

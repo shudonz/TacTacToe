@@ -760,13 +760,13 @@
                     <div class="mode-cards">
                     <div class="detail-section">
                         <h3 class="detail-section-title">&#129302; Single Player</h3>
-                        <p class="lobby-hint">Play against a computer opponent. Your role (Fox or Hounds) is randomly assigned.</p>
-                        <div class="sp-section">
-                            <span class="sp-label">vs Computer</span>
-                            <div class="sp-btns">
-                                <button id="foxAndHoundsSpBtn" class="btn btn-sp">🦊 Play Solo</button>
-                            </div>
+                        <p class="lobby-hint">Play against a computer opponent — choose your difficulty. Your role (Fox or Hounds) is randomly assigned.</p>
+                        <div class="difficulty-toggle" id="fahDifficultyToggle">
+                            <button class="difficulty-opt" data-difficulty="easy" id="fahEasyOpt">Easy</button>
+                            <button class="difficulty-opt active" data-difficulty="medium" id="fahMediumOpt">Medium</button>
+                            <button class="difficulty-opt difficulty-hard" data-difficulty="hard" id="fahHardOpt">&#128128; Hard</button>
                         </div>
+                        <button id="foxAndHoundsSpBtn" class="btn btn-sp btn-play-selected" style="margin-top:0.5rem;">&#9654; Play</button>
                     </div>
 
                     <div class="detail-section">
