@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>TacTacToe – Connect a Sum</title>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="/css/style.css" rel="stylesheet">
+    <style>
+        /* ── Container ── */
+        .cs-container { max-width: 900px; margin: 0 auto; padding: 1rem; }
+        .cs-header { display: flex; align-items: center; justify-content: space-between; gap: 1rem; flex-wrap: wrap; margin-bottom: 1rem; }
+        .cs-status { font-size: 1rem; font-weight: 700; color: var(--text); min-width: 180px; text-align: center; }
+
+        /* ── Player chips ── */
+        .cs-players { display: flex; gap: 1rem; align-items: center; justify-content: center; margin-bottom: 1rem; flex-wrap: wrap; }
+        .cs-player-chip {
+            display: flex; align-items: center; gap: 0.55rem;
+            background: rgba(255,255,255,0.07); border-radius: 2rem;
+            padding: 0.4rem 1rem; border: 2px solid transparent;
+            transition: border-color 0.25s, box-shadow 0.25s, transform 0.2s;
+            font-weight: 600;
+        }
+        .cs-player-chip.active {
+            border-color: var(--cs-active-color, #7c6aff);
+            box-shadow: 0 0 14px var(--cs-active-color, #7c6aff66);
+            transform: scale(1.04);
+        }
+        .cs-disc-icon {
+            width: 28px; height: 28px; border-radius: 50%;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.4), inset 0 -3px 6px rgba(0,0,0,0.25), inset 0 3px 6px rgba(255,255,255,0.3);
+            flex-shrink: 0;
+        }
+        .cs-disc-p1 { background: radial-gradient(circle at 38% 32%, #ff6b6b, #c00000); }
+        .cs-disc-p2 { background: radial-gradient(circle at 38% 32%, #6bcfff, #0055cc); }
+        .cs-player-name { font-size: 0.93rem; color: var(--text); }
+        .cs-player-score { font-size: 1.1rem; font-weight: 800; color: #ffd700; margin-left: auto; }
+
+        /* ── Column drop buttons (arrow indicators) ── */
+        .cs-col-arrows { display: flex; justify-content: center; gap: 0; margin-bottom: 4px; }
+        .cs-col-arrow {
+            flex: 1; max-width: 72px; height: 32px;
+            background: none; border: none; cursor: pointer;
+            color: rgba(255,255,255,0.0); font-size: 1.1rem; font-weight: 700;
+            transition: color 0.15s, transform 0.15s;
+            display: flex; align-items: center; justify-content: center;
+            border-radius: 8px 8px 0 0;
+        }
+        .cs-col-arrow:hover { color: rgba(255,255,255,0.9); transform: translateY(-3px); }
+        .cs-col-arrow.hint-col { color: #36d6c3 !important; animation: arrow-pulse 0.9s ease-in-out infinite; }
+        @keyframes arrow-pulse { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-5px); } }
+
+        /* ── Board frame ── */
+        .cs-board-wrap {
+            background: linear-gradient(160deg, #1a2060 0%, #0e1340 100%);
+            border-radius: 1.5rem;
+            padding: 0.6rem;
+            box-shadow:
+                0 12px 40px rgba(0,0,0,0.6),
+                0 0 0 4px #2a3a8c,
+                0 0 0 8px #1a2560,
+                inset 0 2px 4px rgba(255,255,255,0.08);
+            position: relative;
+        }
+        .cs-board {
+            display: grid;
+            gap: 6px;
+            padding: 8px;
+            position: relative;
+        }
+        /* Board uses CSS grid, rows x cols set by JS */
+
+        /* ── Cell ── */
+        .cs-cell {
+            aspect-ratio: 1;
+            border-radius: 50%;
+            background: radial-gradient(circle at 40% 35%, #111835, #060b22);
+            box-shadow:
+                inset 0 4px 12px rgba(0,0,0,0.8),
+                inset 0 -1px 3px rgba(255,255,255,0.06),
+                0 1px 3px rgba(255,255,255,0.04);
+            position: relative;
+            overflow: hidden;
+            transition: transform 0.1s;
+            cursor: pointer;
+        }
+        .cs-cell:hover { transform: scale(1.04); }
+        .cs-cell.no-hover { cursor: default; }
+        .cs-cell.no-hover:hover { transform: none; }
+
+        /* ── Disc inside cell ── */
+        .cs-disc {
+            position: absolute; inset: 0;
+            border-radius: 50%;
+            opacity: 0;
+            transform: translateY(-400%);
+            transition: none;
+        }
+        .cs-disc.placed {
+            opacity: 1;
+            animation: discDrop var(--drop-dur, 0.45s) cubic-bezier(.25,1.3,.5,1) forwards;
+        }
+        @keyframes discDrop {
+            0%   { transform: translateY(var(--drop-start, -400%)); opacity: 1; }
+            75%  { transform: translateY(8%); }
+            88%  { transform: translateY(-4%); }
+            100% { transform: translateY(0); }
+        }
+        .cs-disc.p1 {
+            background: radial-gradient(circle at 38% 32%, #ff9999, #ff2020 45%, #9a0000);
+            box-shadow:
+                0 3px 12px rgba(255,50,50,0.55),
+                inset 0 4px 8px rgba(255,255,255,0.35),
+                inset 0 -4px 8px rgba(0,0,0,0.4);
+        }
+        .cs-disc.p2 {
+            background: radial-gradient(circle at 38% 32%, #99ddff, #1188ee 45%, #003a99);
+            box-shadow:
+                0 3px 12px rgba(30,120,255,0.55),
+                inset 0 4px 8px rgba(255,255,255,0.35),
+                inset 0 -4px 8px rgba(0,0,0,0.4);
+        }
+
+        /* ── Win line glow ── */
+        .cs-cell.win-cell .cs-disc.p1 {
+            box-shadow:
+                0 0 0 4px rgba(255,80,80,0.6),
+                0 0 20px rgba(255,80,80,0.9),
+                0 0 40px rgba(255,80,80,0.5),
+                inset 0 4px 8px rgba(255,255,255,0.4);
+            animation: winPulse 0.8s ease-in-out infinite alternate !important;
+        }
+        .cs-cell.win-cell .cs-disc.p2 {
+            box-shadow:
+                0 0 0 4px rgba(50,150,255,0.6),
+                0 0 20px rgba(50,150,255,0.9),
+                0 0 40px rgba(50,150,255,0.5),
+                inset 0 4px 8px rgba(255,255,255,0.4);
+            animation: winPulse 0.8s ease-in-out infinite alternate !important;
+        }
+        @keyframes winPulse {
+            from { filter: brightness(1); }
+            to   { filter: brightness(1.4) saturate(1.5); }
+        }
+
+        /* ── Column hover tint ── */
+        .cs-col-hover .cs-cell:not([data-filled]) {
+            background: radial-gradient(circle at 40% 35%, #1e2a5a, #0c1135);
+        }
+
+        /* ── Actions ── */
+        .cs-actions { display: flex; gap: 0.75rem; flex-wrap: wrap; margin-top: 0.85rem; }
+
+        /* ── Instructions ── */
+        .cs-instructions { background: rgba(255,255,255,0.05); border-radius: 1rem; padding: 1rem 1.2rem; margin-top: 1rem; }
+        .cs-instructions h3 { font-size: 0.9rem; font-weight: 700; color: var(--text); margin-bottom: 0.5rem; }
+        .cs-instructions ul { margin: 0; padding-left: 1.2rem; }
+        .cs-instructions li { font-size: 0.82rem; color: var(--text-dim); margin-bottom: 0.25rem; }
+
+        /* ── Connect N badge ── */
+        .cs-n-badge {
+            display: inline-flex; align-items: center; gap: 0.3rem;
+            background: linear-gradient(135deg, #7c6aff, #ff5c8a);
+            border-radius: 2rem; padding: 0.2rem 0.65rem;
+            font-size: 0.85rem; font-weight: 800; color: #fff;
+            box-shadow: 0 2px 8px rgba(124,106,255,0.5);
+        }
+
+        /* ── Column ghost disc on hover ── */
+        .cs-cell.ghost-hover .cs-disc.ghost {
+            opacity: 0.35;
+            transform: translateY(0);
+            transition: opacity 0.12s;
+        }
+
+        /* ── Responsive ── */
+        @media (max-width: 540px) {
+            .cs-board { gap: 4px; padding: 6px; }
+            .cs-col-arrow { max-width: 44px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="ambient"></div>
+    <div class="noise"></div>
+    <div class="page-content">
+        <nav class="navbar">
+            <button class="ham-btn" onclick="hamOpen()" aria-label="Open menu">
+                <span></span><span></span><span></span>
+            </button>
+            <div class="logo-sm"><span class="logo-x">Tac</span><span class="logo-o">Tac</span><span class="logo-x">Toe</span></div>
+            <a href="/profile" class="nav-profile-btn" title="Edit Profile">
+                <span id="navbarAvatarEmoji" class="nav-profile-emoji" style="display:none"></span>
+                <img id="navbarAvatarImg" class="nav-profile-img" src="" alt="Profile" style="display:none">
+                <span id="navbarAvatarPlaceholder" class="nav-profile-placeholder">&#128100;</span>
+                <span id="navbarUsername" class="nav-profile-username"></span>
+            </a>
+        </nav>
+        <main class="cs-container">
+            <div class="cs-header glass-card">
+                <h2 class="lobby-title" style="margin:0;">🔴 Connect a Sum</h2>
+                <div id="connectSumBadge" class="cs-n-badge">Connect 4</div>
+                <div id="statusText" class="cs-status turn-indicator" style="margin:0;">Loading&hellip;</div>
+                <button id="hintBtn" class="btn btn-outline" style="font-size:0.82rem;padding:0.4rem 0.9rem;">💡 Hint</button>
+            </div>
+
+            <div id="csPlayers" class="cs-players"></div>
+
+            <!-- Column arrow drop zone -->
+            <div id="csColArrows" class="cs-col-arrows"></div>
+
+            <!-- The game board -->
+            <div class="cs-board-wrap">
+                <div id="csBoard" class="cs-board"></div>
+            </div>
+
+            <div class="cs-actions">
+                <button id="backBtn2" class="btn btn-outline">&#8592; Back to Lobby</button>
+            </div>
+
+            <div class="cs-instructions glass-card">
+                <h3>📖 How to Play</h3>
+                <ul>
+                    <li>Click a column (or the arrow above it) to drop your disc.</li>
+                    <li>Discs fall to the lowest available slot — like a real Connect 4 board!</li>
+                    <li id="connectNRule">First to connect <strong>4</strong> in a row (horizontal, vertical, or diagonal) wins.</li>
+                    <li>Use the <strong>💡 Hint</strong> button if you're stuck — it highlights the best column.</li>
+                    <li>The game ends in a <strong>draw</strong> if the board fills up with no winner.</li>
+                </ul>
+            </div>
+        </main>
+    </div>
+
+    <!-- Result overlay -->
+    <div id="resultOverlay" class="result-overlay" style="display:none">
+        <div class="result-card">
+            <h2 id="resultText"></h2>
+            <div id="resultScores" style="margin:0.5rem 0 1rem;font-size:1rem;color:var(--text-dim);"></div>
+            <button id="backToLobby" class="btn btn-outline">Back to Lobby</button>
+            <div class="leaderboard-panel" style="margin-top:1rem;">
+                <div class="leaderboard-panel-tabs">
+                    <button class="lb-tab active" onclick="showLbTab(this,'cs-lb')">&#127942; Top Scores</button>
+                    <button class="lb-tab" onclick="showLbTab(this,'cs-hist')">&#128196; My History</button>
+                </div>
+                <div class="lb-body" id="cs-lb"></div>
+                <div class="lb-body" id="cs-hist" style="display:none"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Chat widget -->
+    <div id="chatWidget" class="chat-widget">
+        <button id="chatToggle" class="chat-toggle">&#128172; <span id="chatBadge" class="chat-badge" style="display:none">0</span></button>
+        <div id="chatPanel" class="chat-panel" style="display:none">
+            <div class="chat-header"><span>Game Chat</span><button id="chatClose" class="chat-close">&#x2715;</button></div>
+            <div id="chatMessages" class="chat-messages"></div>
+            <div class="chat-input-row"><input id="chatInput" class="chat-input" placeholder="Type a message…" maxlength="500"><button id="chatSend" class="chat-send">&#10148;</button></div>
+        </div>
+    </div>
+
+    <script src="/js/signalr.min.js"></script>
+    <script src="/js/avatarCache.js"></script>
+    <script src="/js/leaderboard.js"></script>
+    <script src="/js/connect-sum.js"></script>
+    <script>
+        function showLbTab(btn, id) {
+            btn.closest('.leaderboard-panel').querySelectorAll('.lb-tab').forEach(t => t.classList.remove('active'));
+            btn.classList.add('active');
+            btn.closest('.leaderboard-panel').querySelectorAll('.lb-body').forEach(b => b.style.display = 'none');
+            document.getElementById(id).style.display = '';
+        }
+        document.addEventListener('gameOver', () => {
+            setTimeout(() => {
+                loadLeaderboard('ConnectSum', document.getElementById('cs-lb'));
+                loadPersonalHistory('ConnectSum', document.getElementById('cs-hist'));
+            }, 1500);
+        });
+    </script>
+    <div class="ham-overlay" onclick="hamClose()"></div>
+    <nav class="ham-drawer" aria-label="Navigation menu">
+        <div class="ham-drawer-header">
+            <div class="ham-drawer-logo"><span class="logo-x">Tac</span><span class="logo-o">Tac</span><span class="logo-x">Toe</span></div>
+            <button class="ham-close" onclick="hamClose()" aria-label="Close menu">&#10005;</button>
+        </div>
+        <div class="ham-menu">
+            <button id="backBtn" class="ham-item">&#8592; Back to Lobby</button>
+        </div>
+    </nav>
+    <script src="/js/hamburger.js"></script>
+</body>
+</html>
