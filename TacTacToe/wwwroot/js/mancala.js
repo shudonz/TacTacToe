@@ -297,7 +297,7 @@ async function init() {
             else { soundLose(); }
         }
 
-        renderState(state);
+        renderState(gameState);
     });
 
     connection.on("MancalaHint", hint => {
