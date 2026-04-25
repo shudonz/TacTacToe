@@ -200,7 +200,7 @@ public static class MancalaEngine
             }
             if (landIdx == myStore)
             {
-                return new MancalaHint { HintAvailable = true, PitIndex = pit, Description = $"Play pit {(playerIndex == 0 ? pit + 1 : pit - 6)} — lands in your store for an extra turn!" };
+                return new MancalaHint { HintAvailable = true, PitIndex = pit, Description = $"Play pit {(playerIndex == 0 ? pit + 1 : 13 - pit)} — lands in your store for an extra turn!" };
             }
         }
 
@@ -219,7 +219,7 @@ public static class MancalaEngine
             {
                 int opp = OppositePit(landIdx);
                 if (room.Board[opp] > 0)
-                    return new MancalaHint { HintAvailable = true, PitIndex = pit, Description = $"Play pit {(playerIndex == 0 ? pit + 1 : pit - 6)} — captures {room.Board[opp]} stones!" };
+                    return new MancalaHint { HintAvailable = true, PitIndex = pit, Description = $"Play pit {(playerIndex == 0 ? pit + 1 : 13 - pit)} — captures {room.Board[opp]} stones!" };
             }
         }
 
