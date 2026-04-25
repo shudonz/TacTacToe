@@ -16,6 +16,7 @@ public class LobbyService
     private readonly ConcurrentDictionary<string, CrazyEightsRoom> _crazyEightsRooms = new();
     private readonly ConcurrentDictionary<string, PuzzleTimeRoom> _puzzleTimeRooms = new();
     private readonly ConcurrentDictionary<string, BattleBoatRoom> _battleBoatRooms = new();
+    private readonly ConcurrentDictionary<string, BonesRoom> _bonesRooms = new();
 
     public bool AddPlayer(string connectionId, string name, string email, string picture)
     {
@@ -416,6 +417,39 @@ public class LobbyService
             r.Players.Any(p => p.ConnectionId == connectionId));
 
     public void RemoveBattleBoatRoom(string id) => _battleBoatRooms.TryRemove(id, out _);
+
+    // --- Bones Rooms ---
+
+    public BonesRoom CreateBonesRoom(string id, string hostConnectionId)
+    {
+        var host = _players.GetValueOrDefault(hostConnectionId);
+        var room = new BonesRoom
+        {
+            Id = id,
+            HostConnectionId = hostConnectionId,
+            HostName = host?.Name ?? "Host",
+            Players = [new BonesPlayer { ConnectionId = hostConnectionId, Name = host?.Name ?? "Host", Connected = true }]
+        };
+        _bonesRooms[id] = room;
+        return room;
+    }
+
+    public BonesRoom? GetBonesRoom(string id) { _bonesRooms.TryGetValue(id, out var r); return r; }
+    public void StoreBonesRoom(string id, BonesRoom room) => _bonesRooms[id] = room;
+
+    public IEnumerable<BonesRoom> GetOpenBonesRooms() =>
+        _bonesRooms.Values.Where(r => !r.Started && !r.IsOver &&
+            IsOnlineConnection(r.HostConnectionId) &&
+            r.Players.Any(p => p.IsBot || IsOnlineConnection(p.ConnectionId)));
+
+    public IEnumerable<BonesRoom> GetBonesRoomsForConnection(string connectionId) =>
+        _bonesRooms.Values.Where(r => !r.Started && r.Players.Any(p => p.ConnectionId == connectionId));
+
+    public IEnumerable<BonesRoom> GetActiveBonesRoomsForConnection(string connectionId) =>
+        _bonesRooms.Values.Where(r => r.Started && !r.IsOver &&
+            r.Players.Any(p => p.ConnectionId == connectionId && !p.IsBot));
+
+    public void RemoveBonesRoom(string id) => _bonesRooms.TryRemove(id, out _);
 }
 
 public class LobbyPlayer

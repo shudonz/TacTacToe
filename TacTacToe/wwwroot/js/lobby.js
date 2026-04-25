@@ -24,6 +24,7 @@ const DASH_GAMES = [
     { key: "chinese-checkers", api: "ChineseCheckers", icon: "🎮", label: "Chinese Checkers" },
     { key: "crazy-eights",  api: "CrazyEights",    icon: "🃏",  label: "Crazy Eights"   },
     { key: "battle-boat",   api: "BattleBoat",     icon: "🚢",  label: "Battle Boat"    },
+    { key: "bones",         api: "Bones",          icon: "🦴",  label: "Bones"          },
 ];
 
 async function loadDashboard(me) {
@@ -208,7 +209,8 @@ async function init() {
             pegsolitaire:  "pegsolitairePanel",
             "chinese-checkers": "chineseCheckersPanel",
             "crazy-eights": "crazyEightsPanel",
-            "battle-boat": "battleBoatPanel"
+            "battle-boat": "battleBoatPanel",
+            "bones": "bonesPanel"
         };
 
         // Leaderboard containers per game  [apiGameType, lbId, histId]
@@ -222,7 +224,8 @@ async function init() {
             pegsolitaire:  ["PegSolitaire",   "peg-lobby-lb", "peg-lobby-hist"],
             "chinese-checkers": ["ChineseCheckers", "cc-lobby-lb", "cc-lobby-hist"],
             "crazy-eights": ["CrazyEights", "ce-lobby-lb", "ce-lobby-hist"],
-            "battle-boat": ["BattleBoat", "bb-lobby-lb", "bb-lobby-hist"]
+            "battle-boat": ["BattleBoat", "bb-lobby-lb", "bb-lobby-hist"],
+            "bones": ["Bones", "bon-lobby-lb", "bon-lobby-hist"]
         };
 
         // Show welcome state when no game is selected, otherwise hide it
@@ -247,6 +250,7 @@ async function init() {
         else if (selectedGame === "chinese-checkers") connection.invoke("GetChineseCheckersRooms");
         else if (selectedGame === "crazy-eights")  connection.invoke("GetCrazyEightsRooms");
         else if (selectedGame === "battle-boat")   connection.invoke("GetBattleBoatRooms");
+        else if (selectedGame === "bones")         connection.invoke("GetBonesRooms");
         else if (selectedGame === "yahtzee")       connection.invoke("GetYahtzeeRooms");
 
         // Load leaderboard + personal history for the selected game
@@ -639,6 +643,49 @@ async function init() {
         window.location.href = "/crazy-eights";
     });
 
+    // Bones room list
+    connection.on("BonesRoomList", rooms => {
+        const list = document.getElementById("bonesRoomList");
+        const noRooms = document.getElementById("noBonesRooms");
+        list.innerHTML = "";
+        const open = rooms.filter(r => !r.started);
+        if (open.length === 0) {
+            noRooms.style.display = "block";
+        } else {
+            noRooms.style.display = "none";
+            open.forEach(r => {
+                const isFull = r.isFull;
+                const card = document.createElement("div");
+                card.className = "player-card room-list-card" + (isFull ? " room-full" : "");
+                const badge = isFull ? '<span class="room-badge room-badge-full">Full</span>' : '<span class="room-badge room-badge-open">Open</span>';
+                card.innerHTML =
+                    '<span class="game-option-icon" style="font-size:1.4rem;">🦴</span>'
+                    + '<div class="room-card-info"><span class="name">' + escapeHtml(r.roomName) + '</span>'
+                    + '<span class="room-card-host">Hosted by ' + escapeHtml(r.hostName) + '</span></div>'
+                    + '<div class="room-card-right"><span class="room-player-count-badge">' + r.playerCount + '/' + r.maxPlayers + '</span>'
+                    + badge + (!isFull ? '<button class="btn btn-accept room-join-btn">Join &rarr;</button>' : '') + '</div>';
+                if (!isFull) {
+                    card.querySelector(".room-join-btn").addEventListener("click", e => { e.stopPropagation(); joinBonesRoom(r.id); });
+                    card.onclick = () => joinBonesRoom(r.id);
+                }
+                list.appendChild(card);
+            });
+        }
+    });
+
+    connection.on("BonesRoomCreated", roomId => {
+        sessionStorage.setItem("bonesRoomId", roomId);
+        sessionStorage.setItem("isSinglePlayer", "0");
+        window.location.href = "/bones-room";
+    });
+
+    connection.on("BonesSinglePlayerStarted", roomId => {
+        sessionStorage.setItem("bonesRoomId", roomId);
+        sessionStorage.setItem("myName", me.name);
+        sessionStorage.setItem("isSinglePlayer", "1");
+        window.location.href = "/bones";
+    });
+
     // Yahtzee room list
     connection.on("YahtzeeRoomList", rooms => {
         const list = document.getElementById("roomList");
@@ -746,6 +793,7 @@ async function init() {
         else if (gameParam === "chinese-checkers") joinChineseCheckersRoom(joinParam);
         else if (gameParam === "crazy-eights") joinCrazyEightsRoom(joinParam);
         else if (gameParam === "battle-boat") joinBattleBoatRoom(joinParam);
+        else if (gameParam === "bones") joinBonesRoom(joinParam);
         else joinYahtzeeRoom(joinParam);
     }
 
@@ -939,6 +987,13 @@ async function init() {
         window.location.href = "/battle-boat?mode=solo";
     });
 
+    // Bones single player
+    document.getElementById("bonesSpBtn").addEventListener("click", () => {
+        sessionStorage.setItem("myName", me.name);
+        const botCount = parseInt(document.getElementById("bonesBotCountSelect").value, 10) || 1;
+        connection.invoke("StartBonesSinglePlayer", botCount);
+    });
+
     // Create Battle Boat room
     document.getElementById("createBattleBoatRoomBtn").addEventListener("click", () => {
         document.getElementById("newBattleBoatRoomName").value = "";
@@ -956,6 +1011,25 @@ async function init() {
     document.getElementById("newBattleBoatRoomName").addEventListener("keydown", e => {
         if (e.key === "Enter") document.getElementById("createBattleBoatRoomConfirmBtn").click();
         if (e.key === "Escape") document.getElementById("createBattleBoatRoomCancelBtn").click();
+    });
+
+    // Bones room
+    document.getElementById("createBonesRoomBtn").addEventListener("click", () => {
+        document.getElementById("newBonesRoomName").value = "";
+        document.getElementById("createBonesRoomModal").style.display = "flex";
+        setTimeout(() => document.getElementById("newBonesRoomName").focus(), 50);
+    });
+    document.getElementById("createBonesRoomCancelBtn").addEventListener("click", () => {
+        document.getElementById("createBonesRoomModal").style.display = "none";
+    });
+    document.getElementById("createBonesRoomConfirmBtn").addEventListener("click", () => {
+        const name = document.getElementById("newBonesRoomName").value.trim() || "Bones Room";
+        document.getElementById("createBonesRoomModal").style.display = "none";
+        connection.invoke("CreateBonesRoom", name);
+    });
+    document.getElementById("newBonesRoomName").addEventListener("keydown", e => {
+        if (e.key === "Enter") document.getElementById("createBonesRoomConfirmBtn").click();
+        if (e.key === "Escape") document.getElementById("createBonesRoomCancelBtn").click();
     });
 
     // Create Puzzle Time room
@@ -1080,6 +1154,14 @@ function joinBattleBoatRoom(roomId) {
     connection.invoke("JoinBattleBoatRoom", roomId).then(() => {
         sessionStorage.setItem("battleBoatRoomId", roomId);
         window.location.href = "/battle-boat-room";
+    });
+}
+
+function joinBonesRoom(roomId) {
+    sessionStorage.setItem("isSinglePlayer", "0");
+    connection.invoke("JoinBonesRoom", roomId).then(() => {
+        sessionStorage.setItem("bonesRoomId", roomId);
+        window.location.href = "/bones-room";
     });
 }
 // Ensures the connection is live before invoking a hub method

@@ -121,6 +121,15 @@
                         <span class="game-list-arrow">&#8250;</span>
                     </button>
 
+                    <button class="game-option game-list-item" data-game="bones" aria-label="Bones">
+                        <span class="game-list-icon">🦴</span>
+                        <div class="game-list-info">
+                            <span class="game-list-name">Bones</span>
+                            <span class="game-list-sub">1–4 players &middot; Dominoes</span>
+                        </div>
+                        <span class="game-list-arrow">&#8250;</span>
+                    </button>
+
                 </nav>
             </aside>
 
@@ -661,6 +670,59 @@
                     </div>
                 </div>
 
+                <!-- ── Bones Panel ── -->
+                <div id="bonesPanel" class="game-detail-panel" style="display:none">
+                    <div class="game-detail-header">
+                        <span class="game-detail-icon">🦴</span>
+                        <div class="game-detail-header-body">
+                            <div class="game-title-row">
+                                <h2 class="game-detail-title">Bones</h2>
+                                <button class="btn-play" onclick="showPlaySections('bones')">&#9654; Play</button>
+                            </div>
+                            <p class="game-detail-desc">Classic dominoes! Match tile ends to build the chain, empty your hand to win rounds, and be first to reach the target score.</p>
+                            <div class="lobby-lb-inline">
+                                <div class="lobby-lb-inline-tabs">
+                                    <span class="lobby-lb-title">&#127942; High Scores</span>
+                                    <button class="lb-tab active" onclick="lobbyLbTab(this,'bon-lobby-lb','bon-lobby-hist')">Top 5</button>
+                                    <button class="lb-tab" onclick="lobbyLbTab(this,'bon-lobby-hist','bon-lobby-lb')">My Scores</button>
+                                </div>
+                                <div class="lobby-lb-scroll">
+                                    <div class="lb-body" id="bon-lobby-lb"></div>
+                                    <div class="lb-body" id="bon-lobby-hist" style="display:none"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="bonesPlaySections" class="game-play-sections" style="display:none">
+                    <div class="mode-cards">
+                    <div class="detail-section">
+                        <h3 class="detail-section-title">&#129302; Single Player</h3>
+                        <p class="lobby-hint">Choose how many computer opponents you want to face (1–3).</p>
+                        <div class="sp-section" style="flex-direction:column;align-items:flex-start;gap:0.55rem;">
+                            <label style="display:flex;align-items:center;gap:0.75rem;color:var(--text);font-size:0.93rem;font-weight:500;">
+                                Bots:
+                                <select id="bonesBotCountSelect" class="guest-input" style="width:auto;padding:0.22rem 0.55rem;font-size:0.93rem;">
+                                    <option value="1">1 Bot</option>
+                                    <option value="2">2 Bots</option>
+                                    <option value="3" selected>3 Bots</option>
+                                </select>
+                            </label>
+                            <button id="bonesSpBtn" class="btn btn-sp">🦴 Play Solo</button>
+                        </div>
+                    </div>
+
+                    <div class="detail-section">
+                        <h3 class="detail-section-title">&#127760; Multiplayer</h3>
+                        <p class="lobby-hint">Create a room (up to 4 players) or join an open one.</p>
+                        <button id="createBonesRoomBtn" class="btn-create-room">&#43; Create Room</button>
+                        <div id="bonesRoomList" class="player-list"></div>
+                        <p id="noBonesRooms" class="lobby-hint lobby-no-rooms" style="display:none;">No open rooms right now — create one to get started!</p>
+                    </div>
+                    </div>
+                    </div>
+                </div>
+
             </section>
         </main>
 
@@ -789,8 +851,17 @@
                 </div>
             </div>
         </div>
-
-        <!-- Chat Widget -->
+        <div id="createBonesRoomModal" class="modal" style="display:none">
+            <div class="modal-content">
+                <h3>🦴 Create Bones Room</h3>
+                <p>Give your room a name so friends can find it.</p>
+                <input id="newBonesRoomName" class="guest-input" type="text" placeholder="e.g. Domino Night" maxlength="30" style="margin-top:1.25rem;width:100%;">
+                <div class="modal-actions">
+                    <button id="createBonesRoomConfirmBtn" class="btn btn-accept">Create Room</button>
+                    <button id="createBonesRoomCancelBtn" class="btn btn-decline">Cancel</button>
+                </div>
+            </div>
+        </div>
         <div id="chatWidget" class="chat-widget">
             <button id="chatToggle" class="chat-toggle">&#128172; <span id="chatBadge" class="chat-badge" style="display:none">0</span></button>
             <div id="chatPanel" class="chat-panel" style="display:none">

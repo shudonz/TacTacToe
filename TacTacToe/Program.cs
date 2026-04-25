@@ -334,6 +334,20 @@ app.MapGet("/battle-boat-game", (HttpContext ctx) =>
     return Results.File("battle-boat-game.html", "text/html");
 });
 
+app.MapGet("/bones", (HttpContext ctx) =>
+{
+    if (ctx.User.Identity?.IsAuthenticated != true)
+        return Results.Redirect("/login");
+    return Results.File("bones.html", "text/html");
+});
+
+app.MapGet("/bones-room", (HttpContext ctx) =>
+{
+    if (ctx.User.Identity?.IsAuthenticated != true)
+        return Results.Redirect("/login");
+    return Results.File("bones-room.html", "text/html");
+});
+
 app.MapGet("/api/me", async (HttpContext ctx) =>
 {
     if (ctx.User.Identity?.IsAuthenticated != true)

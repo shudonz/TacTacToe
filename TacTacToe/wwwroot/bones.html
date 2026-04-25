@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>TacTacToe &#8211; Bones</title>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="/css/style.css" rel="stylesheet">
+    <style>
+        /* ── Bones-specific styles ─────────────────────────────────── */
+        .bones-page { display:flex; flex-direction:column; gap:0.75rem; padding:0.75rem; max-width:900px; margin:0 auto; }
+
+        /* Player bar */
+        .bones-player-bar { display:flex; flex-wrap:wrap; gap:0.55rem; }
+        .bones-player-chip {
+            display:flex; align-items:center; gap:0.45rem;
+            background:rgba(255,255,255,0.06); border:2px solid transparent;
+            border-radius:40px; padding:0.28rem 0.75rem 0.28rem 0.38rem;
+            font-size:0.82rem; color:var(--text-dim); transition:all 0.25s;
+        }
+        .bones-player-chip.is-current { border-color:var(--accent); color:var(--text); background:rgba(18,145,158,0.12); }
+        .bones-player-chip.is-me { font-weight:700; }
+        .bones-player-chip .bpc-score { font-size:0.75rem; color:var(--accent); font-weight:700; }
+        .bones-player-chip .bpc-tiles { font-size:0.73rem; color:var(--text-dim); }
+
+        /* Domino tile */
+        .domino {
+            display:inline-flex; flex-direction:column; align-items:center; justify-content:center;
+            background:#fff; border-radius:8px; border:2px solid #ccc;
+            box-shadow:0 2px 8px rgba(0,0,0,0.18);
+            cursor:pointer; transition:transform 0.15s, border-color 0.15s, box-shadow 0.15s;
+            user-select:none; position:relative; overflow:hidden;
+        }
+        .domino:hover { transform:translateY(-4px) scale(1.05); box-shadow:0 6px 18px rgba(0,0,0,0.28); }
+        .domino.playable { border-color:var(--accent); cursor:pointer; }
+        .domino.playable:hover { border-color:var(--accent2); box-shadow:0 6px 18px rgba(18,145,158,0.45); }
+        .domino.selected { border-color:#fbbf24; box-shadow:0 0 0 3px rgba(251,191,36,0.4); transform:translateY(-6px) scale(1.06); }
+        .domino.not-playable { opacity:0.45; cursor:default; transform:none; }
+
+        /* Half of a domino */
+        .domino-half {
+            width:38px; height:38px; display:flex; align-items:center; justify-content:center;
+            position:relative;
+        }
+        .domino-half:first-child { border-bottom:1px solid #ccc; }
+        .domino-divider { width:100%; height:1px; background:#ccc; }
+
+        /* Pip layout — same as real dice */
+        .pip-grid {
+            display:grid; grid-template-columns:repeat(3,10px); grid-template-rows:repeat(3,10px);
+            gap:1px; width:32px; height:32px;
+        }
+        .pip { width:9px; height:9px; border-radius:50%; background:#1a1a1a; }
+        .pip.empty { background:transparent; }
+
+        /* Chain board */
+        .bones-board-wrap {
+            background:rgba(0,0,0,0.18); border-radius:12px; padding:0.75rem;
+            min-height:120px; overflow-x:auto; display:flex; align-items:center;
+        }
+        .bones-chain {
+            display:flex; align-items:center; gap:4px; min-width:max-content;
+            padding:6px 0;
+        }
+        .chain-domino {
+            display:inline-flex; flex-direction:row; align-items:center;
+            background:#fff; border-radius:6px; border:2px solid #ccc;
+            box-shadow:0 1px 5px rgba(0,0,0,0.15);
+            overflow:hidden;
+        }
+        .chain-domino .domino-half {
+            width:26px; height:26px; font-size:0.7rem;
+            display:flex; align-items:center; justify-content:center;
+        }
+        .chain-domino .domino-half:first-child { border-right:1px solid #ddd; border-bottom:none; }
+        .chain-end-marker {
+            font-size:0.9rem; font-weight:700; color:var(--accent);
+            background:rgba(18,145,158,0.15); border-radius:6px; padding:3px 8px;
+            white-space:nowrap;
+        }
+        .chain-empty { color:var(--text-dim); font-style:italic; font-size:0.9rem; }
+
+        /* Hand area */
+        .bones-hand-area { display:flex; flex-direction:column; gap:0.5rem; }
+        .bones-hand-label { font-size:0.82rem; color:var(--text-dim); font-weight:600; }
+        .bones-hand { display:flex; flex-wrap:wrap; gap:0.5rem; align-items:flex-end; min-height:88px; }
+
+        /* Hand dominos — portrait orientation */
+        .hand-domino {
+            display:inline-flex; flex-direction:column; align-items:center;
+            background:#fff; border-radius:7px; border:2px solid #ccc;
+            box-shadow:0 2px 8px rgba(0,0,0,0.18);
+            cursor:default; transition:transform 0.15s, border-color 0.15s, box-shadow 0.15s;
+            user-select:none; overflow:hidden;
+        }
+        .hand-domino .domino-half { width:32px; height:32px; }
+        .hand-domino .domino-half:first-child { border-bottom:1px solid #ccc; border-right:none; }
+        .hand-domino.playable { border-color:var(--accent); cursor:pointer; }
+        .hand-domino.playable:hover { transform:translateY(-5px) scale(1.08); border-color:var(--accent2); box-shadow:0 6px 16px rgba(18,145,158,0.45); }
+        .hand-domino.selected { border-color:#fbbf24; box-shadow:0 0 0 3px rgba(251,191,36,0.4); transform:translateY(-7px) scale(1.09); }
+        .hand-domino.not-playable { opacity:0.42; cursor:default; }
+
+        /* Action bar */
+        .bones-actions { display:flex; flex-wrap:wrap; gap:0.55rem; align-items:center; }
+        .bones-actions .btn { min-width:90px; }
+
+        /* Side selection banner */
+        .bones-side-banner {
+            background:rgba(18,145,158,0.15); border:1px solid var(--accent);
+            border-radius:8px; padding:0.55rem 0.85rem; font-size:0.88rem; color:var(--text);
+            display:flex; gap:0.65rem; align-items:center; flex-wrap:wrap;
+        }
+        .bones-side-btn {
+            background:var(--accent); color:#fff; border:none; border-radius:6px;
+            padding:0.3rem 0.75rem; font-size:0.85rem; font-weight:600; cursor:pointer;
+            transition:background 0.15s;
+        }
+        .bones-side-btn:hover { background:var(--accent2); }
+
+        /* Stats bar */
+        .bones-info-bar { display:flex; gap:1rem; flex-wrap:wrap; font-size:0.83rem; color:var(--text-dim); }
+        .bones-info-item { display:flex; align-items:center; gap:0.3rem; }
+        .bones-info-item strong { color:var(--text); }
+
+        /* Hint banner */
+        .bones-hint-banner {
+            background:rgba(255,203,71,0.13); border:1px solid #fbbf24;
+            border-radius:8px; padding:0.45rem 0.85rem; font-size:0.85rem; color:#fbbf24;
+        }
+
+        /* Round overlay */
+        .round-overlay {
+            position:fixed; inset:0; background:rgba(0,0,0,0.72); z-index:200;
+            display:flex; align-items:center; justify-content:center;
+        }
+        .round-card {
+            background:var(--card-bg); border-radius:16px; padding:2rem 2.5rem;
+            text-align:center; max-width:360px; width:90%;
+            box-shadow:0 8px 40px rgba(0,0,0,0.5);
+        }
+        .round-card h2 { margin:0 0 0.4rem; font-size:1.5rem; }
+        .round-card .round-info { color:var(--text-dim); font-size:0.88rem; margin-bottom:1.2rem; }
+        .round-scores { display:flex; flex-direction:column; gap:0.35rem; margin-bottom:1.4rem; }
+        .round-score-row {
+            display:flex; justify-content:space-between; align-items:center;
+            background:rgba(255,255,255,0.05); border-radius:8px; padding:0.4rem 0.75rem;
+            font-size:0.88rem;
+        }
+        .round-score-row.is-winner { background:rgba(18,145,158,0.18); font-weight:700; color:var(--accent); }
+
+        /* Instructions panel */
+        .bones-instructions {
+            background:rgba(255,255,255,0.04); border-radius:10px;
+            padding:0.75rem 1rem; font-size:0.82rem; color:var(--text-dim);
+        }
+        .bones-instructions summary { font-weight:700; color:var(--text); cursor:pointer; margin-bottom:0.3rem; }
+        .bones-instructions ul { margin:0.4rem 0 0 1rem; padding:0; }
+        .bones-instructions li { margin-bottom:0.2rem; }
+
+        /* Pip count badge */
+        .pip-badge {
+            font-size:0.72rem; background:rgba(255,255,255,0.1);
+            border-radius:4px; padding:1px 5px; margin-left:3px;
+            color:var(--text-dim);
+        }
+
+        /* Confetti */
+        @keyframes bones-fall {
+            0%   { transform:translateY(-30px) rotate(0deg); opacity:1; }
+            100% { transform:translateY(110vh) rotate(720deg); opacity:0; }
+        }
+        .bones-confetti {
+            position:fixed; width:10px; height:10px; border-radius:2px;
+            pointer-events:none; z-index:9999;
+            animation:bones-fall linear forwards;
+        }
+    </style>
+</head>
+<body>
+    <div class="ambient"></div>
+    <div class="noise"></div>
+    <div class="page-content">
+        <nav class="navbar">
+            <button class="ham-btn" onclick="hamOpen()" aria-label="Open menu"><span></span><span></span><span></span></button>
+            <div class="logo-sm"><span class="logo-x">Tac</span><span class="logo-o">Tac</span><span class="logo-x">Toe</span></div>
+            <a href="/profile" class="nav-profile-btn" title="Edit Profile">
+                <span id="navbarAvatarEmoji" class="nav-profile-emoji" style="display:none"></span>
+                <img id="navbarAvatarImg" class="nav-profile-img" src="" alt="Profile" style="display:none">
+                <span id="navbarAvatarPlaceholder" class="nav-profile-placeholder">&#128100;</span>
+                <span id="navbarUsername" class="nav-profile-username"></span>
+            </a>
+        </nav>
+
+        <main class="bones-page">
+            <div class="ce-header glass-card" style="display:flex;align-items:center;justify-content:space-between;gap:0.75rem;flex-wrap:wrap;">
+                <h2 style="margin:0">🦴 Bones</h2>
+                <div id="bonesStatus" class="turn-indicator" style="margin:0">Loading&hellip;</div>
+                <div id="bonesInfoBar" class="bones-info-bar"></div>
+            </div>
+
+            <details class="bones-instructions glass-card" id="instructionsPanel">
+                <summary>📖 How to Play</summary>
+                <ul>
+                    <li>Each player starts with 7 tiles. Place a tile by matching one of its pip ends to an open end of the chain.</li>
+                    <li>If you can't play, draw from the boneyard until you can — or pass if it's empty.</li>
+                    <li>First player to empty their hand wins the round and scores the total pips left in opponents' hands.</li>
+                    <li>If no one can play (blocked game), the player with the fewest pips wins.</li>
+                    <li>First player to reach the target score wins the game!</li>
+                </ul>
+            </details>
+
+            <div id="bonesPlayerBar" class="bones-player-bar glass-card"></div>
+
+            <div class="bones-board-wrap glass-card" id="bonesBoardWrap">
+                <div id="bonesChain" class="bones-chain">
+                    <span class="chain-empty">Waiting for first tile&hellip;</span>
+                </div>
+            </div>
+
+            <div class="glass-card" style="display:flex;flex-direction:column;gap:0.65rem;padding:0.85rem;">
+                <div id="bonesHintBanner" class="bones-hint-banner" style="display:none"></div>
+                <div id="bonesSideBanner" style="display:none" class="bones-side-banner">
+                    <span>Place <strong id="sideTileLabel"></strong> on which end?</span>
+                    <button class="bones-side-btn" id="sideLeftBtn">⬅ Left</button>
+                    <button class="bones-side-btn" id="sideRightBtn">Right ➡</button>
+                    <button class="bones-side-btn" style="background:var(--text-dim)" id="sideCancelBtn">Cancel</button>
+                </div>
+                <div class="bones-actions">
+                    <button id="bonesDrawBtn" class="btn btn-sp" style="display:none">&#43; Draw</button>
+                    <button id="bonesPassBtn" class="btn btn-outline" style="display:none">Pass</button>
+                    <button id="bonesHintBtn" class="btn btn-outline">&#128161; Hint</button>
+                    <button id="bonesNextRoundBtn" class="btn btn-accept" style="display:none">Next Round ▶</button>
+                    <button id="bonesBackBtn" class="btn btn-outline">&#8592; Lobby</button>
+                </div>
+                <div class="bones-hand-area">
+                    <div class="bones-hand-label">Your Hand</div>
+                    <div id="bonesHand" class="bones-hand"></div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Round result overlay -->
+    <div id="roundOverlay" class="round-overlay" style="display:none">
+        <div class="round-card">
+            <h2 id="roundTitle">🦴 Round Over!</h2>
+            <p id="roundInfo" class="round-info"></p>
+            <div id="roundScores" class="round-scores"></div>
+            <button id="roundNextBtn" class="btn btn-accept" style="width:100%">Next Round ▶</button>
+        </div>
+    </div>
+
+    <!-- Game over overlay -->
+    <div id="resultOverlay" class="result-overlay" style="display:none">
+        <div class="result-card">
+            <h2 id="resultText"></h2>
+            <p id="resultSub" style="color:var(--text-dim);margin:0.4rem 0 1.4rem;font-size:0.92rem;"></p>
+            <button id="backToLobby" class="btn btn-outline">Back to Lobby</button>
+        </div>
+    </div>
+
+    <script src="/js/signalr.min.js"></script>
+    <script src="/js/avatarCache.js"></script>
+    <script src="/js/bones.js"></script>
+    <div class="ham-overlay" onclick="hamClose()"></div>
+    <nav class="ham-drawer" aria-label="Navigation menu">
+        <div class="ham-drawer-header">
+            <div class="ham-drawer-logo"><span class="logo-x">Tac</span><span class="logo-o">Tac</span><span class="logo-x">Toe</span></div>
+            <button class="ham-close" onclick="hamClose()" aria-label="Close menu">&#10005;</button>
+        </div>
+        <div class="ham-menu">
+            <button id="backBtn2" class="ham-item">&#8592; Back to Lobby</button>
+        </div>
+    </nav>
+    <script src="/js/hamburger.js"></script>
+</body>
+</html>
