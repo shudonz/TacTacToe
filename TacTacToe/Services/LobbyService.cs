@@ -19,6 +19,7 @@ public class LobbyService
     private readonly ConcurrentDictionary<string, BonesRoom> _bonesRooms = new();
     private readonly ConcurrentDictionary<string, MancalaRoom> _mancalaRooms = new();
     private readonly ConcurrentDictionary<string, FoxAndHoundsRoom> _foxAndHoundsRooms = new();
+    private readonly ConcurrentDictionary<string, ConnectSumRoom> _connectSumRooms = new();
 
     public bool AddPlayer(string connectionId, string name, string email, string picture)
     {
@@ -518,6 +519,39 @@ public class LobbyService
             r.Players.Any(p => p.ConnectionId == connectionId && !p.IsBot));
 
     public void RemoveFoxAndHoundsRoom(string id) => _foxAndHoundsRooms.TryRemove(id, out _);
+
+    // --- Connect a Sum Rooms ---
+
+    public ConnectSumRoom CreateConnectSumRoom(string id, string hostConnectionId)
+    {
+        var host = _players.GetValueOrDefault(hostConnectionId);
+        var room = new ConnectSumRoom
+        {
+            Id = id,
+            HostConnectionId = hostConnectionId,
+            HostName = host?.Name ?? "Host",
+            Players = [new ConnectSumPlayer { ConnectionId = hostConnectionId, Name = host?.Name ?? "Host", Connected = true }]
+        };
+        _connectSumRooms[id] = room;
+        return room;
+    }
+
+    public ConnectSumRoom? GetConnectSumRoom(string id) { _connectSumRooms.TryGetValue(id, out var r); return r; }
+    public void StoreConnectSumRoom(string id, ConnectSumRoom room) => _connectSumRooms[id] = room;
+
+    public IEnumerable<ConnectSumRoom> GetOpenConnectSumRooms() =>
+        _connectSumRooms.Values.Where(r => !r.Started && !r.IsOver &&
+            IsOnlineConnection(r.HostConnectionId) &&
+            r.Players.Any(p => p.IsBot || IsOnlineConnection(p.ConnectionId)));
+
+    public IEnumerable<ConnectSumRoom> GetConnectSumRoomsForConnection(string connectionId) =>
+        _connectSumRooms.Values.Where(r => !r.Started && r.Players.Any(p => p.ConnectionId == connectionId));
+
+    public IEnumerable<ConnectSumRoom> GetActiveConnectSumRoomsForConnection(string connectionId) =>
+        _connectSumRooms.Values.Where(r => r.Started && !r.IsOver &&
+            r.Players.Any(p => p.ConnectionId == connectionId && !p.IsBot));
+
+    public void RemoveConnectSumRoom(string id) => _connectSumRooms.TryRemove(id, out _);
 }
 
 public class LobbyPlayer

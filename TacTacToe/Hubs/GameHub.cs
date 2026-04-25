@@ -859,6 +859,60 @@ public partial class GameHub : Hub
             });
         }
 
+        // Defer ConnectSum waiting-room cleanup
+        var connectSumWaitSnapshot = _lobby.GetConnectSumRoomsForConnection(disconnectedConnectionId).ToList();
+        if (connectSumWaitSnapshot.Count > 0)
+        {
+            _ = Task.Run(async () =>
+            {
+                await Task.Delay(TimeSpan.FromSeconds(DefaultRejoinGracePeriodSeconds));
+                bool changed = false;
+                foreach (var snap in connectSumWaitSnapshot)
+                {
+                    var room = _lobby.GetConnectSumRoom(snap.Id);
+                    if (room == null || room.Started) continue;
+                    var player = room.Players.FirstOrDefault(p => p.Name == name);
+                    if (player == null || player.ConnectionId != disconnectedConnectionId) continue;
+                    room.Players.Remove(player);
+                    changed = true;
+                    if (room.Players.Count == 0 || room.HostName == name)
+                    { await _hubContext.Clients.Group(room.Id).SendAsync("ConnectSumRoomDissolved"); _lobby.RemoveConnectSumRoom(room.Id); }
+                    else
+                    { await _hubContext.Clients.Group(room.Id).SendAsync("ConnectSumRoomUpdated", room); }
+                }
+                if (changed) await _hubContext.Clients.All.SendAsync("ConnectSumRoomList", ConnectSumRoomSummaries());
+            });
+        }
+
+        // Defer ConnectSum active-game disconnect
+        var connectSumGameSnapshot = _lobby.GetActiveConnectSumRoomsForConnection(disconnectedConnectionId).ToList();
+        if (connectSumGameSnapshot.Count > 0)
+        {
+            _ = Task.Run(async () =>
+            {
+                await Task.Delay(TimeSpan.FromSeconds(DefaultRejoinGracePeriodSeconds));
+                foreach (var snap in connectSumGameSnapshot)
+                {
+                    var room = _lobby.GetConnectSumRoom(snap.Id);
+                    if (room == null || room.IsOver) continue;
+                    var player = room.Players.FirstOrDefault(p => p.Name == name && !p.IsBot);
+                    if (player == null || player.ConnectionId != disconnectedConnectionId) continue;
+                    player.Connected = false;
+                    await _hubContext.Clients.Group(room.Id).SendAsync("PlayerLeft", name);
+
+                    var connectedHumans = room.Players.Where(p => !p.IsBot && p.Connected).ToList();
+                    if (connectedHumans.Count == 0)
+                    {
+                        _lobby.RemoveConnectSumRoom(room.Id);
+                        continue;
+                    }
+                    room.IsOver = true;
+                    room.WinnerName = connectedHumans[0].Name;
+                    await _hubContext.Clients.Group(room.Id).SendAsync("ConnectSumUpdated", BuildConnectSumState(room));
+                }
+            });
+        }
+
         _lobby.RemovePlayer(disconnectedConnectionId);
         await BroadcastLobby();
         await BroadcastAllRoomLists();
