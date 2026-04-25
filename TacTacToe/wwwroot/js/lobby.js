@@ -27,6 +27,7 @@ const DASH_GAMES = [
     { key: "bones",         api: "Bones",          icon: "🦴",  label: "Bones"          },
     { key: "mancala",       api: "Mancala",        icon: "🪨",  label: "Mancala"        },
     { key: "fox-and-hounds", api: "FoxAndHounds",  icon: "🦊",  label: "Fox and Hounds" },
+    { key: "connect-sum",    api: "ConnectSum",     icon: "🔴",  label: "Connect a Sum"  },
 ];
 
 async function loadDashboard(me) {
@@ -214,7 +215,8 @@ async function init() {
             "battle-boat": "battleBoatPanel",
             "bones": "bonesPanel",
             "mancala": "mancalaPanel",
-            "fox-and-hounds": "foxAndHoundsPanel"
+            "fox-and-hounds": "foxAndHoundsPanel",
+            "connect-sum": "connectSumPanel"
         };
 
         // Leaderboard containers per game  [apiGameType, lbId, histId]
@@ -231,7 +233,8 @@ async function init() {
             "battle-boat": ["BattleBoat", "bb-lobby-lb", "bb-lobby-hist"],
             "bones": ["Bones", "bon-lobby-lb", "bon-lobby-hist"],
             "mancala": ["Mancala", "man-lobby-lb", "man-lobby-hist"],
-            "fox-and-hounds": ["FoxAndHounds", "fah-lobby-lb", "fah-lobby-hist"]
+            "fox-and-hounds": ["FoxAndHounds", "fah-lobby-lb", "fah-lobby-hist"],
+            "connect-sum": ["ConnectSum", "cs-lobby-lb", "cs-lobby-hist"]
         };
 
         // Show welcome state when no game is selected, otherwise hide it
@@ -259,6 +262,7 @@ async function init() {
         else if (selectedGame === "bones")         connection.invoke("GetBonesRooms");
         else if (selectedGame === "mancala")       connection.invoke("GetMancalaRooms");
         else if (selectedGame === "fox-and-hounds") connection.invoke("GetFoxAndHoundsRooms");
+        else if (selectedGame === "connect-sum")     connection.invoke("GetConnectSumRooms");
         else if (selectedGame === "yahtzee")       connection.invoke("GetYahtzeeRooms");
 
         // Load leaderboard + personal history for the selected game
@@ -780,6 +784,49 @@ async function init() {
         window.location.href = "/fox-and-hounds";
     });
 
+    // Connect a Sum room list
+    connection.on("ConnectSumRoomList", rooms => {
+        const list = document.getElementById("connectSumRoomList");
+        const noRooms = document.getElementById("noConnectSumRooms");
+        list.innerHTML = "";
+        const open = rooms.filter(r => !r.started);
+        if (open.length === 0) {
+            noRooms.style.display = "block";
+        } else {
+            noRooms.style.display = "none";
+            open.forEach(r => {
+                const isFull = r.isFull;
+                const card = document.createElement("div");
+                card.className = "player-card room-list-card" + (isFull ? " room-full" : "");
+                const badge = isFull ? '<span class="room-badge room-badge-full">Full</span>' : '<span class="room-badge room-badge-open">Open</span>';
+                card.innerHTML =
+                    '<span class="game-option-icon" style="font-size:1.4rem;">🔴</span>'
+                    + '<div class="room-card-info"><span class="name">' + escapeHtml(r.roomName) + ' · Connect ' + r.connectN + '</span>'
+                    + '<span class="room-card-host">Hosted by ' + escapeHtml(r.hostName) + '</span></div>'
+                    + '<div class="room-card-right"><span class="room-player-count-badge">' + r.playerCount + '/' + r.maxPlayers + '</span>'
+                    + badge + (!isFull ? '<button class="btn btn-accept room-join-btn">Join &rarr;</button>' : '') + '</div>';
+                if (!isFull) {
+                    card.querySelector(".room-join-btn").addEventListener("click", e => { e.stopPropagation(); joinConnectSumRoom(r.id); });
+                    card.onclick = () => joinConnectSumRoom(r.id);
+                }
+                list.appendChild(card);
+            });
+        }
+    });
+
+    connection.on("ConnectSumRoomCreated", roomId => {
+        sessionStorage.setItem("connectSumRoomId", roomId);
+        sessionStorage.setItem("isSinglePlayer", "0");
+        window.location.href = "/connect-sum-room";
+    });
+
+    connection.on("ConnectSumSinglePlayerStarted", roomId => {
+        sessionStorage.setItem("connectSumRoomId", roomId);
+        sessionStorage.setItem("myName", me.name);
+        sessionStorage.setItem("isSinglePlayer", "1");
+        window.location.href = "/connect-sum";
+    });
+
     // Yahtzee room list
     connection.on("YahtzeeRoomList", rooms => {
         const list = document.getElementById("roomList");
@@ -890,6 +937,7 @@ async function init() {
         else if (gameParam === "bones") joinBonesRoom(joinParam);
         else if (gameParam === "mancala") joinMancalaRoom(joinParam);
         else if (gameParam === "fox-and-hounds") joinFoxAndHoundsRoom(joinParam);
+        else if (gameParam === "connect-sum") joinConnectSumRoom(joinParam);
         else joinYahtzeeRoom(joinParam);
     }
 
@@ -1196,6 +1244,43 @@ async function init() {
         if (e.key === "Escape") document.getElementById("createFoxAndHoundsRoomCancelBtn").click();
     });
 
+    // Connect a Sum difficulty segmented control
+    let csDifficulty = "regular";
+    document.querySelectorAll("#csDifficultyToggle .difficulty-opt").forEach(btn => {
+        btn.addEventListener("click", () => {
+            document.querySelectorAll("#csDifficultyToggle .difficulty-opt").forEach(b => b.classList.remove("active"));
+            btn.classList.add("active");
+            csDifficulty = btn.dataset.difficulty;
+        });
+    });
+
+    // Single player — Connect a Sum
+    document.getElementById("connectSumSpBtn").addEventListener("click", () => {
+        sessionStorage.setItem("myName", me.name);
+        const connectN = parseInt(document.getElementById("csConnectNSelect").value, 10) || 4;
+        connection.invoke("StartConnectSumSinglePlayer", connectN, csDifficulty);
+    });
+
+    // Create Connect a Sum room
+    document.getElementById("createConnectSumRoomBtn").addEventListener("click", () => {
+        document.getElementById("newConnectSumRoomName").value = "";
+        document.getElementById("createConnectSumRoomModal").style.display = "flex";
+        setTimeout(() => document.getElementById("newConnectSumRoomName").focus(), 50);
+    });
+    document.getElementById("createConnectSumRoomCancelBtn").addEventListener("click", () => {
+        document.getElementById("createConnectSumRoomModal").style.display = "none";
+    });
+    document.getElementById("createConnectSumRoomConfirmBtn").addEventListener("click", () => {
+        const name = document.getElementById("newConnectSumRoomName").value.trim() || "Connect a Sum";
+        const connectN = parseInt(document.getElementById("newConnectSumN").value, 10) || 4;
+        document.getElementById("createConnectSumRoomModal").style.display = "none";
+        connection.invoke("CreateConnectSumRoom", name, connectN);
+    });
+    document.getElementById("newConnectSumRoomName").addEventListener("keydown", e => {
+        if (e.key === "Enter") document.getElementById("createConnectSumRoomConfirmBtn").click();
+        if (e.key === "Escape") document.getElementById("createConnectSumRoomCancelBtn").click();
+    });
+
     // Create Puzzle Time room
     document.getElementById("createPuzzleTimeRoomBtn").addEventListener("click", () => {
         document.getElementById("newPuzzleTimeRoomName").value = "";
@@ -1342,6 +1427,14 @@ function joinFoxAndHoundsRoom(roomId) {
     connection.invoke("JoinFoxAndHoundsRoom", roomId).then(() => {
         sessionStorage.setItem("foxAndHoundsRoomId", roomId);
         window.location.href = "/fox-and-hounds-room";
+    });
+}
+
+function joinConnectSumRoom(roomId) {
+    sessionStorage.setItem("isSinglePlayer", "0");
+    connection.invoke("JoinConnectSumRoom", roomId).then(() => {
+        sessionStorage.setItem("connectSumRoomId", roomId);
+        window.location.href = "/connect-sum-room";
     });
 }
 // Ensures the connection is live before invoking a hub method

@@ -143,6 +143,15 @@
                         <span class="game-list-arrow">&#8250;</span>
                     </button>
 
+                    <button class="game-option game-list-item" data-game="connect-sum" aria-label="Connect a Sum">
+                        <span class="game-list-icon">🔴</span>
+                        <div class="game-list-info">
+                            <span class="game-list-name">Connect a Sum</span>
+                            <span class="game-list-sub">1–2 players &middot; Strategy</span>
+                        </div>
+                        <span class="game-list-arrow">&#8250;</span>
+                    </button>
+
                 </nav>
             </aside>
 
@@ -833,6 +842,65 @@
                     </div>
                 </div>
 
+                <!-- ── Connect a Sum Panel ── -->
+                <div id="connectSumPanel" class="game-detail-panel" style="display:none">
+                    <div class="game-detail-header">
+                        <span class="game-detail-icon">🔴</span>
+                        <div class="game-detail-header-body">
+                            <div class="game-title-row">
+                                <h2 class="game-detail-title">Connect a Sum</h2>
+                                <button class="btn-play" onclick="showPlaySections('connectSum')">&#9654; Play</button>
+                            </div>
+                            <p class="game-detail-desc">Drop discs and connect 4, 5, or 6 in a row to win! A beautiful, hard-core Connect 4 rip-off with glowing discs, confetti, sounds, and brain-busting AI.</p>
+                            <div class="lobby-lb-inline">
+                                <div class="lobby-lb-inline-tabs">
+                                    <span class="lobby-lb-title">&#127942; High Scores</span>
+                                    <button class="lb-tab active" onclick="lobbyLbTab(this,'cs-lobby-lb','cs-lobby-hist')">Top 5</button>
+                                    <button class="lb-tab" onclick="lobbyLbTab(this,'cs-lobby-hist','cs-lobby-lb')">My Scores</button>
+                                </div>
+                                <div class="lobby-lb-scroll">
+                                    <div class="lb-body" id="cs-lobby-lb"></div>
+                                    <div class="lb-body" id="cs-lobby-hist" style="display:none"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="connectSumPlaySections" class="game-play-sections" style="display:none">
+                    <div class="mode-cards">
+                    <div class="detail-section">
+                        <h3 class="detail-section-title">&#129302; Single Player</h3>
+                        <p class="lobby-hint">Play against a computer opponent — choose how many to connect and difficulty.</p>
+                        <div style="display:flex;flex-direction:column;gap:0.55rem;margin-bottom:0.6rem;">
+                            <label style="display:flex;align-items:center;gap:0.75rem;color:var(--text);font-size:0.93rem;font-weight:500;">
+                                Connect:
+                                <select id="csConnectNSelect" class="guest-input" style="width:auto;padding:0.22rem 0.55rem;font-size:0.93rem;">
+                                    <option value="4" selected>4 in a row</option>
+                                    <option value="5">5 in a row</option>
+                                    <option value="6">6 in a row</option>
+                                </select>
+                            </label>
+                        </div>
+                        <div class="difficulty-toggle" id="csDifficultyToggle">
+                            <button class="difficulty-opt active" data-difficulty="regular">Regular</button>
+                            <button class="difficulty-opt difficulty-hard" data-difficulty="hard">&#128128; Hard</button>
+                        </div>
+                        <div class="sp-section" style="margin-top:0.6rem;">
+                            <button id="connectSumSpBtn" class="btn btn-sp">🔴 Play Solo</button>
+                        </div>
+                    </div>
+
+                    <div class="detail-section">
+                        <h3 class="detail-section-title">&#127760; Multiplayer</h3>
+                        <p class="lobby-hint">Create a room or join an open one for a 2-player match.</p>
+                        <button id="createConnectSumRoomBtn" class="btn-create-room">&#43; Create Room</button>
+                        <div id="connectSumRoomList" class="player-list"></div>
+                        <p id="noConnectSumRooms" class="lobby-hint lobby-no-rooms" style="display:none;">No open rooms right now — create one to get started!</p>
+                    </div>
+                    </div>
+                    </div>
+                </div>
+
             </section>
         </main>
 
@@ -988,6 +1056,25 @@
                 <div class="modal-actions">
                     <button id="createFoxAndHoundsRoomConfirmBtn" class="btn btn-accept">Create Room</button>
                     <button id="createFoxAndHoundsRoomCancelBtn" class="btn btn-decline">Cancel</button>
+                </div>
+            </div>
+        </div>
+        <div id="createConnectSumRoomModal" class="modal" style="display:none">
+            <div class="modal-content">
+                <h3>🔴 Create Connect a Sum Room</h3>
+                <p>Give your room a name so friends can find it.</p>
+                <input id="newConnectSumRoomName" class="guest-input" type="text" placeholder="e.g. Drop Zone" maxlength="30" style="margin-top:1rem;width:100%;">
+                <div style="display:flex;align-items:center;gap:0.75rem;margin-top:0.85rem;color:var(--text);font-size:0.93rem;font-weight:500;">
+                    Connect:
+                    <select id="newConnectSumN" class="guest-input" style="width:auto;padding:0.22rem 0.55rem;font-size:0.93rem;">
+                        <option value="4" selected>4 in a row</option>
+                        <option value="5">5 in a row</option>
+                        <option value="6">6 in a row</option>
+                    </select>
+                </div>
+                <div class="modal-actions">
+                    <button id="createConnectSumRoomConfirmBtn" class="btn btn-accept">Create Room</button>
+                    <button id="createConnectSumRoomCancelBtn" class="btn btn-decline">Cancel</button>
                 </div>
             </div>
         </div>
