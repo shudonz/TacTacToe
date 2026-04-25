@@ -368,7 +368,7 @@ async function init() {
     });
 
     connection.on('PegSolitaireRoomUpdated', () => {
-        if (roomState?.isOver) window.location.href = '/peg-solitaire-room';
+        window.location.href = '/peg-solitaire-room';
     });
 
     await connection.start();

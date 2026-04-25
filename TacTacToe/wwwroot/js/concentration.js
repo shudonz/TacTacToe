@@ -243,7 +243,7 @@ async function init() {
     });
 
     connection.on("ConcentrationRoomUpdated", () => {
-        if (gameState?.isOver) window.location.href = "/concentration-room";
+        window.location.href = "/concentration-room";
     });
 
     await connection.start();

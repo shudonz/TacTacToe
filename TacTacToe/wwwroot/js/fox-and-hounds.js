@@ -443,7 +443,7 @@ connection.on('FoxAndHoundsSinglePlayerStarted', newRoomId => {
 });
 
 connection.on('FoxAndHoundsRoomUpdated', () => {
-    if (state?.isOver) window.location.href = '/fox-and-hounds-room';
+    window.location.href = '/fox-and-hounds-room';
 });
 
 init();

@@ -556,7 +556,7 @@ async function init() {
     });
 
     connection.on("SlotsRoomUpdated", () => {
-        if (_gameOverEventFired) window.location.href = "/slots-room";
+        window.location.href = "/slots-room";
     });
 
     document.getElementById("backBtn").onclick = () => {

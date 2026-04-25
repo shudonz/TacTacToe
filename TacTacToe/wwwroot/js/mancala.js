@@ -318,7 +318,7 @@ async function init() {
     });
 
     connection.on("MancalaRoomUpdated", () => {
-        if (gameState?.isOver) window.location.href = "/mancala-room";
+        window.location.href = "/mancala-room";
     });
 
     await connection.start();

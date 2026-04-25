@@ -344,7 +344,7 @@ connection.on('BonesSinglePlayerStarted', newRoomId => {
 });
 
 connection.on('BonesRoomUpdated', () => {
-    if (state?.isOver) window.location.href = '/bones-room';
+    window.location.href = '/bones-room';
 });
 
 // ─── Button handlers ──────────────────────────────────────────────────────────

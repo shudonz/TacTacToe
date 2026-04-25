@@ -573,7 +573,7 @@ connection.on("YahtzeeSinglePlayerStarted", newGameId => {
 });
 
 connection.on("YahtzeeRoomUpdated", () => {
-    if (currentRoom?.isOver) window.location.href = "/yahtzee-room";
+    window.location.href = "/yahtzee-room";
 });
 
 // Roll button

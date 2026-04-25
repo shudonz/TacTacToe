@@ -336,7 +336,7 @@ async function init() {
     });
 
     connection.on('CrazyEightsRoomUpdated', () => {
-        if (state?.isOver) window.location.href = '/crazy-eights-room';
+        window.location.href = '/crazy-eights-room';
     });
 
     await connection.start();

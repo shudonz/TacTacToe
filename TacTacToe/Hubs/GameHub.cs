@@ -2109,6 +2109,8 @@ public partial class GameHub : Hub
     public async Task UpdateYahtzeeSettings(string roomId, YahtzeeSettings settings)
     {
         var room = _lobby.GetRoom(roomId);
+        if (room == null || room.Started) return;
+        if (Context.ConnectionId != room.HostConnectionId) return;
         settings.MaxPlayers = Math.Clamp(settings.MaxPlayers, 2, 20);
         settings.RollsPerTurn = Math.Clamp(settings.RollsPerTurn, 1, 5);
         settings.NumberOfDice = Math.Clamp(settings.NumberOfDice, 3, 8);

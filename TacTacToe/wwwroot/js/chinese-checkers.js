@@ -379,7 +379,7 @@ async function init() {
         });
 
         connection.on("ChineseCheckersRoomUpdated", () => {
-            if (state?.isOver) window.location.href = "/chinese-checkers-room";
+            window.location.href = "/chinese-checkers-room";
         });
 
         await connection.start();

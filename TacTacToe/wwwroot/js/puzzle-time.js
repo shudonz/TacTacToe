@@ -872,7 +872,7 @@ async function init() {
     });
 
     connection.on("PuzzleTimeRoomUpdated", () => {
-        if (state?.isOver) window.location.href = "/puzzle-time-room";
+        window.location.href = "/puzzle-time-room";
     });
 
     await connection.start();

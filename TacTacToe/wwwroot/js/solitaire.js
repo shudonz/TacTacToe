@@ -1137,7 +1137,7 @@ async function init() {
     });
 
     connection.on("SolitaireRoomUpdated", () => {
-        if (_gameOverEventFired) window.location.href = "/solitaire-room";
+        window.location.href = "/solitaire-room";
     });
 
     await connection.start();
