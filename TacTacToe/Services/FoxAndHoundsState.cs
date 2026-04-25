@@ -104,13 +104,14 @@ public static class FoxAndHoundsEngine
         room.FoxRow = 0;
         room.FoxCol = 4;
 
-        // Four hounds on the dark squares of row 7: cols 0, 2, 4, 6
+        // Four hounds on the dark squares of row 7: cols 1, 3, 5, 7
+        // Dark squares satisfy (row + col) % 2 == 0, so for row 7 the dark cols are ODD.
         room.Hounds =
         [
-            new FoxAndHoundsHound { Index = 0, Row = 7, Col = 0 },
-            new FoxAndHoundsHound { Index = 1, Row = 7, Col = 2 },
-            new FoxAndHoundsHound { Index = 2, Row = 7, Col = 4 },
-            new FoxAndHoundsHound { Index = 3, Row = 7, Col = 6 },
+            new FoxAndHoundsHound { Index = 0, Row = 7, Col = 1 },
+            new FoxAndHoundsHound { Index = 1, Row = 7, Col = 3 },
+            new FoxAndHoundsHound { Index = 2, Row = 7, Col = 5 },
+            new FoxAndHoundsHound { Index = 3, Row = 7, Col = 7 },
         ];
 
         // Randomly assign roles to players
