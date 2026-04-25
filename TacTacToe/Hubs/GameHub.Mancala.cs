@@ -138,6 +138,7 @@ public partial class GameHub
         var (extraTurn, captured, landedIndex, valid) = MancalaEngine.MakeMove(room, pitIndex);
         if (!valid) return;
 
+        room.ExtraTurn = extraTurn;
         if (!room.IsOver)
         {
             if (!extraTurn)
@@ -235,6 +236,7 @@ public partial class GameHub
         var (extraTurn, _, _, valid) = MancalaEngine.MakeMove(room, pit);
         if (!valid) return;
 
+        room.ExtraTurn = extraTurn;
         if (!room.IsOver)
         {
             if (!extraTurn)
