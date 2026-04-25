@@ -2,7 +2,7 @@
    Solitaire — Klondike client
    ============================================================ */
 const connection = new signalR.HubConnectionBuilder().withUrl("/gamehub").withAutomaticReconnect().build();
-const roomId = sessionStorage.getItem("solitaireRoomId");
+let roomId = sessionStorage.getItem("solitaireRoomId");
 const isSinglePlayer = sessionStorage.getItem("isSinglePlayer") === "1";
 if (!roomId) {
     window.location.replace("/lobby");
@@ -1092,6 +1092,19 @@ async function init() {
         connection.invoke("LeaveSolitaireRoom", roomId).then(() => { window.location.href = "/lobby"; });
     });
     document.getElementById("backToLobby").onclick = () => { window.location.href = "/lobby"; };
+    document.getElementById("playAgainBtn").onclick = () => {
+        if (isSinglePlayer) {
+            document.getElementById("resultOverlay").style.display = "none";
+            _gameOverEventFired = false;
+            roomState = null;
+            myGame = null;
+            gameFinished = false;
+            gaveUp = false;
+            connection.invoke("StartSolitaireSinglePlayer").catch(e => console.error(e));
+        } else {
+            window.location.href = "/solitaire-room";
+        }
+    };
 
     // Hub events
     connection.on("SolitaireUpdated", room => {
@@ -1117,6 +1130,15 @@ async function init() {
         }
     });
     connection.on("PlayerLeft", name => showToast("&#9888; " + esc(name) + " left the game"));
+
+    connection.on("SolitaireSinglePlayerStarted", newRoomId => {
+        roomId = newRoomId;
+        sessionStorage.setItem("solitaireRoomId", newRoomId);
+    });
+
+    connection.on("SolitaireRoomUpdated", () => {
+        if (_gameOverEventFired) window.location.href = "/solitaire-room";
+    });
 
     await connection.start();
     await connection.invoke("RejoinSolitaireRoom", roomId);

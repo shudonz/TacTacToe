@@ -56,7 +56,7 @@ public partial class GameHub
         if (room.HostName == name) room.HostConnectionId = Context.ConnectionId;
 
         await Groups.AddToGroupAsync(Context.ConnectionId, roomId);
-        if (room.Started)
+        if (room.Started && !room.IsOver)
         {
             _lobby.SetInGame(Context.ConnectionId, true);
             await BroadcastLobby();
@@ -64,6 +64,24 @@ public partial class GameHub
         }
         else
         {
+            if (room.IsOver)
+            {
+                room.Started = false;
+                room.IsOver = false;
+                room.WinnerName = null;
+                room.CurrentPlayerIndex = 0;
+                room.Pieces = [];
+                room.LastMove = null;
+                room.Players.RemoveAll(p => p.IsBot);
+                foreach (var p in room.Players)
+                {
+                    p.ColorIndex = 0;
+                    p.FinishRank = 0;
+                }
+                foreach (var p in room.Players)
+                    _lobby.SetInGame(p.ConnectionId, false);
+                await BroadcastLobby();
+            }
             await Clients.Group(roomId).SendAsync("ChineseCheckersRoomUpdated", room);
         }
     }

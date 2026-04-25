@@ -1,5 +1,5 @@
 const connection = new signalR.HubConnectionBuilder().withUrl('/gamehub').withAutomaticReconnect().build();
-const roomId = sessionStorage.getItem('pegSolitaireRoomId');
+let roomId = sessionStorage.getItem('pegSolitaireRoomId');
 const isSinglePlayer = sessionStorage.getItem('isSinglePlayer') === '1';
 if (!roomId) {
     window.location.replace('/lobby');
@@ -362,6 +362,15 @@ async function init() {
         document.getElementById('pegsolStatus').textContent = `${name} left the game.`;
     });
 
+    connection.on('PegSolitaireSinglePlayerStarted', newRoomId => {
+        roomId = newRoomId;
+        sessionStorage.setItem('pegSolitaireRoomId', newRoomId);
+    });
+
+    connection.on('PegSolitaireRoomUpdated', () => {
+        if (roomState?.isOver) window.location.href = '/peg-solitaire-room';
+    });
+
     await connection.start();
     await connection.invoke('RejoinPegSolitaireRoom', roomId);
     if (!isSinglePlayer) initChat(connection, roomId);
@@ -374,6 +383,16 @@ function backToLobby() {
 document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('backBtn').addEventListener('click', backToLobby);
     document.getElementById('backToLobby').addEventListener('click', backToLobby);
+    document.getElementById('playAgainBtn').addEventListener('click', () => {
+        if (isSinglePlayer) {
+            document.getElementById('resultOverlay').style.display = 'none';
+            _gameOverEventFired = false;
+            roomState = null;
+            connection.invoke('StartPegSolitaireSinglePlayer').catch(e => console.error(e));
+        } else {
+            window.location.href = '/peg-solitaire-room';
+        }
+    });
 });
 
 function initChat(conn, groupId) {

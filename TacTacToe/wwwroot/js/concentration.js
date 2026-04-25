@@ -1,5 +1,5 @@
 const connection = new signalR.HubConnectionBuilder().withUrl("/gamehub").withAutomaticReconnect().build();
-const roomId = sessionStorage.getItem("concentrationRoomId");
+let roomId = sessionStorage.getItem("concentrationRoomId");
 const isSinglePlayer = sessionStorage.getItem("isSinglePlayer") === "1";
 if (!roomId) {
     window.location.replace("/lobby");
@@ -237,6 +237,15 @@ async function init() {
         document.getElementById("statusText").textContent = name + " left the game.";
     });
 
+    connection.on("ConcentrationSinglePlayerStarted", newRoomId => {
+        roomId = newRoomId;
+        sessionStorage.setItem("concentrationRoomId", newRoomId);
+    });
+
+    connection.on("ConcentrationRoomUpdated", () => {
+        if (gameState?.isOver) window.location.href = "/concentration-room";
+    });
+
     await connection.start();
     await connection.invoke("RejoinConcentrationRoom", roomId);
     if (!isSinglePlayer) initChat(connection, roomId);
@@ -292,6 +301,15 @@ function backToLobby() {
 document.addEventListener('DOMContentLoaded', () => {
     document.getElementById("backBtn").addEventListener("click", backToLobby);
     document.getElementById("backToLobby").addEventListener("click", backToLobby);
+    document.getElementById("playAgainBtn").addEventListener("click", () => {
+        if (isSinglePlayer) {
+            document.getElementById("resultOverlay").style.display = "none";
+            _gameOverEventFired = false;
+            connection.invoke("StartConcentrationSinglePlayer", "regular").catch(e => console.error(e));
+        } else {
+            window.location.href = "/concentration-room";
+        }
+    });
 });
 
 function initChat(conn, groupId) {

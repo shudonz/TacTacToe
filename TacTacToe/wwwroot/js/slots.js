@@ -2,7 +2,7 @@
    Slots — Vegas-style game client (3x3 multiline)
    ============================================================ */
 const connection = new signalR.HubConnectionBuilder().withUrl("/gamehub").withAutomaticReconnect().build();
-const roomId = sessionStorage.getItem("slotsRoomId");
+let roomId = sessionStorage.getItem("slotsRoomId");
 const isSinglePlayer = sessionStorage.getItem("isSinglePlayer") === "1";
 if (!roomId) {
     window.location.replace("/lobby");
@@ -550,11 +550,29 @@ async function init() {
     connection.on("SlotsUpdated", room => render(room));
     connection.on("PlayerLeft", name => showToast("⚠️ " + esc(name) + " left the game"));
 
+    connection.on("SlotsSinglePlayerStarted", newRoomId => {
+        roomId = newRoomId;
+        sessionStorage.setItem("slotsRoomId", newRoomId);
+    });
+
+    connection.on("SlotsRoomUpdated", () => {
+        if (_gameOverEventFired) window.location.href = "/slots-room";
+    });
+
     document.getElementById("backBtn").onclick = () => {
         _resumeAudio(); soundClick();
         connection.invoke("LeaveSlotsRoom", roomId).then(() => { window.location.href = "/lobby"; });
     };
     document.getElementById("backToLobby").onclick = () => { window.location.href = "/lobby"; };
+    document.getElementById("playAgainBtn").onclick = () => {
+        if (isSinglePlayer) {
+            document.getElementById("resultOverlay").style.display = "none";
+            _gameOverEventFired = false;
+            connection.invoke("StartSlotsSinglePlayer").catch(e => console.error(e));
+        } else {
+            window.location.href = "/slots-room";
+        }
+    };
 
     await connection.start();
     await connection.invoke("RejoinSlotsRoom", roomId);

@@ -257,7 +257,7 @@ const catDescs = {
    Yahtzee N-Player Game
    ============================================================ */
 const connection = new signalR.HubConnectionBuilder().withUrl("/gamehub").withAutomaticReconnect().build();
-const gameId = sessionStorage.getItem("gameId");
+let gameId = sessionStorage.getItem("gameId");
 const myName = sessionStorage.getItem("myName");
 const isSinglePlayer = sessionStorage.getItem("isSinglePlayer") === "1";
 if (!gameId || !myName) {
@@ -567,6 +567,15 @@ connection.on("PlayerLeft", name => {
     showToast("⚠️ " + escapeHtml(name) + " left the game");
 });
 
+connection.on("YahtzeeSinglePlayerStarted", newGameId => {
+    gameId = newGameId;
+    sessionStorage.setItem("gameId", newGameId);
+});
+
+connection.on("YahtzeeRoomUpdated", () => {
+    if (currentRoom?.isOver) window.location.href = "/yahtzee-room";
+});
+
 // Roll button
 document.getElementById("rollBtn").addEventListener("click", () => {
     playDiceRollSound();
@@ -580,6 +589,19 @@ function goBack() {
 document.addEventListener('DOMContentLoaded', () => {
     document.getElementById("backBtn").onclick = goBack;
     document.getElementById("backToLobby").onclick = goBack;
+    document.getElementById("playAgainBtn").onclick = () => {
+        if (isSinglePlayer) {
+            const difficulty = currentRoom?.players?.find(p => p.isBot)?.aiDifficulty || "regular";
+            document.getElementById("resultOverlay").style.display = "none";
+            _gameOverEventFired = false;
+            _gameOverSoundPlayed = false;
+            scorecardBuilt = false;
+            currentRoom = null;
+            connection.invoke("StartYahtzeeSinglePlayer", difficulty).catch(e => console.error(e));
+        } else {
+            window.location.href = "/yahtzee-room";
+        }
+    };
 });
 
 // Connect

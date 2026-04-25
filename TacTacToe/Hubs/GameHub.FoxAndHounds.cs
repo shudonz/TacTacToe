@@ -58,7 +58,7 @@ public partial class GameHub
         if (room.HostName == name) room.HostConnectionId = Context.ConnectionId;
 
         await Groups.AddToGroupAsync(Context.ConnectionId, roomId);
-        if (room.Started)
+        if (room.Started && !room.IsOver)
         {
             _lobby.SetInGame(Context.ConnectionId, true);
             await BroadcastLobby();
@@ -66,6 +66,23 @@ public partial class GameHub
         }
         else
         {
+            if (room.IsOver)
+            {
+                room.Started = false;
+                room.IsOver = false;
+                room.WinnerRole = null;
+                room.WinnerName = null;
+                room.MoveCount = 0;
+                room.LastMove = null;
+                room.CurrentPlayerIndex = 0;
+                room.Hounds = [];
+                room.Players.RemoveAll(p => p.IsBot);
+                foreach (var p in room.Players)
+                    p.Role = "";
+                foreach (var p in room.Players)
+                    _lobby.SetInGame(p.ConnectionId, false);
+                await BroadcastLobby();
+            }
             await Clients.Group(roomId).SendAsync("FoxAndHoundsRoomUpdated", room);
         }
     }

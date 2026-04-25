@@ -7,7 +7,7 @@
 // ================================================================
 
 const connection = new signalR.HubConnectionBuilder().withUrl("/gamehub").withAutomaticReconnect().build();
-const roomId         = sessionStorage.getItem("puzzleTimeRoomId");
+let roomId         = sessionStorage.getItem("puzzleTimeRoomId");
 const isSinglePlayer = sessionStorage.getItem("isSinglePlayer") === "1";
 if (!roomId) { window.location.replace("/lobby"); throw new Error("Missing Puzzle Time room id"); }
 
@@ -866,6 +866,15 @@ async function init() {
         document.getElementById("puzzleStatusText").textContent = name + " left the game.";
     });
 
+    connection.on("PuzzleTimeSinglePlayerStarted", newRoomId => {
+        roomId = newRoomId;
+        sessionStorage.setItem("puzzleTimeRoomId", newRoomId);
+    });
+
+    connection.on("PuzzleTimeRoomUpdated", () => {
+        if (state?.isOver) window.location.href = "/puzzle-time-room";
+    });
+
     await connection.start();
     _ro.observe(board());
 
@@ -882,6 +891,18 @@ document.addEventListener("DOMContentLoaded", () => {
     document.getElementById("showHintsChk")?.addEventListener("change", () => { if (state) renderPieces(); });
     document.getElementById("backBtn")?.addEventListener("click", backToLobby);
     document.getElementById("backToLobby")?.addEventListener("click", backToLobby);
+    document.getElementById("playAgainBtn")?.addEventListener("click", () => {
+        if (isSinglePlayer) {
+            const imageKey = state?.settings?.imageKey || "emoji-garden";
+            const pieceCount = state?.settings?.pieceCount || 25;
+            document.getElementById("resultOverlay").style.display = "none";
+            _gameOverFired = false;
+            state = null;
+            connection.invoke("StartPuzzleTimeSinglePlayer", imageKey, pieceCount).catch(e => console.error(e));
+        } else {
+            window.location.href = "/puzzle-time-room";
+        }
+    });
 });
 
 init();
