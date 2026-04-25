@@ -45,12 +45,12 @@
         .domino-half:first-child { border-bottom:1px solid #ccc; }
         .domino-divider { width:100%; height:1px; background:#ccc; }
 
-        /* Pip layout — same as real dice */
+        /* Pip layout — same as real dice (hand size: 35×35) */
         .pip-grid {
-            display:grid; grid-template-columns:repeat(3,10px); grid-template-rows:repeat(3,10px);
-            gap:1px; width:32px; height:32px;
+            display:grid; grid-template-columns:repeat(3,11px); grid-template-rows:repeat(3,11px);
+            gap:1px; width:35px; height:35px;
         }
-        .pip { width:9px; height:9px; border-radius:50%; background:#1a1a1a; }
+        .pip { width:10px; height:10px; border-radius:50%; background:#1a1a1a; }
         .pip.empty { background:transparent; }
 
         /* Chain board */
@@ -63,16 +63,23 @@
             padding:6px 0;
         }
         .chain-domino {
-            display:inline-flex; flex-direction:row; align-items:center;
+            display:inline-flex; flex-direction:row; align-items:stretch;
             background:#fff; border-radius:6px; border:2px solid #ccc;
             box-shadow:0 1px 5px rgba(0,0,0,0.15);
             overflow:hidden;
         }
         .chain-domino .domino-half {
-            width:26px; height:26px; font-size:0.7rem;
+            width:30px; height:30px;
             display:flex; align-items:center; justify-content:center;
+            flex-shrink:0;
         }
-        .chain-domino .domino-half:first-child { border-right:1px solid #ddd; border-bottom:none; }
+        .chain-domino .domino-half:first-child { border-right:1.5px solid #ccc; border-bottom:none; }
+        /* Pip-grid and pip overrides for chain tiles (smaller to fit 30px half) */
+        .chain-domino .pip-grid {
+            grid-template-columns:repeat(3,8px); grid-template-rows:repeat(3,8px);
+            gap:1px; width:26px; height:26px;
+        }
+        .chain-domino .pip { width:7px; height:7px; }
         .chain-end-marker {
             font-size:0.9rem; font-weight:700; color:var(--accent);
             background:rgba(18,145,158,0.15); border-radius:6px; padding:3px 8px;
@@ -83,17 +90,17 @@
         /* Hand area */
         .bones-hand-area { display:flex; flex-direction:column; gap:0.5rem; }
         .bones-hand-label { font-size:0.82rem; color:var(--text-dim); font-weight:600; }
-        .bones-hand { display:flex; flex-wrap:wrap; gap:0.5rem; align-items:flex-end; min-height:88px; }
+        .bones-hand { display:flex; flex-wrap:wrap; gap:0.55rem; align-items:flex-start; min-height:110px; padding-bottom:1.4rem; }
 
-        /* Hand dominos — portrait orientation */
+        /* Hand dominos — portrait orientation, 10% larger */
         .hand-domino {
             display:inline-flex; flex-direction:column; align-items:center;
             background:#fff; border-radius:7px; border:2px solid #ccc;
             box-shadow:0 2px 8px rgba(0,0,0,0.18);
             cursor:default; transition:transform 0.15s, border-color 0.15s, box-shadow 0.15s;
-            user-select:none; overflow:hidden;
+            user-select:none; overflow:visible; position:relative;
         }
-        .hand-domino .domino-half { width:32px; height:32px; }
+        .hand-domino .domino-half { width:35px; height:35px; overflow:hidden; }
         .hand-domino .domino-half:first-child { border-bottom:1px solid #ccc; border-right:none; }
         .hand-domino.playable { border-color:var(--accent); cursor:pointer; }
         .hand-domino.playable:hover { transform:translateY(-5px) scale(1.08); border-color:var(--accent2); box-shadow:0 6px 16px rgba(18,145,158,0.45); }
@@ -104,18 +111,33 @@
         .bones-actions { display:flex; flex-wrap:wrap; gap:0.55rem; align-items:center; }
         .bones-actions .btn { min-width:90px; }
 
-        /* Side selection banner */
+        /* Side selection banner — more prominent */
         .bones-side-banner {
-            background:rgba(18,145,158,0.15); border:1px solid var(--accent);
-            border-radius:8px; padding:0.55rem 0.85rem; font-size:0.88rem; color:var(--text);
+            background:rgba(251,191,36,0.12); border:2px solid #fbbf24;
+            border-radius:10px; padding:0.75rem 1rem; font-size:0.9rem; color:var(--text);
             display:flex; gap:0.65rem; align-items:center; flex-wrap:wrap;
+            animation:side-pulse 0.8s ease-in-out;
+        }
+        @keyframes side-pulse {
+            0%   { box-shadow:0 0 0 0 rgba(251,191,36,0.5); }
+            60%  { box-shadow:0 0 0 8px rgba(251,191,36,0); }
+            100% { box-shadow:0 0 0 0 rgba(251,191,36,0); }
         }
         .bones-side-btn {
-            background:var(--accent); color:#fff; border:none; border-radius:6px;
-            padding:0.3rem 0.75rem; font-size:0.85rem; font-weight:600; cursor:pointer;
-            transition:background 0.15s;
+            background:var(--accent); color:#fff; border:none; border-radius:8px;
+            padding:0.42rem 1rem; font-size:0.9rem; font-weight:700; cursor:pointer;
+            transition:background 0.15s, transform 0.1s;
         }
-        .bones-side-btn:hover { background:var(--accent2); }
+        .bones-side-btn:hover { background:var(--accent2); transform:scale(1.05); }
+
+        /* Connection badge on playable hand tiles */
+        .tile-connect-badge {
+            position:absolute; bottom:-18px; left:50%; transform:translateX(-50%);
+            font-size:0.62rem; font-weight:700; white-space:nowrap;
+            background:var(--accent); color:#fff;
+            border-radius:4px; padding:1px 5px; pointer-events:none;
+            letter-spacing:0.01em;
+        }
 
         /* Stats bar */
         .bones-info-bar { display:flex; gap:1rem; flex-wrap:wrap; font-size:0.83rem; color:var(--text-dim); }
@@ -201,10 +223,11 @@
             <details class="bones-instructions glass-card" id="instructionsPanel">
                 <summary>📖 How to Play</summary>
                 <ul>
-                    <li>Each player starts with 7 tiles. Place a tile by matching one of its pip ends to an open end of the chain.</li>
-                    <li>If you can't play, draw from the boneyard until you can — or pass if it's empty.</li>
-                    <li>First player to empty their hand wins the round and scores the total pips left in opponents' hands.</li>
-                    <li>If no one can play (blocked game), the player with the fewest pips wins.</li>
+                    <li>Each player starts with 7 tiles. <strong>Click a tile</strong> in your hand to play it.</li>
+                    <li>A tile must match one of its pip-ends to an open end of the chain (shown in teal).</li>
+                    <li>When a tile fits <em>both</em> ends, you'll be asked to choose <strong>Left</strong> or <strong>Right</strong>.</li>
+                    <li>If you can't play, draw from the boneyard — or pass if it's empty.</li>
+                    <li>First to empty their hand wins the round and scores opponents' remaining pips.</li>
                     <li>First player to reach the target score wins the game!</li>
                 </ul>
             </details>
@@ -220,10 +243,10 @@
             <div class="glass-card" style="display:flex;flex-direction:column;gap:0.65rem;padding:0.85rem;">
                 <div id="bonesHintBanner" class="bones-hint-banner" style="display:none"></div>
                 <div id="bonesSideBanner" style="display:none" class="bones-side-banner">
-                    <span>Place <strong id="sideTileLabel"></strong> on which end?</span>
-                    <button class="bones-side-btn" id="sideLeftBtn">⬅ Left</button>
-                    <button class="bones-side-btn" id="sideRightBtn">Right ➡</button>
-                    <button class="bones-side-btn" style="background:var(--text-dim)" id="sideCancelBtn">Cancel</button>
+                    <span>🎯 Place <strong id="sideTileLabel"></strong> on which end of the chain?</span>
+                    <button class="bones-side-btn" id="sideLeftBtn">⬅ Left end (<span id="sideLeftPip">?</span>)</button>
+                    <button class="bones-side-btn" id="sideRightBtn">Right end (<span id="sideRightPip">?</span>) ➡</button>
+                    <button class="bones-side-btn" style="background:rgba(255,255,255,0.15);color:var(--text-dim)" id="sideCancelBtn">✕ Cancel</button>
                 </div>
                 <div class="bones-actions">
                     <button id="bonesDrawBtn" class="btn btn-sp" style="display:none">&#43; Draw</button>

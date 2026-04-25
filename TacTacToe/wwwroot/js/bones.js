@@ -70,15 +70,22 @@ function pipFaceHtml(n) {
 
 function tileLabel(l, h) { return `[${l}|${h}]`; }
 
-// Portrait domino HTML (for hand)
+// Portrait domino HTML (for hand) — includes connection badge for playable tiles
 function handDominoHtml(tileId, low, high, canPlace, selected) {
     const cls = ['hand-domino'];
     if (canPlace !== 'none') cls.push('playable'); else cls.push('not-playable');
     if (selected) cls.push('selected');
     const pipTotal = low + high;
-    return `<div class="${cls.join(' ')}" data-tile="${tileId}" title="${tileLabel(low,high)} (${pipTotal} pips)" aria-label="Domino ${low}|${high}">
+
+    let badge = '';
+    if (canPlace === 'left')  badge = '<div class="tile-connect-badge">⬅ Left</div>';
+    else if (canPlace === 'right') badge = '<div class="tile-connect-badge">Right ➡</div>';
+    else if (canPlace === 'both')  badge = '<div class="tile-connect-badge">⬅ L or R ➡</div>';
+
+    return `<div class="${cls.join(' ')}" data-tile="${tileId}" title="${tileLabel(low,high)} — ${canPlace === 'none' ? 'no match' : 'click to play'} (${pipTotal} pips)" aria-label="Domino ${low}|${high}">
         <div class="domino-half">${pipFaceHtml(low)}</div>
         <div class="domino-half">${pipFaceHtml(high)}</div>
+        ${badge}
     </div>`;
 }
 
@@ -219,8 +226,12 @@ function showSideBanner(tileId) {
     const tile = state.myHand.find(t => t.tileId === tileId);
     if (!tile) return;
     document.getElementById('sideTileLabel').textContent = tileLabel(tile.low, tile.high);
-    const banner = document.getElementById('bonesSideBanner');
-    banner.style.display = 'flex';
+    // Show the actual open-end pip values so the player understands what they're connecting to
+    const leftPip  = state.leftOpenEnd  >= 0 ? state.leftOpenEnd  : '?';
+    const rightPip = state.rightOpenEnd >= 0 ? state.rightOpenEnd : '?';
+    document.getElementById('sideLeftPip').textContent  = leftPip;
+    document.getElementById('sideRightPip').textContent = rightPip;
+    document.getElementById('bonesSideBanner').style.display = 'flex';
 }
 
 function hideSideBanner() {
