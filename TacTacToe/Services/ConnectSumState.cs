@@ -151,7 +151,7 @@ public static class ConnectSumEngine
                 {
                     var copy = CloneBoard(room);
                     copy[row][c] = botDisc;
-                    if (SimulateWin(room, copy, row, c, botDisc)) return c;
+                    if (SimulateWinBoard(room, copy, row, c, botDisc)) return c;
                 }
             }
             // Block opponent
@@ -162,7 +162,7 @@ public static class ConnectSumEngine
                 {
                     var copy = CloneBoard(room);
                     copy[row][c] = humanDisc;
-                    if (SimulateWin(room, copy, row, c, humanDisc)) return c;
+                    if (SimulateWinBoard(room, copy, row, c, humanDisc)) return c;
                 }
             }
             // Center preference
@@ -170,7 +170,7 @@ public static class ConnectSumEngine
             if (valid.Contains(center)) return center;
             return valid[Random.Shared.Next(valid.Count)];
         }
-        else // hard: minimax depth 6
+        else // hard: minimax depth 5
         {
             int bestCol = valid[0];
             int bestScore = int.MinValue;
@@ -180,7 +180,7 @@ public static class ConnectSumEngine
                 if (row < 0) continue;
                 var copy = CloneBoard(room);
                 copy[row][c] = botDisc;
-                bool won = SimulateWin(room, copy, row, c, botDisc);
+                bool won = SimulateWinBoard(room, copy, row, c, botDisc);
                 if (won) return c; // immediate win
                 int score = Minimax(room, copy, 5, false, int.MinValue, int.MaxValue, botDisc, humanDisc);
                 if (score > bestScore) { bestScore = score; bestCol = c; }
@@ -276,11 +276,6 @@ public static class ConnectSumEngine
         return copy;
     }
 
-    private static bool SimulateWin(ConnectSumRoom room, int[][] board, int row, int col, int player)
-    {
-        return SimulateWinBoard(room, board, row, col, player);
-    }
-
     private static bool SimulateWinBoard(ConnectSumRoom room, int[][] board, int row, int col, int player)
     {
         int n = room.ConnectN;
@@ -321,7 +316,7 @@ public static class ConnectSumEngine
             {
                 var copy = CloneBoard(room);
                 copy[row][c] = disc;
-                if (SimulateWin(room, copy, row, c, disc)) return c;
+                if (SimulateWinBoard(room, copy, row, c, disc)) return c;
             }
         }
         // Block opponent
@@ -332,7 +327,7 @@ public static class ConnectSumEngine
             {
                 var copy = CloneBoard(room);
                 copy[row][c] = opp;
-                if (SimulateWin(room, copy, row, c, opp)) return c;
+                if (SimulateWinBoard(room, copy, row, c, opp)) return c;
             }
         }
         // Center
