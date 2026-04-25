@@ -18,7 +18,6 @@ let lastState = null;
 let prevScores = [];
 let pendingDir = null;
 let isMobile = window.matchMedia('(pointer: coarse)').matches;
-const GRID_CELL = 20; // fallback, will be computed from canvas size
 
 // ── Audio ────────────────────────────────────────────────────────
 
