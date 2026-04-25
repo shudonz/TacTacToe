@@ -618,6 +618,66 @@ public partial class GameHub : Hub
             });
         }
 
+        // Defer Fox and Hounds waiting-room cleanup
+        var fahWaitSnapshot = _lobby.GetFoxAndHoundsRoomsForConnection(disconnectedConnectionId).ToList();
+        if (fahWaitSnapshot.Count > 0)
+        {
+            _ = Task.Run(async () =>
+            {
+                await Task.Delay(TimeSpan.FromSeconds(DefaultRejoinGracePeriodSeconds));
+                bool changed = false;
+                foreach (var snap in fahWaitSnapshot)
+                {
+                    var room = _lobby.GetFoxAndHoundsRoom(snap.Id);
+                    if (room == null || room.Started) continue;
+                    var player = room.Players.FirstOrDefault(p => p.Name == name);
+                    if (player == null || player.ConnectionId != disconnectedConnectionId) continue;
+                    room.Players.Remove(player);
+                    changed = true;
+                    if (room.Players.Count == 0 || room.HostName == name)
+                    {
+                        await _hubContext.Clients.Group(room.Id).SendAsync("FoxAndHoundsRoomDissolved");
+                        _lobby.RemoveFoxAndHoundsRoom(room.Id);
+                    }
+                    else
+                    {
+                        await _hubContext.Clients.Group(room.Id).SendAsync("FoxAndHoundsRoomUpdated", room);
+                    }
+                }
+                if (changed) await _hubContext.Clients.All.SendAsync("FoxAndHoundsRoomList", FoxAndHoundsRoomSummaries());
+            });
+        }
+
+        // Defer Fox and Hounds active-game disconnect handling
+        var fahGameSnapshot = _lobby.GetActiveFoxAndHoundsRoomsForConnection(disconnectedConnectionId).ToList();
+        if (fahGameSnapshot.Count > 0)
+        {
+            _ = Task.Run(async () =>
+            {
+                await Task.Delay(TimeSpan.FromSeconds(DefaultRejoinGracePeriodSeconds));
+                foreach (var snap in fahGameSnapshot)
+                {
+                    var room = _lobby.GetFoxAndHoundsRoom(snap.Id);
+                    if (room == null || room.IsOver) continue;
+                    var player = room.Players.FirstOrDefault(p => p.Name == name && !p.IsBot);
+                    if (player == null || player.ConnectionId != disconnectedConnectionId) continue;
+                    player.Connected = false;
+                    await _hubContext.Clients.Group(room.Id).SendAsync("PlayerLeft", name);
+
+                    if (room.IsSinglePlayer) { _lobby.RemoveFoxAndHoundsRoom(room.Id); continue; }
+
+                    var connectedHumans = room.Players.Where(p => !p.IsBot && p.Connected).ToList();
+                    if (connectedHumans.Count == 0) { _lobby.RemoveFoxAndHoundsRoom(room.Id); continue; }
+
+                    room.IsOver = true;
+                    room.WinnerName = connectedHumans[0].Name;
+                    room.WinnerRole = connectedHumans[0].Role;
+                    await _hubContext.Clients.Group(room.Id).SendAsync("FoxAndHoundsUpdated", BuildFoxAndHoundsState(room));
+                    _ = SaveFoxAndHoundsSessionsAsync(room);
+                }
+            });
+        }
+
         // Defer TTT room cleanup
         // because creating/joining a room causes a page navigation which disconnects the
         // lobby connection before RejoinTttRoom can update the player's ConnectionId.
